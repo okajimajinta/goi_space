@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="語彙空間 — 言葉を入力すると、類義語・対義語・感情・比喩が星雲のように広がる語彙探索ツール">
+<meta name="keywords" content="語彙,類義語,対義語,言葉,国語,日本語,辞書">
+<title>語彙空間 — 言葉の宇宙を探索する</title>
+
+<!-- OGP（SNSシェア用） -->
+<meta property="og:title" content="語彙空間 — 言葉の宇宙を探索する">
+<meta property="og:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!--
+  ▼▼▼ Google AdSense ▼▼▼
+  手順：
+  1. https://adsense.google.com でアカウント作成
+  2. サイト審査が通ったら、下の YOUR-PUBLISHER-ID を自分のIDに書き換える
+     例: ca-pub-1234567890123456
+  3. 審査中はこのタグをコメントアウトしたままにしてOK
+-->
+<!--
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR-PUBLISHER-ID" crossorigin="anonymous"></script>
+-->
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080C18;
+    --surface: #111726;
+    --border: #1E2840;
+    --text: #D4DCF0;
+    --muted: #5B6A8A;
+    --amber: #F5A623;
+    --blue: #5B8FDE;
+    --green: #4ECBA8;
+    --rose: #E06B8B;
+    --violet: #9B72E8;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'Noto Serif JP', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ===== LAYOUT ===== */
+  .layout {
+    display: grid;
+    grid-template-rows: 64px 1fr 90px;
+    grid-template-columns: 1fr 160px;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    z-index: 100;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: rgba(8,12,24,0.98);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--amber);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .logo span {
+    color: var(--muted);
+    font-weight: 300;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  .search-wrap {
+    flex: 1;
+    max-width: 480px;
+    display: flex;
+    gap: 8px;
+  }
+
+  input#wordInput {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Noto Serif JP', serif;
+    font-size: 15px;
+    padding: 9px 16px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input#wordInput::placeholder { color: var(--muted); }
+  input#wordInput:focus { border-color: var(--amber); }
+
+  button#exploreBtn {
+    background: var(--amber);
+    color: #080C18;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  button#exploreBtn:hover { opacity: 0.85; }
+  button#exploreBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Mode tabs */
+  .mode-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px;
+    flex-shrink: 0;
+  }
+  .mode-tab {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'Noto Serif JP', serif;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-tab.active { background: var(--amber); color: #080C18; }
+  .mode-tab:not(.active):hover { color: var(--text); }
+
+  /* Engine select */
+  #engineSelect {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    outline: none;
+    flex-shrink: 0;
+  }
+  #engineSelect:focus { border-color: var(--amber); }
+
+  /* Golf panel */
+  .golf-panel {
+    position: absolute;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(17,23,38,0.96);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 22px;
+    display: none;
+    align-items: center;
+    gap: 24px;
+    z-index: 50;
+    backdrop-filter: blur(8px);
+  }
+  .golf-panel.visible { display: flex; }
+
+  /* ===== Daily panel (slide-in) ===== */
+  .daily-panel {
+    position: fixed;
+    top: 0; right: 0;
+    width: 380px;
+    max-width: 90vw;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 250;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .daily-panel.visible { transform: translateX(0); }
+  .daily-header {
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .daily-title { font-family: 'Noto Serif JP', serif; font-size: 17px; font-weight: 600; color: var(--amber); }
+  .daily-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .daily-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; }
+  .daily-close:hover { color: var(--text); }
+
+  .daily-body { padding: 18px 22px; }
+
+  .puzzle-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .puzzle-card:hover { border-color: var(--amber); }
+  .puzzle-card.cleared { border-color: var(--green); }
+  .puzzle-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .puzzle-diff { font-size: 10px; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.05em; }
+  .diff-易 { background: rgba(78,203,168,0.18); color: var(--green); }
+  .diff-中 { background: rgba(91,143,222,0.18); color: var(--blue); }
+  .diff-難 { background: rgba(224,107,139,0.18); color: var(--rose); }
+  .diff-激難 { background: rgba(155,114,232,0.22); color: var(--violet); }
+  .puzzle-par { font-size: 11px; color: var(--muted); }
+  .puzzle-route { display: flex; align-items: center; gap: 10px; }
+  .puzzle-word { font-family: 'Noto Serif JP', serif; font-size: 16px; font-weight: 600; }
+  .puzzle-word.s { color: var(--blue); }
+  .puzzle-word.g { color: var(--green); }
+  .puzzle-route .arrow { color: var(--muted); }
+  .puzzle-result { font-size: 11px; color: var(--green); margin-top: 8px; }
+
+  /* Leaderboard */
+  .board-section { margin-top: 8px; }
+  .board-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .board-tab {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    padding: 7px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .board-tab.active { background: var(--amber); color: #080C18; border-color: var(--amber); }
+  .board-list { display: flex; flex-direction: column; gap: 2px; }
+  .board-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .board-row:nth-child(odd) { background: var(--bg); }
+  .board-row.me { background: rgba(245,166,35,0.12); border: 1px solid var(--amber); }
+  .board-rank { font-family: 'Inter', sans-serif; font-weight: 500; color: var(--muted); text-align: center; }
+  .board-rank.top { color: var(--amber); }
+  .board-name { font-family: 'Noto Serif JP', serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .board-moves { font-family: 'Inter', sans-serif; font-weight: 500; color: var(--amber); }
+  .board-moves small { color: var(--muted); font-weight: 400; }
+  .board-empty { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0; }
+  .board-path { font-size: 10px; color: var(--muted); grid-column: 2 / 4; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Name input + share */
+  .name-row { display: flex; gap: 8px; margin: 4px 0 16px; }
+  .name-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Noto Serif JP', serif;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    outline: none;
+  }
+  .name-row input:focus { border-color: var(--amber); }
+  .name-row label { font-size: 11px; color: var(--muted); align-self: center; white-space: nowrap; }
+  .share-btn {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--blue);
+    color: var(--blue);
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .share-btn:hover { background: var(--blue); color: #080C18; }
+
+  @media (max-width: 768px) {
+    .daily-panel { width: 100vw; }
+  }
+  .golf-leg {
+    text-align: center;
+  }
+  .golf-leg-label { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
+  .golf-leg-word { font-family: 'Noto Serif JP', serif; font-size: 18px; font-weight: 600; }
+  .golf-start .golf-leg-word { color: var(--blue); }
+  .golf-goal .golf-leg-word { color: var(--green); }
+  .golf-arrow { color: var(--muted); font-size: 14px; }
+  .golf-stat { text-align: center; }
+  .golf-stat-num { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 500; color: var(--amber); }
+  .golf-stat-label { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .golf-actions { display: flex; gap: 8px; }
+  .golf-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 12px;
+    padding: 7px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+  }
+  .golf-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .golf-btn.primary { background: var(--amber); color: #080C18; border-color: var(--amber); }
+  .golf-btn.primary:hover { opacity: 0.85; }
+
+  /* Golf path trail */
+  .golf-trail {
+    position: absolute;
+    bottom: 70px; left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 80%;
+    z-index: 40;
+  }
+  .golf-trail.visible { display: flex; }
+  .trail-word {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+  .trail-word.start { border-color: var(--blue); color: var(--blue); }
+  .trail-word.goal { border-color: var(--green); color: var(--green); }
+  .trail-sep { color: var(--muted); font-size: 11px; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 110px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 20px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 300;
+    pointer-events: none;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--rose); }
+  .toast.info { border-color: var(--blue); }
+
+  .header-links {
+    margin-left: auto;
+    display: flex;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .header-links a {
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+  }
+  .header-links a:hover { color: var(--text); }
+
+  /* ===== CANVAS AREA ===== */
+  .canvas-area {
+    grid-column: 1;
+    grid-row: 2;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #canvas {
+    position: absolute;
+    inset: 0;
+    cursor: grab;
+  }
+  #canvas:active { cursor: grabbing; }
+
+  /* ===== RIGHT SIDEBAR AD ===== */
+  .ad-sidebar {
+    grid-column: 2;
+    grid-row: 2;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    gap: 8px;
+  }
+  .ad-label {
+    font-size: 9px;
+    color: #2E3A55;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ad-slot-side {
+    width: 136px;
+    min-height: 600px;
+    background: var(--border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2E3A55;
+    font-size: 10px;
+    /* 本番: display:block にしてAdSenseコードを入れる */
+  }
+
+  /* ===== BOTTOM AD BAR ===== */
+  .ad-bottom {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 8px 24px;
+  }
+  .ad-slot-bottom {
+    width: 728px;
+    height: 90px;
+    background: var(--border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2E3A55;
+    font-size: 10px;
+    flex-shrink: 0;
+    /* 本番: display:block にしてAdSenseコードを入れる */
+  }
+
+  /* ===== OVERLAY UI ===== */
+  .legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  .legend.visible { opacity: 1; }
+  .legend-item {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 11px; color: var(--muted); letter-spacing: 0.04em;
+  }
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 13px;
+    max-width: 220px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 200;
+    line-height: 1.6;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip-word { font-family: 'Noto Serif JP', serif; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .tooltip-desc { color: var(--muted); font-size: 12px; }
+
+  .status {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .status-text { font-family: 'Noto Serif JP', serif; font-size: 14px; color: var(--muted); letter-spacing: 0.1em; }
+  .status-hint { margin-top: 10px; font-size: 11px; color: #2E3A55; letter-spacing: 0.06em; }
+  .loader {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border); border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 14px; display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .history {
+    position: absolute;
+    bottom: 20px; right: 20px;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .history.visible { opacity: 1; }
+  .history-label { font-size: 9px; color: #2E3A55; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+  .history-item { font-family: 'Noto Serif JP', serif; font-size: 12px; color: var(--muted); cursor: pointer; transition: color 0.15s; }
+  .history-item:hover { color: var(--text); }
+  .history-item.current { color: var(--amber); cursor: default; }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; grid-template-rows: 64px 1fr 60px; }
+    .ad-sidebar { display: none; }
+    .ad-slot-bottom { width: 320px; height: 50px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { .loader { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ヘッダー -->
+  <header>
+    <div class="logo">語彙空間<span>Lexical Space</span></div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="explore">探索</button>
+      <button class="mode-tab" data-mode="golf">ゴルフ</button>
+      <button class="mode-tab" data-mode="daily">デイリー</button>
+      <button class="mode-tab" data-mode="monthly">マンスリー</button>
+    </div>
+
+    <div class="search-wrap">
+      <input id="wordInput" type="text" placeholder="探索する言葉を入力…" autocomplete="off" />
+      <button id="exploreBtn">探索</button>
+    </div>
+
+    <select id="engineSelect" title="ダブルクリック時の検索エンジン">
+      <option value="https://www.google.com/search?q=">Google</option>
+      <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+      <option value="https://www.bing.com/search?q=">Bing</option>
+      <option value="https://ja.wikipedia.org/wiki/">Wikipedia</option>
+      <option value="https://www.weblio.jp/content/">Weblio辞書</option>
+    </select>
+
+    <div class="header-links">
+      <a href="/privacy.html">プライバシー</a>
+      <a href="mailto:your@email.com">お問い合わせ</a>
+    </div>
+  </header>
+
+  <!-- キャンバスエリア -->
+  <div class="canvas-area">
+    <canvas id="canvas"></canvas>
+
+    <!-- ワードゴルフ パネル -->
+    <div class="golf-panel" id="golfPanel">
+      <div class="golf-leg golf-start">
+        <div class="golf-leg-label">スタート</div>
+        <div class="golf-leg-word" id="golfStart">—</div>
+      </div>
+      <div class="golf-arrow">→</div>
+      <div class="golf-leg golf-goal">
+        <div class="golf-leg-label">ゴール</div>
+        <div class="golf-leg-word" id="golfGoal">—</div>
+      </div>
+      <div class="golf-stat">
+        <div class="golf-stat-num" id="golfMoves">0</div>
+        <div class="golf-stat-label">手数</div>
+      </div>
+      <div class="golf-stat">
+        <div class="golf-stat-num" id="golfPar">—</div>
+        <div class="golf-stat-label">パー</div>
+      </div>
+      <div class="golf-actions">
+        <button class="golf-btn" id="golfHintBtn">ヒント</button>
+        <button class="golf-btn" id="golfNewBtn">新しいお題</button>
+      </div>
+    </div>
+
+    <!-- ゴルフ経路トレイル -->
+    <div class="golf-trail" id="golfTrail"></div>
+
+    <div class="status" id="status">
+      <div class="loader" id="loader"></div>
+      <div class="status-text" id="statusText">言葉を入力して、語彙の宇宙を探索する</div>
+      <div class="status-hint">ノードをクリックすると、そこを中心に再探索できます</div>
+    </div>
+
+    <div class="legend" id="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#F5A623"></div>中心語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#5B8FDE"></div>類義語・関連語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4ECBA8"></div>対義語・対比</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E06B8B"></div>感情・ニュアンス</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#9B72E8"></div>比喩・象徴</div>
+    </div>
+
+    <div class="history" id="history">
+      <div class="history-label">探索履歴</div>
+      <div id="historyItems"></div>
+    </div>
+  </div>
+
+  <!-- 右サイドバー広告（160×600） -->
+  <div class="ad-sidebar">
+    <div class="ad-label">広告</div>
+    <div class="ad-slot-side" id="adSide">
+      <!--
+        AdSense審査通過後、ここを以下に書き換える:
+        <ins class="adsbygoogle"
+             style="display:block;width:136px;height:600px"
+             data-ad-client="ca-pub-YOUR-ID"
+             data-ad-slot="YOUR-SLOT-ID"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      -->
+      広告スペース
+    </div>
+  </div>
+
+  <!-- 下部バナー広告（728×90 / モバイル320×50） -->
+  <div class="ad-bottom">
+    <div class="ad-slot-bottom" id="adBottom">
+      <!--
+        AdSense審査通過後、ここを以下に書き換える:
+        <ins class="adsbygoogle"
+             style="display:block;width:728px;height:90px"
+             data-ad-client="ca-pub-YOUR-ID"
+             data-ad-slot="YOUR-SLOT-ID-2"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      -->
+      広告スペース（728×90）
+    </div>
+  </div>
+
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-word" id="ttWord"></div>
+  <div class="tooltip-desc" id="ttDesc"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== デイリーチャレンジ パネル ===== -->
+<div class="daily-panel" id="dailyPanel">
+  <div class="daily-header">
+    <div>
+      <div class="daily-title" id="dailyTitle">デイリーチャレンジ</div>
+      <div class="daily-date" id="dailyDate">—</div>
+    </div>
+    <button class="daily-close" id="dailyClose">×</button>
+  </div>
+  <div class="daily-body">
+    <div class="name-row">
+      <label>ハンドルネーム</label>
+      <input id="handleInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off" />
+    </div>
+
+    <!-- お題一覧 -->
+    <div id="puzzleList"></div>
+
+    <!-- ランキング -->
+    <div class="board-section">
+      <div class="board-tabs" id="boardTabs">
+        <button class="board-tab active" data-puzzle="0">第1問</button>
+        <button class="board-tab" data-puzzle="1">第2問</button>
+        <button class="board-tab" data-puzzle="2">第3問</button>
+      </div>
+      <div class="board-list" id="boardList">
+        <div class="board-empty">読み込み中…</div>
+      </div>
+      <button class="share-btn" id="shareBoardBtn">この結果を共有する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvasEl = document.getElementById('canvas');
+const ctx = canvasEl.getContext('2d');
+const canvasArea = document.querySelector('.canvas-area');
+const wordInput = document.getElementById('wordInput');
+const exploreBtn = document.getElementById('exploreBtn');
+const statusEl = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+const loaderEl = document.getElementById('loader');
+const legendEl = document.getElementById('legend');
+const tooltip = document.getElementById('tooltip');
+const ttWord = document.getElementById('ttWord');
+const ttDesc = document.getElementById('ttDesc');
+const historyEl = document.getElementById('history');
+const historyItems = document.getElementById('historyItems');
+
+const COLORS = {
+  center: '#F5A623', synonym: '#5B8FDE',
+  antonym: '#4ECBA8', emotion: '#E06B8B', metaphor: '#9B72E8',
+};
+
+let nodes = [], edges = [], animFrame = null;
+let pan = { x: 0, y: 0 }, dragging = false;
+let dragStart = { x: 0, y: 0 }, panStart = { x: 0, y: 0 };
+let wordHistory = [], hoveredNode = null, simTick = 0;
+
+function resize() {
+  canvasEl.width = canvasArea.clientWidth;
+  canvasEl.height = canvasArea.clientHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); draw(); });
+
+// Physics
+function initPhysics() {
+  const cx = canvasEl.width / 2, cy = canvasEl.height / 2;
+  nodes.forEach(n => {
+    n.vx = 0; n.vy = 0;
+    if (!n.fixed) {
+      n.x = cx + (Math.random() - 0.5) * 200;
+      n.y = cy + (Math.random() - 0.5) * 200;
+    }
+  });
+  simTick = 0;
+}
+
+function tick() {
+  if (simTick > 300) return;
+  simTick++;
+  const centerNode = nodes.find(n => n.fixed);
+  nodes.forEach(n => {
+    if (n.fixed) return;
+    nodes.forEach(m => {
+      if (m === n) return;
+      const dx = n.x - m.x, dy = n.y - m.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = 4000 / (dist * dist);
+      n.vx += (dx / dist) * force; n.vy += (dy / dist) * force;
+    });
+    if (centerNode) {
+      const dx = centerNode.x - n.x, dy = centerNode.y - n.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = (dist - (n.targetDist || 180)) * 0.004;
+      n.vx += (dx / dist) * force; n.vy += (dy / dist) * force;
+    }
+    n.vx *= 0.82; n.vy *= 0.82;
+    n.x += n.vx; n.y += n.vy;
+  });
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  if (!window._stars) {
+    window._stars = Array.from({ length: 140 }, () => ({
+      x: Math.random(), y: Math.random(), r: Math.random() * 1.2, a: Math.random() * 0.4 + 0.05
+    }));
+  }
+  window._stars.forEach(s => {
+    ctx.beginPath();
+    ctx.arc(s.x * canvasEl.width, s.y * canvasEl.height, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(212,220,240,${s.a})`; ctx.fill();
+  });
+  if (nodes.length === 0) return;
+
+  edges.forEach(e => {
+    const a = nodes.find(n => n.id === e.source), b = nodes.find(n => n.id === e.target);
+    if (!a || !b) return;
+    // よく辿られる経路ほど線を太く明るく（引力の可視化）
+    const pull = b.pull || 0;
+    const strength = Math.min(1, pull / 10);
+    const alpha = Math.round((0x44 + strength * 0x88)).toString(16).padStart(2, '0');
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = (COLORS[b.type] || '#3D4560') + alpha;
+    ctx.lineWidth = 1 + strength * 2.5; ctx.stroke();
+  });
+
+  nodes.forEach(n => {
+    const isHovered = n === hoveredNode;
+    const col = COLORS[n.type] || '#5B6A8A';
+    const r = n.fixed ? 26 : (isHovered ? 20 : 16);
+    const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 2.5);
+    grd.addColorStop(0, col + (n.fixed ? 'AA' : '55'));
+    grd.addColorStop(1, col + '00');
+    ctx.beginPath(); ctx.arc(n.x, n.y, r * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = grd; ctx.fill();
+    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = n.fixed ? col : '#111726';
+    ctx.strokeStyle = col;
+    ctx.lineWidth = n.fixed ? 0 : (isHovered ? 2 : 1.5);
+    ctx.fill(); if (!n.fixed) ctx.stroke();
+    ctx.font = n.fixed ? `600 14px 'Noto Serif JP',serif` : `400 12px 'Noto Serif JP',serif`;
+    ctx.fillStyle = n.fixed ? '#080C18' : col;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.word, n.x, n.y);
+    if (!n.fixed && n.reading) {
+      ctx.font = `300 9px 'Inter',sans-serif`;
+      ctx.fillStyle = col + '88';
+      ctx.fillText(n.reading, n.x, n.y + r + 10);
+    }
+  });
+}
+
+function loop() { tick(); draw(); animFrame = requestAnimationFrame(loop); }
+
+// API — Vercelのサーバーサイドエンドポイントを呼ぶ（APIキーはサーバー側）
+async function fetchWords(word) {
+  const resp = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ word }),
+  });
+  if (!resp.ok) throw new Error('API error');
+  return resp.json();
+}
+
+// 全ユーザーの遷移重みを取得（「よく辿る経路」を引力に反映）
+async function fetchGravity(word) {
+  try {
+    const resp = await fetch(`/api/transitions?word=${encodeURIComponent(word)}`);
+    if (!resp.ok) return {};
+    const data = await resp.json();
+    const map = {};
+    (data.neighbors || []).forEach(n => { map[n.word] = n.count; });
+    return map;
+  } catch { return {}; }
+}
+
+// 遷移をログに記録（fire-and-forget）
+function logTransition(from, to) {
+  if (!from || !to || from === to) return;
+  fetch('/api/transitions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to }),
+  }).catch(() => {});
+}
+
+async function explore(word, fromWord) {
+  if (!word.trim()) return;
+
+  // 遷移ログ：前の中心語 → 新しい語
+  if (fromWord) logTransition(fromWord, word);
+
+  exploreBtn.disabled = true;
+  statusEl.style.opacity = '1';
+  loaderEl.style.display = 'block';
+  statusText.textContent = `「${word}」の語彙空間を探索中…`;
+  legendEl.classList.remove('visible');
+  historyEl.classList.remove('visible');
+  if (animFrame) cancelAnimationFrame(animFrame);
+  nodes = []; edges = []; draw();
+
+  try {
+    // 語彙生成と引力データを並行取得
+    const [result, gravity] = await Promise.all([fetchWords(word), fetchGravity(word)]);
+    const cx = canvasEl.width / 2, cy = canvasEl.height / 2;
+    nodes = [{ id: 'center', word, type: 'center', fixed: true, x: cx, y: cy }];
+
+    // 最大遷移回数（正規化用）
+    const maxCount = Math.max(1, ...Object.values(gravity));
+
+    result.words.forEach((w, i) => {
+      // よく辿られる語ほど中心に近づける（引力が強い）
+      const pull = gravity[w.word] || 0;
+      const ratio = pull / maxCount;            // 0〜1
+      const baseDist = 150 + Math.random() * 80;
+      const targetDist = baseDist - ratio * 70; // よく辿る語は最大70px近く
+      nodes.push({
+        id: `n${i}`, word: w.word, reading: w.reading,
+        type: w.type, description: w.description,
+        targetDist, pull,                        // pull: 引力の強さ（描画にも使う）
+      });
+      edges.push({ source: 'center', target: `n${i}` });
+    });
+
+    if (!wordHistory.includes(word)) { wordHistory.unshift(word); if (wordHistory.length > 6) wordHistory.pop(); }
+    renderHistory(word);
+    statusEl.style.opacity = '0';
+    legendEl.classList.add('visible');
+    historyEl.classList.add('visible');
+    pan = { x: 0, y: 0 };
+    initPhysics(); loop();
+
+    // ゴルフモード：ゴール到達判定
+    if (golf.active) handleGolfMove(word);
+  } catch (err) {
+    loaderEl.style.display = 'none';
+    statusText.textContent = 'エラーが発生しました。再度お試しください。';
+  } finally {
+    exploreBtn.disabled = false;
+  }
+}
+
+function renderHistory(current) {
+  historyItems.innerHTML = wordHistory.map(w =>
+    `<div class="history-item ${w === current ? 'current' : ''}" data-word="${w}">${w}</div>`
+  ).join('');
+  historyItems.querySelectorAll('[data-word]').forEach(el => {
+    if (!el.classList.contains('current'))
+      el.addEventListener('click', () => { wordInput.value = el.dataset.word; explore(el.dataset.word); });
+  });
+}
+
+function getNodeAt(mx, my) {
+  const rect = canvasEl.getBoundingClientRect();
+  const x = mx - rect.left, y = my - rect.top;
+  return nodes.find(n => { const r = n.fixed ? 26 : 16; return (n.x-x)**2 + (n.y-y)**2 < (r+6)**2; });
+}
+
+// 現在の中心語を取得
+function currentCenter() {
+  const c = nodes.find(n => n.fixed);
+  return c ? c.word : null;
+}
+
+// ===== ダブルクリック → 外部検索 =====
+const engineSelect = document.getElementById('engineSelect');
+canvasEl.addEventListener('dblclick', e => {
+  const node = getNodeAt(e.clientX, e.clientY);
+  if (!node) return;
+  e.preventDefault();
+  const base = engineSelect.value;
+  window.open(base + encodeURIComponent(node.word), '_blank', 'noopener');
+});
+
+// ===== クリック（シングル）→ 再探索。ダブルクリックと区別するため遅延 =====
+let clickTimer = null;
+let moved = false;
+
+canvasEl.addEventListener('mousedown', e => {
+  dragging = true; moved = false;
+  dragStart = { x: e.clientX, y: e.clientY }; panStart = { ...pan };
+});
+
+canvasEl.addEventListener('mousemove', e => {
+  if (dragging) {
+    if (Math.abs(e.clientX - dragStart.x) > 4 || Math.abs(e.clientY - dragStart.y) > 4) moved = true;
+    pan.x = panStart.x + (e.clientX - dragStart.x);
+    pan.y = panStart.y + (e.clientY - dragStart.y);
+    const c = nodes.find(n => n.fixed);
+    if (c) { c.x = canvasEl.width/2 - pan.x; c.y = canvasEl.height/2 - pan.y; }
+    return;
+  }
+  const node = getNodeAt(e.clientX, e.clientY);
+  hoveredNode = node || null;
+  canvasEl.style.cursor = node ? 'pointer' : 'grab';
+  if (node) {
+    ttWord.textContent = node.word;
+    ttDesc.textContent = (node.description || '') + (node.fixed ? '' : '  ·  ダブルクリックで検索');
+    tooltip.classList.add('visible');
+    tooltip.style.left = (e.clientX + 16) + 'px';
+    tooltip.style.top = (e.clientY - 40) + 'px';
+  } else { tooltip.classList.remove('visible'); }
+});
+
+canvasEl.addEventListener('mouseup', e => {
+  dragging = false;
+  if (moved) return;
+  const node = getNodeAt(e.clientX, e.clientY);
+  if (node && !node.fixed) {
+    // 遅延させてダブルクリックなら再探索をキャンセル
+    if (clickTimer) clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => {
+      const from = currentCenter();
+      wordInput.value = node.word;
+      explore(node.word, from);
+    }, 220);
+  }
+});
+canvasEl.addEventListener('dblclick', () => { if (clickTimer) clearTimeout(clickTimer); });
+canvasEl.addEventListener('mouseleave', () => { dragging = false; tooltip.classList.remove('visible'); });
+
+// タッチ
+canvasEl.addEventListener('touchstart', e => {
+  const t = e.touches[0]; dragStart = { x: t.clientX, y: t.clientY }; panStart = { ...pan }; dragging = true; moved = false;
+}, { passive: true });
+canvasEl.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  if (Math.abs(t.clientX - dragStart.x) > 4 || Math.abs(t.clientY - dragStart.y) > 4) moved = true;
+  pan.x = panStart.x + (t.clientX - dragStart.x); pan.y = panStart.y + (t.clientY - dragStart.y);
+  const c = nodes.find(n => n.fixed);
+  if (c) { c.x = canvasEl.width/2 - pan.x; c.y = canvasEl.height/2 - pan.y; }
+}, { passive: false });
+
+let lastTap = 0;
+canvasEl.addEventListener('touchend', e => {
+  dragging = false;
+  if (moved) return;
+  const t = e.changedTouches[0];
+  const node = getNodeAt(t.clientX, t.clientY);
+  if (!node || node.fixed) return;
+  const now = Date.now();
+  if (now - lastTap < 300) {
+    // ダブルタップ → 検索
+    window.open(engineSelect.value + encodeURIComponent(node.word), '_blank', 'noopener');
+    lastTap = 0;
+  } else {
+    lastTap = now;
+    setTimeout(() => {
+      if (lastTap === now) { // シングルのまま
+        const from = currentCenter();
+        wordInput.value = node.word;
+        explore(node.word, from);
+      }
+    }, 310);
+  }
+});
+
+exploreBtn.addEventListener('click', () => explore(wordInput.value, currentCenter()));
+wordInput.addEventListener('keydown', e => { if (e.key === 'Enter') explore(wordInput.value, currentCenter()); });
+
+// ===================================================================
+// ===== トースト通知 =====
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg, type = 'info', ms = 2600) {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast visible ' + type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('visible'), ms);
+}
+
+// ===================================================================
+// ===== ワードゴルフ =====
+const golf = { active: false, start: '', goal: '', par: 0, moves: 0, path: [] };
+
+const golfPanel = document.getElementById('golfPanel');
+const golfTrail = document.getElementById('golfTrail');
+const golfStartEl = document.getElementById('golfStart');
+const golfGoalEl = document.getElementById('golfGoal');
+const golfMovesEl = document.getElementById('golfMoves');
+const golfParEl = document.getElementById('golfPar');
+const golfHintBtn = document.getElementById('golfHintBtn');
+const golfNewBtn = document.getElementById('golfNewBtn');
+
+async function startGolf() {
+  toast('お題を生成中…', 'info', 1500);
+  try {
+    const resp = await fetch('/api/golf', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'pair' }),
+    });
+    const data = await resp.json();
+    golf.active = true;
+    golf.start = data.start; golf.goal = data.goal; golf.par = data.par || 5;
+    golf.moves = 0; golf.path = [data.start];
+    golfStartEl.textContent = golf.start;
+    golfGoalEl.textContent = golf.goal;
+    golfParEl.textContent = golf.par;
+    golfMovesEl.textContent = '0';
+    golfPanel.classList.add('visible');
+    renderTrail();
+    wordInput.value = golf.start;
+    explore(golf.start);   // スタート語から開始（ログfromなし）
+    toast(`「${golf.start}」から「${golf.goal}」へ！`, 'success');
+  } catch {
+    toast('お題の生成に失敗しました', 'error');
+  }
+}
+
+function renderTrail() {
+  golfTrail.classList.add('visible');
+  const parts = golf.path.map((w, i) => {
+    const cls = i === 0 ? 'trail-word start' : 'trail-word';
+    return `<span class="${cls}">${w}</span>`;
+  });
+  // ゴール表示
+  parts.push('<span class="trail-sep">…→</span>');
+  parts.push(`<span class="trail-word goal">${golf.goal}</span>`);
+  golfTrail.innerHTML = parts.join('<span class="trail-sep">→</span>');
+}
+
+// ゴルフ中に語を選んだとき
+function handleGolfMove(word) {
+  if (word === golf.start && golf.path.length === 1) return; // 初期表示
+  golf.moves++;
+  golf.path.push(word);
+  golfMovesEl.textContent = golf.moves;
+  renderTrail();
+
+  if (word === golf.goal) {
+    finishGolf();
+  }
+}
+
+function finishGolf() {
+  const par = golf.par;
+  const diff = golf.moves - par;
+  let grade = diff <= -2 ? 'イーグル！' : diff === -1 ? 'バーディー！' : diff === 0 ? 'パー' : diff === 1 ? 'ボギー' : `+${diff}`;
+  toast(`ゴール！ ${golf.moves}手（${grade}）`, 'success', 4000);
+  golf.active = false;
+
+  const fullPath = [...golf.path]; // golf.goal は既に path 末尾に入っている
+
+  // デイリー/マンスリーチャレンジならランキングに登録
+  if (golf.daily) {
+    const idx = golf.dailyIdx;
+    const period = golf.dailyPeriod || 'daily';
+    daily.results[resultKey(period, idx)] = { moves: golf.moves, path: fullPath };
+    submitScore(period, idx, golf.moves, fullPath).then(() => {
+      // 登録した期間が今開いている期間と同じならランキング更新
+      if (daily.period === period) {
+        dailyPanel.classList.add('visible');
+        renderPuzzles();
+        loadBoard(idx);
+      }
+    });
+    golf.daily = false;
+
+    const label = period === 'monthly' ? 'マンスリー' : 'デイリー';
+    const shareText =
+      `語彙ゴルフ ${label} 🏌️ ${daily.date}\n` +
+      `第${idx+1}問：${golf.start}→${golf.goal}\n` +
+      `${golf.moves}手（パー${par}）${grade}\n` +
+      `${fullPath.join('→')}\n\n${location.origin}`;
+    shareResult(shareText);
+    return;
+  }
+
+  // 通常ゴルフ：結果を共有
+  const shareText = `語彙ゴルフ 🏌️\n${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(shareText)
+      .then(() => toast('結果をクリップボードにコピーしました', 'info', 3000))
+      .catch(() => {});
+  }
+}
+
+golfHintBtn.addEventListener('click', async () => {
+  if (!golf.active) return;
+  const from = currentCenter();
+  toast('ヒントを取得中…', 'info', 1500);
+  try {
+    const resp = await fetch('/api/golf', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'hint', from, goal: golf.goal }),
+    });
+    const data = await resp.json();
+    toast('ヒント: ' + (data.hints || []).join(' / '), 'info', 5000);
+  } catch {
+    toast('ヒントの取得に失敗しました', 'error');
+  }
+});
+
+golfNewBtn.addEventListener('click', startGolf);
+
+// ===== モード切替 =====
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const mode = tab.dataset.mode;
+    // 一旦すべて閉じる
+    golf.active = false;
+    golfPanel.classList.remove('visible');
+    golfTrail.classList.remove('visible');
+    dailyPanel.classList.remove('visible');
+
+    if (mode === 'golf') {
+      startGolf();
+    } else if (mode === 'daily') {
+      openChallenge('daily');
+    } else if (mode === 'monthly') {
+      openChallenge('monthly');
+    }
+  });
+});
+
+// ===================================================================
+// ===== デイリー / マンスリー チャレンジ & ランキング =====
+const dailyPanel = document.getElementById('dailyPanel');
+const dailyTitle = document.getElementById('dailyTitle');
+const dailyDate = document.getElementById('dailyDate');
+const dailyClose = document.getElementById('dailyClose');
+const handleInput = document.getElementById('handleInput');
+const puzzleList = document.getElementById('puzzleList');
+const boardTabs = document.getElementById('boardTabs');
+const boardList = document.getElementById('boardList');
+const shareBoardBtn = document.getElementById('shareBoardBtn');
+
+const daily = {
+  period: 'daily', date: '', puzzles: [], current: 0,
+  results: {},   // {"period:idx": {moves, path}} クリア済み記録（端末ローカル）
+};
+
+// 結果記録のキー（period混在対応）
+function resultKey(period, idx) { return `${period}:${idx}`; }
+
+// ハンドルネームは端末に保持（メモリのみ。ブラウザストレージは使わない）
+let handleName = '';
+handleInput.addEventListener('input', () => { handleName = handleInput.value.trim(); });
+
+async function openChallenge(period) {
+  daily.period = period;
+  daily.current = 0;
+  dailyPanel.classList.add('visible');
+  dailyTitle.textContent = period === 'monthly' ? 'マンスリーチャレンジ' : 'デイリーチャレンジ';
+  puzzleList.innerHTML = '<div class="board-empty">お題を読み込み中…</div>';
+  try {
+    const resp = await fetch(`/api/daily?period=${period}`);
+    const data = await resp.json();
+    daily.date = data.date;
+    daily.puzzles = data.puzzles || [];
+    dailyDate.textContent = (period === 'monthly' ? '今月 ' : '') + data.date;
+    renderPuzzles();
+    loadBoard(daily.current);
+  } catch {
+    puzzleList.innerHTML = '<div class="board-empty">読み込みに失敗しました</div>';
+  }
+}
+
+function renderPuzzles() {
+  puzzleList.innerHTML = daily.puzzles.map((p, i) => {
+    const res = daily.results[resultKey(daily.period, i)];
+    const cleared = res ? 'cleared' : '';
+    const resultLine = res ? `<div class="puzzle-result">クリア済み：${res.moves}手</div>` : '';
+    return `
+      <div class="puzzle-card ${cleared}" data-puzzle="${i}">
+        <div class="puzzle-top">
+          <span class="puzzle-diff diff-${p.difficulty}">${p.difficulty}</span>
+          <span class="puzzle-par">パー ${p.par}</span>
+        </div>
+        <div class="puzzle-route">
+          <span class="puzzle-word s">${p.start}</span>
+          <span class="arrow">→</span>
+          <span class="puzzle-word g">${p.goal}</span>
+        </div>
+        ${resultLine}
+      </div>`;
+  }).join('');
+
+  puzzleList.querySelectorAll('.puzzle-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = Number(card.dataset.puzzle);
+      startDailyPuzzle(idx);
+    });
+  });
+}
+
+// デイリー/マンスリーのお題をゴルフとして開始
+function startDailyPuzzle(idx) {
+  const p = daily.puzzles[idx];
+  if (!p) return;
+  dailyPanel.classList.remove('visible');
+  golf.active = true;
+  golf.start = p.start; golf.goal = p.goal; golf.par = p.par || 5;
+  golf.moves = 0; golf.path = [p.start];
+  golf.daily = true; golf.dailyIdx = idx;
+  golf.dailyPeriod = daily.period;   // どのチャレンジか記憶
+  golfStartEl.textContent = golf.start;
+  golfGoalEl.textContent = golf.goal;
+  golfParEl.textContent = golf.par;
+  golfMovesEl.textContent = '0';
+  golfPanel.classList.add('visible');
+  renderTrail();
+  wordInput.value = golf.start;
+  explore(golf.start);
+  const label = daily.period === 'monthly' ? 'マンスリー' : '';
+  toast(`${label}第${idx+1}問：「${golf.start}」→「${golf.goal}」`, 'success');
+}
+
+// ランキング読み込み
+async function loadBoard(puzzleIdx) {
+  daily.current = puzzleIdx;
+  boardTabs.querySelectorAll('.board-tab').forEach(t =>
+    t.classList.toggle('active', Number(t.dataset.puzzle) === puzzleIdx));
+  boardList.innerHTML = '<div class="board-empty">読み込み中…</div>';
+  try {
+    const resp = await fetch(`/api/daily?action=board&period=${daily.period}&puzzle=${puzzleIdx}`);
+    const data = await resp.json();
+    renderBoard(data.board || []);
+  } catch {
+    boardList.innerHTML = '<div class="board-empty">読み込みに失敗しました</div>';
+  }
+}
+
+function renderBoard(board) {
+  if (!board.length) {
+    boardList.innerHTML = '<div class="board-empty">まだ記録がありません。最初の挑戦者になろう！</div>';
+    return;
+  }
+  boardList.innerHTML = board.map((row, i) => {
+    const rank = i + 1;
+    const isMe = handleName && row.name === handleName;
+    const rankCls = rank <= 3 ? 'top' : '';
+    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+    return `
+      <div class="board-row ${isMe ? 'me' : ''}">
+        <div class="board-rank ${rankCls}">${medal}</div>
+        <div class="board-name">${escapeHtml(row.name)}</div>
+        <div class="board-moves">${row.moves}<small>手</small></div>
+        ${row.path ? `<div class="board-path">${escapeHtml(row.path)}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ランキングのタブ切替
+boardTabs.querySelectorAll('.board-tab').forEach(t => {
+  t.addEventListener('click', () => loadBoard(Number(t.dataset.puzzle)));
+});
+
+dailyClose.addEventListener('click', () => dailyPanel.classList.remove('visible'));
+
+// スコアをサーバーへ登録
+async function submitScore(period, puzzleIdx, moves, path) {
+  const name = handleName || '名無し';
+  try {
+    await fetch('/api/daily', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'submit', period, puzzle: puzzleIdx, name, moves, path }),
+    });
+  } catch {}
+}
+
+// ランキング全体を共有
+shareBoardBtn.addEventListener('click', () => {
+  const idx = daily.current;
+  const p = daily.puzzles[idx];
+  const res = daily.results[resultKey(daily.period, idx)];
+  const label = daily.period === 'monthly' ? 'マンスリー' : 'デイリー';
+  let text = `語彙ゴルフ ${label} 🏌️ ${daily.date}\n第${idx+1}問：${p ? p.start + '→' + p.goal : ''}\n`;
+  if (res) text += `私の記録：${res.moves}手（パー${p.par}）\n`;
+  text += `\nあなたも挑戦 → ${location.origin}`;
+  shareResult(text);
+});
+
+// 共有：Web Share API → なければクリップボード
+function shareResult(text) {
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text)
+      .then(() => toast('共有テキストをコピーしました', 'info', 3000))
+      .catch(() => toast('コピーに失敗しました', 'error'));
+  }
+}
+
+draw();
+</script>
+</body>
+</html>
