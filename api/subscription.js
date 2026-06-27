@@ -48,12 +48,43 @@ export default async function handler(req, res) {
       return res.status(200).json({ premium: false });
     }
 
-    // --- メールで課金状態を確認 ---
+    // --- メールで課金状態を確認（プラン詳細つき） ---
     if (req.query.email) {
       const email = normEmail(req.query.email);
       let sub = null;
       try { sub = await redis('GET', `premium:${email}`); } catch {}
-      return res.status(200).json({ premium: !!sub, email });
+      if (!sub) return res.status(200).json({ premium: false, email });
+
+      // Stripeから現在のプラン情報を取得（任意・失敗してもpremiumは返す）
+      let plan = null;
+      try {
+        const search = await fetch(
+          `https://api.stripe.com/v1/customers/search?query=${encodeURIComponent(`email:'${email}'`)}`,
+          { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
+        ).then(r => r.json());
+        const customer = search.data && search.data[0];
+        if (customer) {
+          const subs = await fetch(
+            `https://api.stripe.com/v1/subscriptions?customer=${customer.id}&status=active&limit=1`,
+            { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
+          ).then(r => r.json());
+          const s = subs.data && subs.data[0];
+          if (s) {
+            const item = s.items.data[0];
+            const interval = item.price.recurring?.interval; // month | year
+            const amount = item.price.unit_amount; // 円
+            plan = {
+              interval,
+              amount,
+              label: interval === 'year' ? '年額プラン' : '月額プラン',
+              renewsAt: s.current_period_end,
+              cancelAtEnd: s.cancel_at_period_end,
+            };
+          }
+        }
+      } catch {}
+
+      return res.status(200).json({ premium: true, email, plan });
     }
 
     return res.status(400).json({ error: 'session_id または email が必要です' });

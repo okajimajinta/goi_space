@@ -34,42 +34,61 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .layout{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr 160px;height:100dvh}
 
 /* === HEADER === */
-header{grid-column:1/-1;padding:8px 16px;display:flex;align-items:center;gap:10px;background:rgba(8,12,24,0.98);border-bottom:1px solid var(--border);flex-wrap:wrap;z-index:100}
-.logo{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;color:var(--amber);white-space:nowrap;flex-shrink:0}
-.logo span{color:var(--muted);font-weight:300;font-size:10px;margin-left:4px}
+header{grid-column:1/-1;padding:10px 20px;display:flex;align-items:center;gap:10px;background:rgba(8,12,24,0.98);border-bottom:1px solid var(--border);flex-wrap:wrap;z-index:100}
+.logo{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--amber);white-space:nowrap;flex-shrink:0}
+.logo span{color:var(--muted);font-weight:300;font-size:12px;margin-left:4px}
 .mode-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px;flex-shrink:0}
-.mode-tab{background:transparent;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:12px;padding:5px 10px;border-radius:3px;cursor:pointer;transition:all .15s}
+.mode-tab{background:transparent;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:15px;padding:6px 12px;border-radius:3px;cursor:pointer;transition:all .15s}
 .mode-tab.active{background:var(--amber);color:#080C18}
 .mode-tab:not(.active):hover{color:var(--text)}
 .search-wrap{flex:1;min-width:180px;display:flex;gap:6px}
-input#wordInput{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:8px 12px;border-radius:4px;outline:none;transition:border-color .2s}
+input#wordInput{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:18px;padding:10px 15px;border-radius:4px;outline:none;transition:border-color .2s}
 input#wordInput::placeholder{color:var(--muted)}
 input#wordInput:focus{border-color:var(--amber)}
-button#exploreBtn{background:var(--amber);color:#080C18;border:none;padding:8px 14px;border-radius:4px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+button#exploreBtn{background:var(--amber);color:#080C18;border:none;padding:10px 18px;border-radius:4px;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}
 button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
-#engineSelect{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px;border-radius:4px;cursor:pointer;outline:none;flex-shrink:0;max-width:90px}
+#engineSelect{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:8px;border-radius:4px;cursor:pointer;outline:none;flex-shrink:0;max-width:90px}
 .header-links{display:flex;gap:10px;flex-shrink:0}
-.header-links a{font-size:10px;color:var(--muted);text-decoration:none}
+.header-links a{font-size:12px;color:var(--muted);text-decoration:none}
 
 /* === USAGE COUNTER === */
-.usage-badge{font-family:'Inter',sans-serif;font-size:10px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:4px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.usage-badge{font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 10px;border-radius:10px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.usage-badge.premium{border-color:var(--amber);color:var(--amber)}
 .usage-badge .count{color:var(--amber);font-weight:500}
 .usage-badge.low .count{color:var(--rose)}
+
+/* === ACCOUNT PANEL === */
+.account-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
+.account-overlay.visible{display:flex}
+.account-card{background:var(--surface);border:1px solid var(--amber);border-radius:14px;padding:30px 34px;text-align:center;max-width:400px;width:90%}
+.account-icon{font-size:40px;margin-bottom:10px}
+.account-title{font-family:'Noto Serif JP',serif;font-size:20px;font-weight:600;color:var(--amber);margin-bottom:6px}
+.account-email{font-size:13px;color:var(--muted);margin-bottom:20px;word-break:break-all}
+.account-plan{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px}
+.account-plan-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.account-plan-name{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
+.account-plan-detail{font-size:12px;color:var(--muted);margin-top:6px}
+.account-actions{display:flex;flex-direction:column;gap:10px}
+.account-btn{padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer;transition:all .15s}
+.account-btn:hover{border-color:var(--amber);color:var(--amber)}
+.account-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:500}
+.account-btn.primary:hover{opacity:.85;color:#080C18}
+.account-close{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-top:8px}
 
 /* === UPGRADE PROMPT === */
 .upgrade-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
 .upgrade-overlay.visible{display:flex}
-.upgrade-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px 32px;text-align:center;max-width:380px;width:90%}
-.upgrade-icon{font-size:36px;margin-bottom:12px}
-.upgrade-title{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--amber);margin-bottom:8px}
-.upgrade-desc{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px}
+.upgrade-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:35px 40px;text-align:center;max-width:380px;width:90%}
+.upgrade-icon{font-size:45px;margin-bottom:12px}
+.upgrade-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber);margin-bottom:8px}
+.upgrade-desc{font-size:16px;color:var(--muted);line-height:1.7;margin-bottom:20px}
 .upgrade-plans{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
-.upgrade-plan{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
+.upgrade-plan{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
 .upgrade-plan:hover{border-color:var(--amber)}
-.upgrade-plan-name{font-family:'Noto Serif JP',serif;font-size:13px;font-weight:600}
-.upgrade-plan-price{font-size:12px;color:var(--amber);font-weight:500}
-.upgrade-plan-detail{font-size:10px;color:var(--muted)}
-.upgrade-close{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;margin-top:4px}
+.upgrade-plan-name{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:600}
+.upgrade-plan-price{font-size:15px;color:var(--amber);font-weight:500}
+.upgrade-plan-detail{font-size:12px;color:var(--muted)}
+.upgrade-close{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;margin-top:4px}
 .upgrade-close:hover{color:var(--text)}
 
 /* === CANVAS === */
@@ -78,39 +97,39 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 #canvas:active{cursor:grabbing}
 
 /* === ADS === */
-.ad-sidebar{grid-column:2;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px}
-.ad-label{font-size:8px;color:#2E3A55;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
-.ad-slot-side{width:136px;min-height:600px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:9px}
-.ad-bottom{grid-column:1/-1;grid-row:3;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:6px}
-.ad-slot-bottom{width:728px;max-width:100%;height:90px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:9px}
+.ad-sidebar{grid-column:2;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px}
+.ad-label{font-size:10px;color:#2E3A55;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.ad-slot-side{width:136px;min-height:600px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px}
+.ad-bottom{grid-column:1/-1;grid-row:3;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:8px}
+.ad-slot-bottom{width:728px;max-width:100%;height:90px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px}
 
 /* === LOADING OVERLAY (with ad) === */
 .loading-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(8,12,24,0.85);z-index:60;backdrop-filter:blur(4px)}
 .loading-overlay.visible{display:flex}
 .loading-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite}
-.loading-text{font-family:'Noto Serif JP',serif;font-size:13px;color:var(--muted);letter-spacing:.08em}
-.loading-ad{width:300px;height:250px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:9px;margin-top:8px}
+.loading-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
+.loading-ad{width:300px;height:250px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px;margin-top:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* === STATUS (initial) === */
 .status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-.status-text{font-family:'Noto Serif JP',serif;font-size:13px;color:var(--muted);letter-spacing:.08em}
-.status-hint{margin-top:8px;font-size:11px;color:#2E3A55}
+.status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
+.status-hint{margin-top:8px;font-size:14px;color:#2E3A55}
 
 /* === GOLF PANEL === */
-.golf-panel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--border);border-radius:8px;padding:10px 16px;display:none;align-items:center;gap:14px;z-index:50;backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw}
+.golf-panel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:none;align-items:center;gap:14px;z-index:50;backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw}
 .golf-panel.visible{display:flex}
 .golf-leg{text-align:center}
-.golf-leg-label{font-size:8px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
-.golf-leg-word{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600}
+.golf-leg-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.golf-leg-word{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600}
 .golf-start .golf-leg-word{color:var(--blue)}
 .golf-goal .golf-leg-word{color:var(--goal)}
-.golf-arrow{color:var(--muted);font-size:12px}
+.golf-arrow{color:var(--muted);font-size:15px}
 .golf-stat{text-align:center}
-.golf-stat-num{font-family:'Inter',sans-serif;font-size:18px;font-weight:500;color:var(--amber)}
-.golf-stat-label{font-size:8px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.golf-stat-num{font-family:'Inter',sans-serif;font-size:22px;font-weight:500;color:var(--amber)}
+.golf-stat-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
 .golf-actions{display:flex;gap:6px;flex-wrap:wrap}
-.golf-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;padding:6px 10px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.golf-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:14px;padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
 .golf-btn:hover{border-color:var(--amber);color:var(--amber)}
 .golf-btn:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);color:var(--muted)}
 .golf-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber)}
@@ -118,24 +137,24 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === GOLF TRAIL === */
 .golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
 .golf-trail.visible{display:flex}
-.trail-word{font-family:'Noto Serif JP',serif;font-size:12px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:10px}
+.trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px}
 .trail-word.start{border-color:var(--blue);color:var(--blue)}
 .trail-word.goal{border-color:var(--goal);color:var(--goal)}
-.trail-sep{color:var(--muted);font-size:10px}
+.trail-sep{color:var(--muted);font-size:12px}
 
 /* === COMPLETION OVERLAY === */
-.completion{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px);padding:20px;overflow-y:auto}
+.completion{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px);padding:25px;overflow-y:auto}
 .completion.visible{display:flex}
-.comp-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber);margin-bottom:4px}
-.comp-grade{font-size:14px;color:var(--green);margin-bottom:16px}
+.comp-title{font-family:'Noto Serif JP',serif;font-size:28px;font-weight:600;color:var(--amber);margin-bottom:4px}
+.comp-grade{font-size:18px;color:var(--green);margin-bottom:16px}
 .comp-path{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin-bottom:20px}
-.comp-node{text-align:center;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:60px}
-.comp-node-word{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;color:var(--text)}
-.comp-node-dist{font-size:10px;margin-top:2px}
-.comp-node-reason{font-size:9px;color:var(--muted)}
-.comp-arrow{color:var(--muted);font-size:14px}
+.comp-node{text-align:center;padding:10px 15px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:60px}
+.comp-node-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
+.comp-node-dist{font-size:12px;margin-top:2px}
+.comp-node-reason{font-size:11px;color:var(--muted)}
+.comp-arrow{color:var(--muted);font-size:18px}
 .comp-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
-.comp-btn{padding:10px 18px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s}
+.comp-btn{padding:12px 22px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .15s}
 .comp-btn:hover{border-color:var(--amber);color:var(--amber)}
 .comp-btn.twitter{background:#1DA1F2;border-color:#1DA1F2;color:#fff}
 .comp-btn.twitter:hover{opacity:.85}
@@ -143,13 +162,13 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === OVERLAY UI === */
 .legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:5px;opacity:0;transition:opacity .4s;pointer-events:none}
 .legend.visible{opacity:1}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
 .legend-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:12px;max-width:200px;opacity:0;transition:opacity .15s;z-index:200;line-height:1.5}
+.tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 15px;font-size:15px;max-width:200px;opacity:0;transition:opacity .15s;z-index:200;line-height:1.5}
 .tooltip.visible{opacity:1}
-.tooltip-word{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;margin-bottom:3px}
-.tooltip-desc{color:var(--muted);font-size:11px}
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 18px;font-size:12px;opacity:0;transition:all .3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center}
+.tooltip-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;margin-bottom:3px}
+.tooltip-desc{color:var(--muted);font-size:14px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 22px;font-size:15px;opacity:0;transition:all .3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center}
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.success{border-color:var(--green)}
 .toast.error{border-color:var(--rose)}
@@ -157,33 +176,33 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === DAILY PANEL === */
 .daily-panel{position:fixed;top:0;right:0;width:360px;max-width:90vw;height:100dvh;background:var(--surface);border-left:1px solid var(--border);z-index:250;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;overflow-y:auto}
 .daily-panel.visible{transform:translateX(0)}
-.daily-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.daily-title{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:var(--amber)}
-.daily-date{font-size:10px;color:var(--muted);margin-top:2px}
-.daily-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
-.daily-body{padding:14px 16px}
-.puzzle-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.daily-header{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.daily-title{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600;color:var(--amber)}
+.daily-date{font-size:12px;color:var(--muted);margin-top:2px}
+.daily-close{background:none;border:none;color:var(--muted);font-size:25px;cursor:pointer}
+.daily-body{padding:18px 20px}
+.puzzle-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
 .puzzle-card:hover{border-color:var(--amber)}
 .puzzle-card.cleared{border-color:var(--green)}
 .puzzle-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.puzzle-diff{font-size:9px;padding:2px 6px;border-radius:8px}
+.puzzle-diff{font-size:11px;padding:2px 8px;border-radius:8px}
 .diff-易{background:rgba(78,203,168,.18);color:var(--green)}
 .diff-中{background:rgba(91,143,222,.18);color:var(--blue)}
 .diff-難{background:rgba(224,107,139,.18);color:var(--rose)}
 .diff-激難{background:rgba(155,114,232,.22);color:var(--violet)}
-.puzzle-par{font-size:10px;color:var(--muted)}
+.puzzle-par{font-size:12px;color:var(--muted)}
 .puzzle-route{display:flex;align-items:center;gap:8px}
-.puzzle-word{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600}
+.puzzle-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600}
 .puzzle-word.s{color:var(--blue)}
 .puzzle-word.g{color:var(--goal)}
 .puzzle-route .arrow{color:var(--muted)}
-.puzzle-result{font-size:10px;color:var(--green);margin-top:6px}
+.puzzle-result{font-size:12px;color:var(--green);margin-top:6px}
 .board-section{margin-top:8px}
 .board-tabs{display:flex;gap:4px;margin-bottom:10px}
-.board-tab{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px;border-radius:4px;cursor:pointer}
+.board-tab{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:8px;border-radius:4px;cursor:pointer}
 .board-tab.active{background:var(--amber);color:#080C18;border-color:var(--amber)}
 .board-list{display:flex;flex-direction:column;gap:2px}
-.board-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:7px 8px;border-radius:4px;font-size:12px}
+.board-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:9px 10px;border-radius:4px;font-size:15px}
 .board-row:nth-child(odd){background:var(--bg)}
 .board-row.me{background:rgba(245,166,35,.12);border:1px solid var(--amber)}
 .board-rank{font-family:'Inter',sans-serif;font-weight:500;color:var(--muted);text-align:center}
@@ -191,53 +210,53 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .board-name{font-family:'Noto Serif JP',serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .board-moves{font-family:'Inter',sans-serif;font-weight:500;color:var(--amber)}
 .board-moves small{color:var(--muted);font-weight:400}
-.board-path{font-size:9px;color:var(--muted);grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.board-empty{text-align:center;color:var(--muted);font-size:11px;padding:20px 0}
+.board-path{font-size:11px;color:var(--muted);grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-empty{text-align:center;color:var(--muted);font-size:14px;padding:25px 0}
 .name-row{display:flex;gap:6px;margin:4px 0 12px}
-.name-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:12px;padding:7px 10px;border-radius:4px;outline:none}
-.name-row label{font-size:10px;color:var(--muted);align-self:center;white-space:nowrap}
-.share-btn{width:100%;background:#1DA1F2;border:none;color:#fff;font-size:12px;padding:9px;border-radius:4px;cursor:pointer;margin-top:8px}
+.name-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:9px 12px;border-radius:4px;outline:none}
+.name-row label{font-size:12px;color:var(--muted);align-self:center;white-space:nowrap}
+.share-btn{width:100%;background:#1DA1F2;border:none;color:#fff;font-size:15px;padding:11px;border-radius:4px;cursor:pointer;margin-top:8px}
 .share-btn:hover{opacity:.85}
 
 /* === PIN TRAY === */
 .pin-tray{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:45;max-height:calc(100% - 80px);overflow-y:auto;pointer-events:none}
 .pin-tray:empty{display:none}
-.pin-chip{display:flex;align-items:center;gap:6px;background:rgba(17,23,38,0.92);border:1px solid var(--amber);border-radius:20px;padding:5px 10px 5px 12px;cursor:pointer;pointer-events:all;transition:all .15s;backdrop-filter:blur(6px);white-space:nowrap}
+.pin-chip{display:flex;align-items:center;gap:6px;background:rgba(17,23,38,0.92);border:1px solid var(--amber);border-radius:20px;padding:6px 12px 6px 15px;cursor:pointer;pointer-events:all;transition:all .15s;backdrop-filter:blur(6px);white-space:nowrap}
 .pin-chip:hover{background:rgba(245,166,35,0.15);transform:translateX(-2px)}
-.pin-chip-word{font-family:'Noto Serif JP',serif;font-size:12px;color:var(--amber)}
-.pin-chip-remove{background:none;border:none;color:var(--muted);font-size:14px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0}
+.pin-chip-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--amber)}
+.pin-chip-remove{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0}
 .pin-chip-remove:hover{color:var(--rose)}
 /* Tooltip pin button */
-.tt-pin{display:inline-block;margin-left:8px;cursor:pointer;font-size:12px;opacity:.6;transition:opacity .15s;user-select:none}
+.tt-pin{display:inline-block;margin-left:8px;cursor:pointer;font-size:15px;opacity:.6;transition:opacity .15s;user-select:none}
 .tt-pin:hover{opacity:1}
 .tt-pin.pinned{opacity:1;filter:saturate(2)}
 
 /* === MOBILE === */
 @media(max-width:768px){
   .pin-tray{top:8px;right:8px}
-  .pin-chip{padding:4px 8px 4px 10px}
-  .pin-chip-word{font-size:11px}
+  .pin-chip{padding:5px 10px 5px 12px}
+  .pin-chip-word{font-size:14px}
 }
   .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
   .ad-sidebar{display:none}
   .ad-slot-bottom{height:50px}
-  header{gap:6px;padding:6px 10px}
-  .logo{font-size:12px}
+  header{gap:6px;padding:8px 12px}
+  .logo{font-size:15px}
   .logo span{display:none}
-  .mode-tab{font-size:11px;padding:4px 8px}
+  .mode-tab{font-size:14px;padding:5px 10px}
   .search-wrap{min-width:140px;gap:4px}
-  input#wordInput{font-size:13px;padding:7px 10px}
-  button#exploreBtn{padding:7px 10px;font-size:11px}
+  input#wordInput{font-size:16px;padding:9px 12px}
+  button#exploreBtn{padding:9px 12px;font-size:14px}
   #engineSelect{display:none}
   .header-links{display:none}
-  .golf-panel{padding:8px 10px;gap:10px}
-  .golf-leg-word{font-size:13px}
-  .golf-stat-num{font-size:16px}
+  .golf-panel{padding:10px 12px;gap:10px}
+  .golf-leg-word{font-size:16px}
+  .golf-stat-num{font-size:20px}
   .legend{bottom:10px;left:8px}
-  .legend-item{font-size:9px}
+  .legend-item{font-size:11px}
   .loading-ad{width:250px;height:200px}
   .daily-panel{width:100vw}
-  .comp-title{font-size:18px}
+  .comp-title{font-size:22px}
 }
 @media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}
 </style>
@@ -289,6 +308,24 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         </div>
         <button class="upgrade-close" id="restoreBtn" style="color:var(--blue);margin-bottom:6px">購入済みの方はこちら（メールで復元）</button>
         <button class="upgrade-close" id="upgradeClose">明日また無料で遊ぶ</button>
+      </div>
+    </div>
+    <!-- アカウント／プラン管理パネル -->
+    <div class="account-overlay" id="accountOverlay">
+      <div class="account-card">
+        <div class="account-icon">✨</div>
+        <div class="account-title">プレミアム会員</div>
+        <div class="account-email" id="accountEmail">—</div>
+        <div class="account-plan">
+          <div class="account-plan-label">現在のプラン</div>
+          <div class="account-plan-name" id="accountPlanName">読み込み中…</div>
+          <div class="account-plan-detail" id="accountPlanDetail"></div>
+        </div>
+        <div class="account-actions">
+          <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
+          <button class="account-btn" id="accountLogout">この端末からログアウト</button>
+        </div>
+        <button class="account-close" id="accountClose">閉じる</button>
       </div>
     </div>
     <div class="status" id="status">
@@ -397,8 +434,20 @@ const golf={active:false,start:'',goal:'',par:0,moves:0,path:[],
 
 // Daily/Monthly state
 const daily={period:'daily',date:'',puzzles:[],current:0,results:{}};
-let handleName='';
-HN.addEventListener('input',()=>{handleName=HN.value.trim()});
+// 達成記録を復元（localStorage）
+try{const saved=localStorage_get('dailyResults');if(saved)daily.results=JSON.parse(saved)}catch{}
+function saveResults(){
+  // 古い記録を整理（最新60件まで保持）
+  const keys=Object.keys(daily.results);
+  if(keys.length>60){
+    keys.slice(0,keys.length-60).forEach(k=>delete daily.results[k]);
+  }
+  localStorage_set('dailyResults',JSON.stringify(daily.results));
+}
+
+let handleName=localStorage_get('handleName')||'';
+HN.value=handleName;
+HN.addEventListener('input',()=>{handleName=HN.value.trim();localStorage_set('handleName',handleName)});
 
 // ===== RESIZE =====
 function resize(){C.width=CA.clientWidth;C.height=CA.clientHeight}
@@ -523,6 +572,8 @@ function draw(){
   });
   X.globalAlpha=1;
   X.restore();
+  // 光の波紋（スクリーン座標で描画）
+  drawBursts();
 }
 
 function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
@@ -637,6 +688,87 @@ async function explore(word,fromWord){
 
 // ===== INTERACTIONS =====
 function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);return c?c.word:null}
+
+// 光の波紋エフェクト（ゴール到達時）
+let bursts=[];
+function triggerBurst(x,y){
+  bursts.push({x,y,r:0,max:Math.hypot(C.width,C.height),start:Date.now()});
+}
+function drawBursts(){
+  const now=Date.now();
+  bursts=bursts.filter(b=>now-b.start<900);
+  bursts.forEach(b=>{
+    const t=(now-b.start)/900; // 0→1
+    const r=b.max*t;
+    const alpha=(1-t)*0.9;
+    // 広がる光の輪
+    const grd=X.createRadialGradient(b.x,b.y,Math.max(0,r-60),b.x,b.y,r);
+    grd.addColorStop(0,`rgba(255,107,107,0)`);
+    grd.addColorStop(0.7,`rgba(255,180,120,${alpha*0.5})`);
+    grd.addColorStop(0.9,`rgba(245,166,35,${alpha})`);
+    grd.addColorStop(1,`rgba(255,255,255,0)`);
+    X.globalAlpha=1;
+    X.beginPath();X.arc(b.x,b.y,r,0,Math.PI*2);
+    X.lineWidth=8*(1-t)+2;X.strokeStyle=grd;X.stroke();
+    // 中心のフラッシュ
+    if(t<0.3){
+      const fa=(0.3-t)/0.3;
+      X.beginPath();X.arc(b.x,b.y,40*(1-fa),0,Math.PI*2);
+      X.fillStyle=`rgba(255,255,255,${fa*0.8})`;X.fill();
+    }
+  });
+  X.globalAlpha=1;
+}
+
+// ノード選択（ゴール判定を先に、検索はバックグラウンド）
+function selectNode(n,screenX,screenY){
+  if(!n||(n.fixed&&n.generation===gen))return;
+  const from=currentCenter();
+  WI.value=n.word;
+
+  // ★ゴール判定を最優先（検索より先に）
+  if(golf.active&&n.word===golf.goal){
+    // クリックしたノードの画面座標から光を放つ
+    const ccx=C.width/2,ccy=C.height/2;
+    const bx=(n.x-ccx)*zoom+ccx, by=(n.y-ccy)*zoom+ccy;
+    triggerBurst(bx,by);
+    // 手数・経路を記録
+    golf.moves++;golf.path.push(n.word);
+    GM.textContent=golf.moves;renderTrail();
+    // 少し余韻を持たせてから完了画面（光の演出を見せる）
+    setTimeout(()=>finishGolf(),800);
+    // 検索はバックグラウンドで（語彙空間も更新しておくが、ゴール判定はしない）
+    exploreBackground(n.word,from);
+    return;
+  }
+
+  // 通常の探索
+  if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
+  explore(n.word,from);
+}
+
+// ゴール後のバックグラウンド探索（ゴール判定なし・ローディング非表示）
+async function exploreBackground(word,fromWord){
+  if(fromWord)logTransition(fromWord,word);
+  try{
+    const[result,gravity]=await Promise.all([fetchWords(word),fetchGravity(word)]);
+    if(result._error)return;
+    gen++;
+    const cx=C.width/2,cy=C.height/2;
+    nodes.forEach(nd=>{if(nd.fixed&&nd.generation<gen)nd.fixed=false});
+    nodes.push({id:`c${gen}`,word,type:'center',fixed:true,x:cx,y:cy,generation:gen});
+    const maxC=Math.max(1,...Object.values(gravity));
+    (result.words||[]).filter(w=>w.word!==word).forEach((w,i)=>{
+      const pull=gravity[w.word]||0,ratio=pull/maxC,base=140+Math.random()*70;
+      nodes.push({id:`n${gen}_${i}`,word:w.word,reading:w.reading,type:w.type,
+        description:w.description,targetDist:base-ratio*60,pull,generation:gen,appearAt:Date.now()+i*120});
+      edges.push({source:`c${gen}`,target:`n${gen}_${i}`});
+      vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
+    });
+    initPhysics();if(animFrame)cancelAnimationFrame(animFrame);loop();
+  }catch{}
+}
+
 function getNodeAt(mx,my){
   const r=C.getBoundingClientRect();
   // スクリーン座標→ワールド座標（ズーム逆変換）
@@ -686,12 +818,7 @@ C.addEventListener('mouseup',e=>{
   const n=getNodeAt(e.clientX,e.clientY);
   if(n&&!(n.fixed&&n.generation===gen)){
     if(clickTimer)clearTimeout(clickTimer);
-    clickTimer=setTimeout(()=>{
-      const from=currentCenter();WI.value=n.word;
-      // Golf: save prev state for undo
-      if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
-      explore(n.word,from);
-    },220);
+    clickTimer=setTimeout(()=>{selectNode(n,e.clientX,e.clientY)},220);
   }
 });
 C.addEventListener('dblclick',()=>{if(clickTimer)clearTimeout(clickTimer)});
@@ -739,11 +866,7 @@ C.addEventListener('touchend',e=>{
     window.open(ES.value+encodeURIComponent(n.word),'_blank','noopener');lastTap=0;
   }else{
     lastTap=now;
-    setTimeout(()=>{if(lastTap===now){
-      const from=currentCenter();WI.value=n.word;
-      if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
-      explore(n.word,from);
-    }},310);
+    setTimeout(()=>{if(lastTap===now){selectNode(n,t.clientX,t.clientY)}},310);
   }
 });
 
@@ -803,9 +926,9 @@ pollLive();
 // ===== GOLF =====
 function handleGolfMove(word){
   if(word===golf.start&&golf.path.length===1)return;
+  if(word===golf.goal)return; // ゴールはselectNodeで処理済み
   golf.moves++;golf.path.push(word);
   GM.textContent=golf.moves;renderTrail();
-  if(word===golf.goal)finishGolf();
 }
 function renderTrail(){
   GT.classList.add('visible');
@@ -861,11 +984,15 @@ async function finishGolf(){
   // Daily/Monthly: submit score
   if(golf.daily){
     const idx=golf.dailyIdx,per=golf.dailyPeriod||'daily';
-    daily.results[per+':'+idx]={moves:golf.moves,path:fullPath};
+    daily.results[per+':'+daily.date+':'+idx]={moves:golf.moves,path:fullPath,date:daily.date};
+    saveResults(); // localStorageに永続化
     submitScore(per,idx,golf.moves,fullPath).then(()=>{
       if(daily.period===per){DP.classList.add('visible');renderPuzzles();loadBoard(idx)}
     });
+    savedSessions[per]=null; // 完了したので中断状態をクリア
     golf.daily=false;
+  }else{
+    savedSessions.golf=null; // 通常ゴルフ完了
   }
 }
 
@@ -904,10 +1031,10 @@ GH.addEventListener('click',async()=>{
     const d=await r.json();toast('ヒント: '+(d.hints||[]).join(' / '),'info',5000);
   }catch{toast('ヒント取得失敗','error')}
 });
-GN.addEventListener('click',startGolf);
+GN.addEventListener('click',()=>{savedSessions.golf=null;startGolf()});
 
 // ===== DAILY/MONTHLY =====
-function resultKey(p,i){return p+':'+i}
+function resultKey(p,i){return p+':'+daily.date+':'+i}
 async function openChallenge(period){
   daily.period=period;daily.current=0;
   DP.classList.add('visible');
@@ -932,6 +1059,7 @@ function renderPuzzles(){
 }
 function startDailyPuzzle(idx){
   const p=daily.puzzles[idx];if(!p)return;DP.classList.remove('visible');
+  savedSessions[daily.period]=null; // パネルから新規開始したら中断状態を破棄
   golf.active=true;golf.start=p.start;golf.goal=p.goal;golf.par=p.par||5;
   golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;
   golf.daily=true;golf.dailyIdx=idx;golf.dailyPeriod=daily.period;
@@ -975,17 +1103,65 @@ SB.addEventListener('click',()=>{
   shareOnX(text);
 });
 
-// ===== MODE SWITCH =====
+// ===== MODE SWITCH (進行状態を保存して途中再開) =====
+let currentMode='explore';
+// 各モードの中断状態を保存
+const savedSessions={golf:null,daily:null,monthly:null};
+
+// 現在のゴルフ状態のスナップショットを取る
+function snapshotGolf(){
+  if(!golf.active)return null;
+  return {
+    start:golf.start,goal:golf.goal,par:golf.par,moves:golf.moves,
+    path:[...golf.path],undoUsed:golf.undoUsed,
+    prevState:golf.prevState?{...golf.prevState,path:[...golf.prevState.path]}:null,
+    daily:golf.daily,dailyIdx:golf.dailyIdx,dailyPeriod:golf.dailyPeriod,
+    centerWord:currentCenter(),
+  };
+}
+// スナップショットからゴルフを復元
+function restoreGolf(s){
+  golf.active=true;golf.start=s.start;golf.goal=s.goal;golf.par=s.par;
+  golf.moves=s.moves;golf.path=[...s.path];golf.undoUsed=s.undoUsed;
+  golf.prevState=s.prevState;golf.daily=s.daily;golf.dailyIdx=s.dailyIdx;golf.dailyPeriod=s.dailyPeriod;
+  GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent=golf.moves;
+  GU.disabled=golf.undoUsed;GP.classList.add('visible');renderTrail();
+  // 中断時の中心語で語彙空間を再描画
+  WI.value=s.centerWord;explore(s.centerWord);
+  toast('続きから再開しました','info',1800);
+}
+
+function leaveMode(mode){
+  // ゴルフ系モードを離れるとき、進行中なら保存
+  if((mode==='golf'||mode==='daily'||mode==='monthly')&&golf.active){
+    savedSessions[mode]=snapshotGolf();
+  }
+}
+
 document.querySelectorAll('.mode-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
+    const m=tab.dataset.mode;
+    // 現在のモードの状態を保存
+    leaveMode(currentMode);
+
     document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
     tab.classList.add('active');
-    const m=tab.dataset.mode;
+
     golf.active=false;GP.classList.remove('visible');GT.classList.remove('visible');
     DP.classList.remove('visible');CO.classList.remove('visible');
-    if(m==='golf')startGolf();
-    else if(m==='daily')openChallenge('daily');
-    else if(m==='monthly')openChallenge('monthly');
+    currentMode=m;
+
+    if(m==='golf'){
+      if(savedSessions.golf){restoreGolf(savedSessions.golf)}
+      else startGolf();
+    }else if(m==='daily'){
+      if(savedSessions.daily){daily.period='daily';restoreGolf(savedSessions.daily)}
+      else openChallenge('daily');
+    }else if(m==='monthly'){
+      if(savedSessions.monthly){daily.period='monthly';restoreGolf(savedSessions.monthly)}
+      else openChallenge('monthly');
+    }
+    // explore モードは特に何もしない（現在の語彙空間がそのまま残る）
   });
 });
 
@@ -1038,7 +1214,8 @@ TTP.addEventListener('click',e=>{
 
 // ===== USAGE & UPGRADE =====
 function updateUsage(remaining,limit){
-  if(premiumEmail){UB.innerHTML='<span class="count">プレミアム</span>';UB.classList.remove('low');return}
+  if(premiumEmail){UB.innerHTML='<span class="count">✨ プレミアム</span>';UB.classList.remove('low');UB.classList.add('premium');return}
+  UB.classList.remove('premium');
   UC.textContent=remaining;
   UB.classList.toggle('low',remaining<=5);
 }
@@ -1047,6 +1224,66 @@ function showUpgrade(){
   UO.classList.add('visible');
 }
 UCL.addEventListener('click',()=>UO.classList.remove('visible'));
+
+// ===== ACCOUNT PANEL =====
+const AO=document.getElementById('accountOverlay');
+const accEmail=document.getElementById('accountEmail');
+const accPlanName=document.getElementById('accountPlanName');
+const accPlanDetail=document.getElementById('accountPlanDetail');
+
+// バッジクリック：課金者ならアカウント画面、未課金ならアップグレード画面
+UB.addEventListener('click',()=>{
+  if(premiumEmail)openAccount();
+  else showUpgrade();
+});
+
+async function openAccount(){
+  AO.classList.add('visible');
+  accEmail.textContent=premiumEmail;
+  accPlanName.textContent='読み込み中…';
+  accPlanDetail.textContent='';
+  try{
+    const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
+    const d=await r.json();
+    if(d.plan){
+      accPlanName.textContent=d.plan.label;
+      const yen=d.plan.amount?`¥${d.plan.amount.toLocaleString()}`:'';
+      const renew=d.plan.renewsAt?new Date(d.plan.renewsAt*1000).toLocaleDateString('ja-JP'):'';
+      if(d.plan.cancelAtEnd){
+        accPlanDetail.textContent=`${renew} に解約予定`;
+      }else{
+        accPlanDetail.textContent=`${yen} ・ 次回更新 ${renew}`;
+      }
+    }else{
+      accPlanName.textContent='プレミアム会員';
+      accPlanDetail.textContent='';
+    }
+  }catch{accPlanName.textContent='プレミアム会員'}
+}
+
+document.getElementById('accountClose').addEventListener('click',()=>AO.classList.remove('visible'));
+
+// プラン管理（Stripe Customer Portal）へ
+document.getElementById('managePlanBtn').addEventListener('click',async()=>{
+  toast('管理画面へ移動します…','info',2000);
+  try{
+    const r=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:premiumEmail})});
+    const d=await r.json();
+    if(d.url){location.href=d.url}
+    else{toast(d.error||'管理画面を開けませんでした','error',3000)}
+  }catch{toast('管理画面を開けませんでした','error',3000)}
+});
+
+// ログアウト（この端末のプレミアム情報を消す）
+document.getElementById('accountLogout').addEventListener('click',()=>{
+  if(!confirm('この端末からログアウトしますか？\n（課金は継続されます。再ログインはメール復元から可能です）'))return;
+  premiumEmail='';
+  try{localStorage.removeItem('premiumEmail')}catch{}
+  AO.classList.remove('visible');
+  toast('ログアウトしました','info',2500);
+  loadUsage();
+});
 
 // ===== STRIPE CHECKOUT =====
 async function startCheckout(plan){

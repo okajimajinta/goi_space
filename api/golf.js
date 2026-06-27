@@ -56,13 +56,13 @@ export default async function handler(req, res) {
         expandWord(seed.goal, ANTHROPIC_KEY),
       ]);
 
-      // パー（手数の目安）だけHaikuで軽く推定
-      let par = 5;
+      // パー（手数の目安）だけHaikuで軽く推定（実際の探索は手数がかさむため3倍に調整）
+      let par = 15;
       try {
         const parPrompt = `日本語のワードゴルフで「${start}」から関連語をたどって「${goal}」に到達するのに必要な手数の目安を整数だけで答えてください（4〜8程度）。数字のみ。`;
         const out = await callClaude(parPrompt, 20, true); // Haiku
         const n = parseInt(out.replace(/[^0-9]/g, ''), 10);
-        if (n >= 3 && n <= 12) par = n;
+        if (n >= 3 && n <= 12) par = n * 3;
       } catch {}
 
       return res.status(200).json({ start, goal, par, _remaining: rl.remaining, _limit: GOLF_LIMIT });

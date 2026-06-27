@@ -43,7 +43,7 @@ async function estimatePar(start, goal) {
     const data = await resp.json();
     const raw = data.content.map(c => c.text || '').join('');
     const n = parseInt(raw.replace(/[^0-9]/g, ''), 10);
-    if (n >= 3 && n <= 14) return n;
+    if (n >= 3 && n <= 14) return n * 3; // 実際は手数がかさむため3倍
   } catch {}
   return null;
 }
@@ -71,9 +71,9 @@ async function generatePuzzles(period, key) {
       expandWord(seed.goal, ANTHROPIC_KEY),
     ]);
 
-    // パー推定（失敗時はデフォルト）
+    // パー推定（失敗時はデフォルト・3倍基準）
     const par = await estimatePar(start, goal)
-      || (period === 'monthly' ? 7 : 5);
+      || (period === 'monthly' ? 21 : 15);
 
     puzzles.push({ start, goal, par, difficulty: diffs[i] });
   }
