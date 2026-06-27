@@ -78,6 +78,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .account-plan-row .k{color:var(--muted)}
 .account-plan-row .v{color:var(--text);font-weight:500}
 .account-plan-row .v.warn{color:var(--rose)}
+.account-handle{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;text-align:left}
+.account-handle label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.account-handle input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:9px 12px;border-radius:6px;outline:none}
+.account-handle input:focus{border-color:var(--amber)}
 .account-actions{display:flex;flex-direction:column;gap:10px}
 .account-btn{padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer;transition:all .15s}
 .account-btn:hover{border-color:var(--amber);color:var(--amber)}
@@ -332,6 +336,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           <div class="account-plan-name" id="accountPlanName">読み込み中…</div>
           <div class="account-plan-rows" id="accountPlanRows"></div>
         </div>
+        <div class="account-handle">
+          <label for="accountHandleInput">ハンドルネーム</label>
+          <input id="accountHandleInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/>
+        </div>
         <div class="account-actions">
           <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
           <button class="account-btn" id="accountLogout">この端末からログアウト</button>
@@ -459,7 +467,15 @@ function saveResults(){
 
 let handleName=localStorage_get('handleName')||'';
 HN.value=handleName;
-HN.addEventListener('input',()=>{handleName=HN.value.trim();localStorage_set('handleName',handleName)});
+// ハンドルネームを一元管理（複数の入力欄を同期）
+function setHandleName(v){
+  handleName=String(v||'').trim();
+  localStorage_set('handleName',handleName);
+  if(HN.value!==handleName)HN.value=handleName;
+  const ah=document.getElementById('accountHandleInput');
+  if(ah&&ah.value!==handleName)ah.value=handleName;
+}
+HN.addEventListener('input',()=>setHandleName(HN.value));
 
 // ===== RESIZE =====
 function resize(){C.width=CA.clientWidth;C.height=CA.clientHeight}
@@ -627,8 +643,9 @@ function logTransition(from,to){
 }
 
 // ===== EXPLORE (gradual transition + sequential appearance) =====
-async function explore(word,fromWord){
+async function explore(word,fromWord,opts){
   if(!word.trim())return;
+  const suppressGolfMove=opts&&opts.suppressGolfMove;
   // Game protection: block explore from history during golf
   if(golf.active&&fromWord==='__history__')return;
   if(fromWord&&fromWord!=='__history__')logTransition(fromWord,word);
@@ -693,8 +710,8 @@ async function explore(word,fromWord){
 
     LO.classList.remove('visible');
 
-    // Golf: goal check
-    if(golf.active)handleGolfMove(word);
+    // Golf: goal check（再開時など抑制フラグがあればスキップ）
+    if(golf.active&&!suppressGolfMove)handleGolfMove(word);
   }catch(err){
     LO.classList.remove('visible');
     toast('エラーが発生しました','error');
@@ -985,7 +1002,8 @@ async function finishGolf(){
   }).join('');
 
   const periodLabel=golf.daily?(golf.dailyPeriod==='monthly'?'マンスリー':'デイリー'):'';
-  const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
+  const who=handleName?`${handleName} さんの記録\n`:'';
+  const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${who}${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
 
   CO.innerHTML=`
     <div class="comp-title">ゴール！🎉</div>
@@ -1020,7 +1038,7 @@ GU.addEventListener('click',()=>{
   GM.textContent=golf.moves;renderTrail();
   WI.value=golf.prevState.word;
   gen--;// step back one generation visually
-  explore(golf.prevState.word);
+  explore(golf.prevState.word,null,{suppressGolfMove:true});
   toast('手戻りしました（残り0回）','info');
 });
 
@@ -1074,7 +1092,13 @@ function renderPuzzles(){
   PL.querySelectorAll('.puzzle-card').forEach(c=>c.addEventListener('click',()=>startDailyPuzzle(Number(c.dataset.puzzle))));
 }
 function startDailyPuzzle(idx){
-  const p=daily.puzzles[idx];if(!p)return;DP.classList.remove('visible');
+  const p=daily.puzzles[idx];if(!p)return;
+  // ハンドルネーム未設定なら確認
+  if(!handleName){
+    const ok=confirm('ハンドルネームが未設定です。\n「名無し」のまま開始しますか？\n\n（キャンセルを押すと、上の入力欄でハンドルネームを設定できます）');
+    if(!ok){HN.focus();return}
+  }
+  DP.classList.remove('visible');
   savedSessions[daily.period]=null; // パネルから新規開始したら中断状態を破棄
   golf.active=true;golf.start=p.start;golf.goal=p.goal;golf.par=p.par||5;
   golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;
@@ -1114,7 +1138,7 @@ SB.addEventListener('click',()=>{
   const idx=daily.current,p=daily.puzzles[idx],res=daily.results[resultKey(daily.period,idx)];
   const label=daily.period==='monthly'?'マンスリー':'デイリー';
   let text=`語彙ゴルフ ${label} 🏌️ ${daily.date}\n第${idx+1}問：${p?p.start+'→'+p.goal:''}`;
-  if(res)text+=`\n私の記録：${res.moves}手（パー${p.par}）`;
+  if(res)text+=`\n${handleName?handleName+' さんの記録：':'私の記録：'}${res.moves}手（パー${p.par}）`;
   text+=`\nあなたも挑戦！`;
   shareOnX(text);
 });
@@ -1142,8 +1166,8 @@ function restoreGolf(s){
   golf.prevState=s.prevState;golf.daily=s.daily;golf.dailyIdx=s.dailyIdx;golf.dailyPeriod=s.dailyPeriod;
   GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent=golf.moves;
   GU.disabled=golf.undoUsed;GP.classList.add('visible');renderTrail();
-  // 中断時の中心語で語彙空間を再描画
-  WI.value=s.centerWord;explore(s.centerWord);
+  // 中断時の中心語で語彙空間を再描画（手数を増やさないよう抑制）
+  WI.value=s.centerWord;explore(s.centerWord,null,{suppressGolfMove:true});
   toast('続きから再開しました','info',1800);
 }
 
@@ -1286,6 +1310,12 @@ async function openAccount(){
   AO.classList.add('visible');
   accEmail.textContent=premiumEmail;
   accPlanName.textContent='読み込み中…';
+  // ハンドルネーム欄に現在値を反映＋編集リスナー（初回のみ登録）
+  const ah=document.getElementById('accountHandleInput');
+  if(ah){
+    ah.value=handleName;
+    if(!ah._wired){ah._wired=true;ah.addEventListener('input',()=>setHandleName(ah.value))}
+  }
   const rows=document.getElementById('accountPlanRows');
   rows.innerHTML='';
   try{

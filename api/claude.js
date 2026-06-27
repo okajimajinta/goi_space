@@ -127,7 +127,7 @@ function logLive(word) {
 // 文脈語生成：前の語(prev)から現在の語(cur)への流れを踏まえた関連語をHaikuで生成
 async function generateContextWords(prev, cur) {
   if (!prev || prev === cur) return [];
-  const prompt = `日本語の語彙探索です。「${prev}」から「${cur}」へと連想が移りました。この2語の流れ・文脈を踏まえて、両者を橋渡しする・あるいはこの文脈で次に連想される語を3〜4語挙げてください。各語に読み仮名と、なぜこの文脈で出てくるかの一言説明（20字以内）を添えてください。JSON配列のみ：[{"word":"語","reading":"よみ","description":"説明"}]`;
+  const prompt = `日本語の語彙探索です。「${prev}」から「${cur}」へと連想が移りました。この2語の流れ・文脈を踏まえて、両者を橋渡しする・あるいはこの文脈で次に連想される語をちょうど3語挙げてください。各語に読み仮名と、なぜこの文脈で出てくるかの一言説明（20字以内）を添えてください。JSON配列のみ：[{"word":"語","reading":"よみ","description":"説明"}]`;
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -148,6 +148,7 @@ async function generateContextWords(prev, cur) {
     if (Array.isArray(arr)) {
       return arr
         .filter(w => w && w.word && w.word !== cur && w.word !== prev)
+        .slice(0, 3)
         .map(w => ({ word: w.word, reading: w.reading || '', type: 'context', description: w.description || '' }));
     }
   } catch {}
