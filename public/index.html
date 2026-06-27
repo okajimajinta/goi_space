@@ -8,6 +8,14 @@
 <meta property="og:title" content="語彙空間 — 言葉の宇宙を探索する">
 <meta property="og:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://goispace.app">
+<meta property="og:image" content="https://goispace.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="語彙空間 — 言葉の宇宙を探索する">
+<meta name="twitter:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
+<meta name="twitter:image" content="https://goispace.app/og-image.png">
 <!-- アイコン -->
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -767,9 +775,15 @@ function toast(msg,type='info',ms=2600){
 }
 
 // ===== X (TWITTER) SHARE =====
-function shareOnX(text){
-  const url='https://twitter.com/intent/tweet?text='+encodeURIComponent(text);
-  window.open(url,'_blank','noopener,width=550,height=420');
+const SITE_URL='https://goispace.app';
+function shareOnX(text,opts={}){
+  // text・url・hashtagsを正しいパラメータで渡す（Xがリンクカードを生成）
+  const params=new URLSearchParams();
+  params.set('text',text);
+  params.set('url',opts.url||SITE_URL);
+  params.set('hashtags',opts.hashtags||'語彙空間,ワードゴルフ');
+  const url='https://twitter.com/intent/tweet?'+params.toString();
+  window.open(url,'_blank','noopener,width=550,height=480');
 }
 
 // ===== AD REFRESH =====
@@ -957,7 +971,7 @@ SB.addEventListener('click',()=>{
   const label=daily.period==='monthly'?'マンスリー':'デイリー';
   let text=`語彙ゴルフ ${label} 🏌️ ${daily.date}\n第${idx+1}問：${p?p.start+'→'+p.goal:''}`;
   if(res)text+=`\n私の記録：${res.moves}手（パー${p.par}）`;
-  text+=`\n\nあなたも挑戦 → ${location.origin}`;
+  text+=`\nあなたも挑戦！`;
   shareOnX(text);
 });
 
