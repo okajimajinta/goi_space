@@ -73,6 +73,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .account-plan-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
 .account-plan-name{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
 .account-plan-detail{font-size:12px;color:var(--muted);margin-top:6px}
+.account-plan-rows{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.account-plan-row{display:flex;justify-content:space-between;font-size:13px}
+.account-plan-row .k{color:var(--muted)}
+.account-plan-row .v{color:var(--text);font-weight:500}
+.account-plan-row .v.warn{color:var(--rose)}
 .account-actions{display:flex;flex-direction:column;gap:10px}
 .account-btn{padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer;transition:all .15s}
 .account-btn:hover{border-color:var(--amber);color:var(--amber)}
@@ -165,10 +170,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .comp-btn.twitter:hover{opacity:.85}
 
 /* === OVERLAY UI === */
-.legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:5px;opacity:0;transition:opacity .4s;pointer-events:none}
+.legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:8px;opacity:0;transition:opacity .4s;pointer-events:none;background:rgba(17,23,38,0.7);padding:12px 14px;border-radius:8px;border:1px solid var(--border)}
 .legend.visible{opacity:1}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
-.legend-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text)}
+.legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
 .tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 15px;font-size:15px;max-width:200px;opacity:0;transition:opacity .15s;z-index:200;line-height:1.5}
 .tooltip.visible{opacity:1}
 .tooltip-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;margin-bottom:3px}
@@ -269,7 +274,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 <body>
 <div class="layout">
   <header>
-    <div class="logo">語彙空間<span>Lexical Space</span></div>
+    <div class="logo">語彙空間<span>GOI-Space</span></div>
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="explore">探索</button>
       <button class="mode-tab" data-mode="golf">ゴルフ</button>
@@ -325,7 +330,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         <div class="account-plan">
           <div class="account-plan-label">現在のプラン</div>
           <div class="account-plan-name" id="accountPlanName">読み込み中…</div>
-          <div class="account-plan-detail" id="accountPlanDetail"></div>
+          <div class="account-plan-rows" id="accountPlanRows"></div>
         </div>
         <div class="account-actions">
           <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
@@ -358,6 +363,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>対義語</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--rose)"></div>感情</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>比喩</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E8C547"></div>コンテキスト</div>
     </div>
     <div class="loading-overlay" id="loadingOverlay">
       <div class="loading-spinner"></div>
@@ -412,7 +418,7 @@ UO=document.getElementById('upgradeOverlay'),UCL=document.getElementById('upgrad
 PT=document.getElementById('pinTray'),TTP=document.getElementById('ttPin');
 
 // ===== COLORS =====
-const COL={center:'#F5A623',synonym:'#5B8FDE',antonym:'#4ECBA8',emotion:'#E06B8B',metaphor:'#9B72E8',goal:'#FF6B6B'};
+const COL={center:'#F5A623',synonym:'#5B8FDE',antonym:'#4ECBA8',emotion:'#E06B8B',metaphor:'#9B72E8',context:'#E8C547',goal:'#FF6B6B'};
 
 // ===== STATE =====
 let nodes=[],edges=[],gen=0,pan={x:0,y:0},zoom=1,
@@ -596,17 +602,19 @@ function apiHeaders(){
 function localStorage_get(k){try{return localStorage.getItem(k)}catch{return null}}
 function localStorage_set(k,v){try{localStorage.setItem(k,v)}catch{}}
 
-async function fetchWords(word){
-  if(vocabCache[word]){
-    const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
+async function fetchWords(word,context){
+  // 文脈つきの探索はキャッシュを使わない（毎回文脈語が変わるため）
+  const body=context?{word,context}:{word};
+  if(!context&&vocabCache[word]){
+    const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
     const data=await resp.json();
     if(resp.status===429)return{_error:'daily_limit',_message:data.message};
     vocabCache[word]=data;return data;
   }
-  const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
+  const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
   if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
   if(!resp.ok)throw new Error('API error '+resp.status);
-  const data=await resp.json();vocabCache[word]=data;return data;
+  const data=await resp.json();if(!context)vocabCache[word]=data;return data;
 }
 async function fetchGravity(word){
   try{const r=await fetch(`/api/transitions?word=${encodeURIComponent(word)}`);
@@ -634,7 +642,9 @@ async function explore(word,fromWord){
   refreshAd();
 
   try{
-    const[result,gravity]=await Promise.all([fetchWords(word),fetchGravity(word)]);
+    // 前の語があれば文脈として渡す（A→Bの流れからコンテキスト語を追加生成）
+    const context=(fromWord&&fromWord!=='__history__')?fromWord:null;
+    const[result,gravity]=await Promise.all([fetchWords(word,context),fetchGravity(word)]);
 
     // Check for rate limit error
     if(result._error==='daily_limit'){
@@ -1236,12 +1246,16 @@ UCL.addEventListener('click',()=>UO.classList.remove('visible'));
 const AO=document.getElementById('accountOverlay');
 const accEmail=document.getElementById('accountEmail');
 const accPlanName=document.getElementById('accountPlanName');
-const accPlanDetail=document.getElementById('accountPlanDetail');
 
-// バッジクリック：課金者ならアカウント画面、未課金ならアップグレード画面
+// バッジクリック：課金者ならアカウント画面、未課金ならアップグレード画面（トグル）
 UB.addEventListener('click',()=>{
-  if(premiumEmail)openAccount();
-  else showUpgrade();
+  if(premiumEmail){
+    if(AO.classList.contains('visible'))AO.classList.remove('visible');
+    else openAccount();
+  }else{
+    if(UO.classList.contains('visible'))UO.classList.remove('visible');
+    else showUpgrade();
+  }
 });
 
 // アカウントタブ（常時表示・モバイルでも見える）
@@ -1257,30 +1271,43 @@ function updateAccountTab(){
   }
 }
 accountTab.addEventListener('click',()=>{
-  if(premiumEmail)openAccount();
-  else showUpgrade();
+  if(premiumEmail){
+    // 表示中なら閉じる（トグル）
+    if(AO.classList.contains('visible'))AO.classList.remove('visible');
+    else openAccount();
+  }else{
+    // アップグレード画面もトグル
+    if(UO.classList.contains('visible'))UO.classList.remove('visible');
+    else showUpgrade();
+  }
 });
 
 async function openAccount(){
   AO.classList.add('visible');
   accEmail.textContent=premiumEmail;
   accPlanName.textContent='読み込み中…';
-  accPlanDetail.textContent='';
+  const rows=document.getElementById('accountPlanRows');
+  rows.innerHTML='';
   try{
     const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
     const d=await r.json();
     if(d.plan){
       accPlanName.textContent=d.plan.label;
+      const fmt=ts=>ts?new Date(ts*1000).toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'}):'—';
       const yen=d.plan.amount?`¥${d.plan.amount.toLocaleString()}`:'';
-      const renew=d.plan.renewsAt?new Date(d.plan.renewsAt*1000).toLocaleDateString('ja-JP'):'';
+      const list=[];
+      list.push(['料金',`${yen} / ${d.plan.interval==='year'?'年':'月'}`]);
+      if(d.plan.startedAt)list.push(['入会日',fmt(d.plan.startedAt)]);
       if(d.plan.cancelAtEnd){
-        accPlanDetail.textContent=`${renew} に解約予定`;
+        list.push(['解約予定日',fmt(d.plan.renewsAt),'warn']);
       }else{
-        accPlanDetail.textContent=`${yen} ・ 次回更新 ${renew}`;
+        list.push(['次回課金日',fmt(d.plan.renewsAt)]);
       }
+      rows.innerHTML=list.map(([k,v,cls])=>
+        `<div class="account-plan-row"><span class="k">${k}</span><span class="v ${cls||''}">${v}</span></div>`
+      ).join('');
     }else{
       accPlanName.textContent='プレミアム会員';
-      accPlanDetail.textContent='';
     }
   }catch{accPlanName.textContent='プレミアム会員'}
 }

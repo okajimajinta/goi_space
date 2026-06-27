@@ -77,6 +77,7 @@ export default async function handler(req, res) {
               interval,
               amount,
               label: interval === 'year' ? '年額プラン' : '月額プラン',
+              startedAt: s.start_date || s.created,
               renewsAt: s.current_period_end,
               cancelAtEnd: s.cancel_at_period_end,
             };
