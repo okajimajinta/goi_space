@@ -374,7 +374,7 @@ const COL={center:'#F5A623',synonym:'#5B8FDE',antonym:'#4ECBA8',emotion:'#E06B8B
 
 // ===== STATE =====
 let nodes=[],edges=[],gen=0,pan={x:0,y:0},
-drag=false,moved=false,dStart={x:0,y:0},pStart={x:0,y:0},
+drag=false,moved=false,dStart={x:0,y:0},pStart={x:0,y:0},dLast={x:0,y:0},
 wHist=[],hoverN=null,simTick=0,animFrame=null,time=0,
 clickTimer=null,lastTap=0;
 
@@ -490,7 +490,7 @@ function draw(){
 
     // Live blink: if other user searched this word
     const blink=liveWords.includes(n.word);
-    const blinkAlpha=blink?(0.6+0.4*Math.sin(time*0.15)):1;
+    const blinkAlpha=blink?(0.55+0.45*Math.sin(time*0.04)):1;
 
     X.globalAlpha=o*blinkAlpha;
 
@@ -657,13 +657,14 @@ C.addEventListener('dblclick',e=>{
 });
 
 // Mouse
-C.addEventListener('mousedown',e=>{drag=true;moved=false;dStart={x:e.clientX,y:e.clientY};pStart={...pan}});
+C.addEventListener('mousedown',e=>{drag=true;moved=false;dStart={x:e.clientX,y:e.clientY};dLast={x:e.clientX,y:e.clientY}});
 C.addEventListener('mousemove',e=>{
   if(drag){
     if(Math.abs(e.clientX-dStart.x)>4||Math.abs(e.clientY-dStart.y)>4)moved=true;
-    pan.x=pStart.x+(e.clientX-dStart.x);pan.y=pStart.y+(e.clientY-dStart.y);
-    const c=nodes.find(n=>n.fixed&&n.generation===gen);
-    if(c){c.x=C.width/2-pan.x;c.y=C.height/2-pan.y}
+    // 全ノードを差分だけ移動（画面全体のパン）
+    const ddx=e.clientX-dLast.x,ddy=e.clientY-dLast.y;
+    nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
+    dLast={x:e.clientX,y:e.clientY};
     return;
   }
   const n=getNodeAt(e.clientX,e.clientY);hoverN=n||null;
@@ -695,14 +696,14 @@ C.addEventListener('mouseleave',()=>{drag=false;TT.classList.remove('visible')})
 
 // Touch
 C.addEventListener('touchstart',e=>{
-  const t=e.touches[0];dStart={x:t.clientX,y:t.clientY};pStart={...pan};drag=true;moved=false;
+  const t=e.touches[0];dStart={x:t.clientX,y:t.clientY};dLast={x:t.clientX,y:t.clientY};drag=true;moved=false;
 },{passive:true});
 C.addEventListener('touchmove',e=>{
   e.preventDefault();const t=e.touches[0];
   if(Math.abs(t.clientX-dStart.x)>4||Math.abs(t.clientY-dStart.y)>4)moved=true;
-  pan.x=pStart.x+(t.clientX-dStart.x);pan.y=pStart.y+(t.clientY-dStart.y);
-  const c=nodes.find(n=>n.fixed&&n.generation===gen);
-  if(c){c.x=C.width/2-pan.x;c.y=C.height/2-pan.y}
+  const ddx=t.clientX-dLast.x,ddy=t.clientY-dLast.y;
+  nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
+  dLast={x:t.clientX,y:t.clientY};
 },{passive:false});
 C.addEventListener('touchend',e=>{
   drag=false;if(moved)return;
