@@ -666,7 +666,7 @@ C.addEventListener('dblclick',e=>{
 });
 
 // Mouse
-C.addEventListener('mousedown',e=>{drag=true;moved=false;dStart={x:e.clientX,y:e.clientY};dLast={x:e.clientX,y:e.clientY}});
+C.addEventListener('mousedown',e=>{if(e.button!==0)return;drag=true;moved=false;dStart={x:e.clientX,y:e.clientY};dLast={x:e.clientX,y:e.clientY}});
 C.addEventListener('mousemove',e=>{
   if(drag){
     if(Math.abs(e.clientX-dStart.x)>4||Math.abs(e.clientY-dStart.y)>4)moved=true;
@@ -688,6 +688,7 @@ C.addEventListener('mousemove',e=>{
   }else TT.classList.remove('visible');
 });
 C.addEventListener('mouseup',e=>{
+  if(e.button!==0){drag=false;return}
   drag=false;if(moved)return;
   const n=getNodeAt(e.clientX,e.clientY);
   if(n&&!(n.fixed&&n.generation===gen)){
