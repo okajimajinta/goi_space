@@ -1,12 +1,11 @@
-// api/golf.js
-// ワードゴルフ用API。
-//   action="pair"      → ランダムなスタート/ゴールのワードペアを生成
-//   action="validate"  → 現在の語から次の語へ「語彙的につながるか」を判定
-//   action="hint"      → 現在の語からゴールに近づく中継語の候補を返す
+// api/golf.js — ワードゴルフAPI（レートリミット付き、軽量タスクはHaiku）
+
+import { checkLimit } from './_ratelimit.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
-async function callClaude(prompt, maxTokens = 400) {
+// 軽量タスク（ヒント・距離）はHaiku、お題生成はSonnet
+async function callClaude(prompt, maxTokens = 400, useHaiku = false) {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -15,7 +14,7 @@ async function callClaude(prompt, maxTokens = 400) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -24,6 +23,9 @@ async function callClaude(prompt, maxTokens = 400) {
   const raw = data.content.map(c => c.text || '').join('');
   return raw.replace(/```json|```/g, '').trim();
 }
+
+const GOLF_LIMIT = 3;  // 1日のゴルフ回数
+const HINT_LIMIT = 3;  // 1日のヒント回数
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -35,8 +37,17 @@ export default async function handler(req, res) {
   const { action } = req.body || {};
 
   try {
-    // --- ランダムなワードペア生成 ---
+    // --- お題生成（レートリミット付き） ---
     if (action === 'pair') {
+      const rl = await checkLimit(req, 'golf', GOLF_LIMIT);
+      if (!rl.ok) {
+        return res.status(429).json({
+          error: 'daily_limit',
+          message: `本日の無料ゴルフ回数（${GOLF_LIMIT}回）に達しました`,
+          remaining: 0,
+        });
+      }
+
       const prompt = `
 日本語のワードゴルフ用に、スタートとゴールの単語ペアを1組作ってください。
 条件：
@@ -47,12 +58,24 @@ export default async function handler(req, res) {
 JSON形式のみで返答：
 {"start":"語","goal":"語","par":手数の目安(整数)}
 `.trim();
-      const out = await callClaude(prompt, 150);
-      return res.status(200).json(JSON.parse(out));
+      const out = await callClaude(prompt, 150, false); // Sonnet
+      const parsed = JSON.parse(out);
+      parsed._remaining = rl.remaining;
+      parsed._limit = GOLF_LIMIT;
+      return res.status(200).json(parsed);
     }
 
-    // --- ヒント（中継語候補） ---
+    // --- ヒント（Haikuで安く、レートリミット付き） ---
     if (action === 'hint') {
+      const rl = await checkLimit(req, 'hint', HINT_LIMIT);
+      if (!rl.ok) {
+        return res.status(429).json({
+          error: 'daily_limit',
+          message: `本日の無料ヒント回数（${HINT_LIMIT}回）に達しました`,
+          remaining: 0,
+        });
+      }
+
       const { from, goal } = req.body;
       if (!from || !goal) return res.status(400).json({ error: 'from/goal required' });
       const prompt = `
@@ -62,7 +85,27 @@ JSON形式のみで返答：
 JSON形式のみで返答：
 {"hints":["語1","語2","語3"]}
 `.trim();
-      const out = await callClaude(prompt, 150);
+      const out = await callClaude(prompt, 150, true); // Haiku（安い）
+      const parsed = JSON.parse(out);
+      parsed._remaining = rl.remaining;
+      return res.status(200).json(parsed);
+    }
+
+    // --- 距離測定（Haikuで安く） ---
+    if (action === 'distance') {
+      const { words, goal } = req.body;
+      if (!words || !goal) return res.status(400).json({ error: 'words/goal required' });
+      const list = words.slice(0, 20).join('、');
+      const prompt = `
+以下の日本語の語それぞれと「${goal}」との意味的距離を1〜10で評価してください。
+1=ほぼ同じ意味、10=全く関係ない。
+
+語のリスト：${list}
+
+JSON形式のみで返答：
+{"distances":[{"word":"語","distance":数値,"reason":"一言理由(10字以内)"}]}
+`.trim();
+      const out = await callClaude(prompt, 500, true); // Haiku
       return res.status(200).json(JSON.parse(out));
     }
 

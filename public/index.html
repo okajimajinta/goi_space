@@ -2,1366 +2,1008 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="description" content="語彙空間 — 言葉を入力すると、類義語・対義語・感情・比喩が星雲のように広がる語彙探索ツール">
-<meta name="keywords" content="語彙,類義語,対義語,言葉,国語,日本語,辞書">
 <title>語彙空間 — 言葉の宇宙を探索する</title>
-
-<!-- OGP（SNSシェア用） -->
 <meta property="og:title" content="語彙空間 — 言葉の宇宙を探索する">
 <meta property="og:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
 <meta property="og:type" content="website">
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-
-<!--
-  ▼▼▼ Google AdSense ▼▼▼
-  手順：
-  1. https://adsense.google.com でアカウント作成
-  2. サイト審査が通ったら、下の YOUR-PUBLISHER-ID を自分のIDに書き換える
-     例: ca-pub-1234567890123456
-  3. 審査中はこのタグをコメントアウトしたままにしてOK
--->
 <!--
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR-PUBLISHER-ID" crossorigin="anonymous"></script>
 -->
-
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080C18;--surface:#111726;--border:#1E2840;--text:#D4DCF0;--muted:#5B6A8A;--amber:#F5A623;--blue:#5B8FDE;--green:#4ECBA8;--rose:#E06B8B;--violet:#9B72E8;--goal:#FF6B6B}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Inter','Noto Serif JP',sans-serif;overflow:hidden;touch-action:none}
 
-  :root {
-    --bg: #080C18;
-    --surface: #111726;
-    --border: #1E2840;
-    --text: #D4DCF0;
-    --muted: #5B6A8A;
-    --amber: #F5A623;
-    --blue: #5B8FDE;
-    --green: #4ECBA8;
-    --rose: #E06B8B;
-    --violet: #9B72E8;
-  }
+/* === LAYOUT === */
+.layout{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr 160px;height:100dvh}
 
-  html, body {
-    width: 100%; height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', 'Noto Serif JP', sans-serif;
-    overflow: hidden;
-  }
+/* === HEADER === */
+header{grid-column:1/-1;padding:8px 16px;display:flex;align-items:center;gap:10px;background:rgba(8,12,24,0.98);border-bottom:1px solid var(--border);flex-wrap:wrap;z-index:100}
+.logo{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;color:var(--amber);white-space:nowrap;flex-shrink:0}
+.logo span{color:var(--muted);font-weight:300;font-size:10px;margin-left:4px}
+.mode-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px;flex-shrink:0}
+.mode-tab{background:transparent;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:12px;padding:5px 10px;border-radius:3px;cursor:pointer;transition:all .15s}
+.mode-tab.active{background:var(--amber);color:#080C18}
+.mode-tab:not(.active):hover{color:var(--text)}
+.search-wrap{flex:1;min-width:180px;display:flex;gap:6px}
+input#wordInput{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:8px 12px;border-radius:4px;outline:none;transition:border-color .2s}
+input#wordInput::placeholder{color:var(--muted)}
+input#wordInput:focus{border-color:var(--amber)}
+button#exploreBtn{background:var(--amber);color:#080C18;border:none;padding:8px 14px;border-radius:4px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
+#engineSelect{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px;border-radius:4px;cursor:pointer;outline:none;flex-shrink:0;max-width:90px}
+.header-links{display:flex;gap:10px;flex-shrink:0}
+.header-links a{font-size:10px;color:var(--muted);text-decoration:none}
 
-  /* ===== LAYOUT ===== */
-  .layout {
-    display: grid;
-    grid-template-rows: 64px 1fr 90px;
-    grid-template-columns: 1fr 160px;
-    height: 100vh;
-    gap: 0;
-  }
+/* === USAGE COUNTER === */
+.usage-badge{font-family:'Inter',sans-serif;font-size:10px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:4px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.usage-badge .count{color:var(--amber);font-weight:500}
+.usage-badge.low .count{color:var(--rose)}
 
-  /* ===== HEADER ===== */
-  header {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    z-index: 100;
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    background: rgba(8,12,24,0.98);
-    border-bottom: 1px solid var(--border);
-  }
+/* === UPGRADE PROMPT === */
+.upgrade-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
+.upgrade-overlay.visible{display:flex}
+.upgrade-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px 32px;text-align:center;max-width:380px;width:90%}
+.upgrade-icon{font-size:36px;margin-bottom:12px}
+.upgrade-title{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--amber);margin-bottom:8px}
+.upgrade-desc{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px}
+.upgrade-plans{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.upgrade-plan{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
+.upgrade-plan:hover{border-color:var(--amber)}
+.upgrade-plan-name{font-family:'Noto Serif JP',serif;font-size:13px;font-weight:600}
+.upgrade-plan-price{font-size:12px;color:var(--amber);font-weight:500}
+.upgrade-plan-detail{font-size:10px;color:var(--muted)}
+.upgrade-close{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;margin-top:4px}
+.upgrade-close:hover{color:var(--text)}
 
-  .logo {
-    font-family: 'Noto Serif JP', serif;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    color: var(--amber);
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .logo span {
-    color: var(--muted);
-    font-weight: 300;
-    font-size: 11px;
-    margin-left: 6px;
-  }
+/* === CANVAS === */
+.canvas-area{grid-column:1;grid-row:2;position:relative;overflow:hidden}
+#canvas{position:absolute;inset:0;cursor:grab}
+#canvas:active{cursor:grabbing}
 
-  .search-wrap {
-    flex: 1;
-    max-width: 480px;
-    display: flex;
-    gap: 8px;
-  }
+/* === ADS === */
+.ad-sidebar{grid-column:2;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px}
+.ad-label{font-size:8px;color:#2E3A55;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.ad-slot-side{width:136px;min-height:600px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:9px}
+.ad-bottom{grid-column:1/-1;grid-row:3;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:6px}
+.ad-slot-bottom{width:728px;max-width:100%;height:90px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:9px}
 
-  input#wordInput {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Noto Serif JP', serif;
-    font-size: 15px;
-    padding: 9px 16px;
-    border-radius: 4px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input#wordInput::placeholder { color: var(--muted); }
-  input#wordInput:focus { border-color: var(--amber); }
+/* === LOADING OVERLAY (with ad) === */
+.loading-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(8,12,24,0.85);z-index:60;backdrop-filter:blur(4px)}
+.loading-overlay.visible{display:flex}
+.loading-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite}
+.loading-text{font-family:'Noto Serif JP',serif;font-size:13px;color:var(--muted);letter-spacing:.08em}
+.loading-ad{width:300px;height:250px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:9px;margin-top:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-  button#exploreBtn {
-    background: var(--amber);
-    color: #080C18;
-    border: none;
-    padding: 9px 18px;
-    border-radius: 4px;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: opacity 0.15s;
-  }
-  button#exploreBtn:hover { opacity: 0.85; }
-  button#exploreBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* === STATUS (initial) === */
+.status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.status-text{font-family:'Noto Serif JP',serif;font-size:13px;color:var(--muted);letter-spacing:.08em}
+.status-hint{margin-top:8px;font-size:11px;color:#2E3A55}
 
-  /* Mode tabs */
-  .mode-tabs {
-    display: flex;
-    gap: 2px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px;
-    flex-shrink: 0;
-  }
-  .mode-tab {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    font-family: 'Noto Serif JP', serif;
-    font-size: 13px;
-    padding: 6px 14px;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .mode-tab.active { background: var(--amber); color: #080C18; }
-  .mode-tab:not(.active):hover { color: var(--text); }
+/* === GOLF PANEL === */
+.golf-panel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--border);border-radius:8px;padding:10px 16px;display:none;align-items:center;gap:14px;z-index:50;backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw}
+.golf-panel.visible{display:flex}
+.golf-leg{text-align:center}
+.golf-leg-label{font-size:8px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.golf-leg-word{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600}
+.golf-start .golf-leg-word{color:var(--blue)}
+.golf-goal .golf-leg-word{color:var(--goal)}
+.golf-arrow{color:var(--muted);font-size:12px}
+.golf-stat{text-align:center}
+.golf-stat-num{font-family:'Inter',sans-serif;font-size:18px;font-weight:500;color:var(--amber)}
+.golf-stat-label{font-size:8px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.golf-actions{display:flex;gap:6px;flex-wrap:wrap}
+.golf-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;padding:6px 10px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.golf-btn:hover{border-color:var(--amber);color:var(--amber)}
+.golf-btn:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);color:var(--muted)}
+.golf-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber)}
 
-  /* Engine select */
-  #engineSelect {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 12px;
-    padding: 8px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    outline: none;
-    flex-shrink: 0;
-  }
-  #engineSelect:focus { border-color: var(--amber); }
+/* === GOLF TRAIL === */
+.golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
+.golf-trail.visible{display:flex}
+.trail-word{font-family:'Noto Serif JP',serif;font-size:12px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:10px}
+.trail-word.start{border-color:var(--blue);color:var(--blue)}
+.trail-word.goal{border-color:var(--goal);color:var(--goal)}
+.trail-sep{color:var(--muted);font-size:10px}
 
-  /* Golf panel */
-  .golf-panel {
-    position: absolute;
-    top: 16px; left: 50%;
-    transform: translateX(-50%);
-    background: rgba(17,23,38,0.96);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 22px;
-    display: none;
-    align-items: center;
-    gap: 24px;
-    z-index: 50;
-    backdrop-filter: blur(8px);
-  }
-  .golf-panel.visible { display: flex; }
+/* === COMPLETION OVERLAY === */
+.completion{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px);padding:20px;overflow-y:auto}
+.completion.visible{display:flex}
+.comp-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber);margin-bottom:4px}
+.comp-grade{font-size:14px;color:var(--green);margin-bottom:16px}
+.comp-path{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin-bottom:20px}
+.comp-node{text-align:center;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:60px}
+.comp-node-word{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;color:var(--text)}
+.comp-node-dist{font-size:10px;margin-top:2px}
+.comp-node-reason{font-size:9px;color:var(--muted)}
+.comp-arrow{color:var(--muted);font-size:14px}
+.comp-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.comp-btn{padding:10px 18px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s}
+.comp-btn:hover{border-color:var(--amber);color:var(--amber)}
+.comp-btn.twitter{background:#1DA1F2;border-color:#1DA1F2;color:#fff}
+.comp-btn.twitter:hover{opacity:.85}
 
-  /* ===== Daily panel (slide-in) ===== */
-  .daily-panel {
-    position: fixed;
-    top: 0; right: 0;
-    width: 380px;
-    max-width: 90vw;
-    height: 100vh;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    z-index: 250;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  .daily-panel.visible { transform: translateX(0); }
-  .daily-header {
-    padding: 20px 22px 14px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .daily-title { font-family: 'Noto Serif JP', serif; font-size: 17px; font-weight: 600; color: var(--amber); }
-  .daily-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .daily-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; }
-  .daily-close:hover { color: var(--text); }
+/* === OVERLAY UI === */
+.legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:5px;opacity:0;transition:opacity .4s;pointer-events:none}
+.legend.visible{opacity:1}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+.legend-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:12px;max-width:200px;opacity:0;transition:opacity .15s;z-index:200;line-height:1.5}
+.tooltip.visible{opacity:1}
+.tooltip-word{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;margin-bottom:3px}
+.tooltip-desc{color:var(--muted);font-size:11px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 18px;font-size:12px;opacity:0;transition:all .3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center}
+.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--green)}
+.toast.error{border-color:var(--rose)}
 
-  .daily-body { padding: 18px 22px; }
+/* === HISTORY === */
+.history{position:absolute;bottom:16px;right:12px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;opacity:0;transition:opacity .4s}
+.history.visible{opacity:1}
+.history-label{font-size:8px;color:#2E3A55;letter-spacing:.06em;text-transform:uppercase}
+.history-item{font-family:'Noto Serif JP',serif;font-size:11px;color:var(--muted);cursor:pointer;transition:color .15s}
+.history-item:hover{color:var(--text)}
+.history-item.current{color:var(--amber);cursor:default}
+.history-item.locked{opacity:.4;cursor:not-allowed}
 
-  .puzzle-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 14px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .puzzle-card:hover { border-color: var(--amber); }
-  .puzzle-card.cleared { border-color: var(--green); }
-  .puzzle-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .puzzle-diff { font-size: 10px; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.05em; }
-  .diff-易 { background: rgba(78,203,168,0.18); color: var(--green); }
-  .diff-中 { background: rgba(91,143,222,0.18); color: var(--blue); }
-  .diff-難 { background: rgba(224,107,139,0.18); color: var(--rose); }
-  .diff-激難 { background: rgba(155,114,232,0.22); color: var(--violet); }
-  .puzzle-par { font-size: 11px; color: var(--muted); }
-  .puzzle-route { display: flex; align-items: center; gap: 10px; }
-  .puzzle-word { font-family: 'Noto Serif JP', serif; font-size: 16px; font-weight: 600; }
-  .puzzle-word.s { color: var(--blue); }
-  .puzzle-word.g { color: var(--green); }
-  .puzzle-route .arrow { color: var(--muted); }
-  .puzzle-result { font-size: 11px; color: var(--green); margin-top: 8px; }
+/* === DAILY PANEL === */
+.daily-panel{position:fixed;top:0;right:0;width:360px;max-width:90vw;height:100dvh;background:var(--surface);border-left:1px solid var(--border);z-index:250;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;overflow-y:auto}
+.daily-panel.visible{transform:translateX(0)}
+.daily-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.daily-title{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:var(--amber)}
+.daily-date{font-size:10px;color:var(--muted);margin-top:2px}
+.daily-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+.daily-body{padding:14px 16px}
+.puzzle-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.puzzle-card:hover{border-color:var(--amber)}
+.puzzle-card.cleared{border-color:var(--green)}
+.puzzle-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.puzzle-diff{font-size:9px;padding:2px 6px;border-radius:8px}
+.diff-易{background:rgba(78,203,168,.18);color:var(--green)}
+.diff-中{background:rgba(91,143,222,.18);color:var(--blue)}
+.diff-難{background:rgba(224,107,139,.18);color:var(--rose)}
+.diff-激難{background:rgba(155,114,232,.22);color:var(--violet)}
+.puzzle-par{font-size:10px;color:var(--muted)}
+.puzzle-route{display:flex;align-items:center;gap:8px}
+.puzzle-word{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600}
+.puzzle-word.s{color:var(--blue)}
+.puzzle-word.g{color:var(--goal)}
+.puzzle-route .arrow{color:var(--muted)}
+.puzzle-result{font-size:10px;color:var(--green);margin-top:6px}
+.board-section{margin-top:8px}
+.board-tabs{display:flex;gap:4px;margin-bottom:10px}
+.board-tab{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px;border-radius:4px;cursor:pointer}
+.board-tab.active{background:var(--amber);color:#080C18;border-color:var(--amber)}
+.board-list{display:flex;flex-direction:column;gap:2px}
+.board-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:7px 8px;border-radius:4px;font-size:12px}
+.board-row:nth-child(odd){background:var(--bg)}
+.board-row.me{background:rgba(245,166,35,.12);border:1px solid var(--amber)}
+.board-rank{font-family:'Inter',sans-serif;font-weight:500;color:var(--muted);text-align:center}
+.board-rank.top{color:var(--amber)}
+.board-name{font-family:'Noto Serif JP',serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-moves{font-family:'Inter',sans-serif;font-weight:500;color:var(--amber)}
+.board-moves small{color:var(--muted);font-weight:400}
+.board-path{font-size:9px;color:var(--muted);grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-empty{text-align:center;color:var(--muted);font-size:11px;padding:20px 0}
+.name-row{display:flex;gap:6px;margin:4px 0 12px}
+.name-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:12px;padding:7px 10px;border-radius:4px;outline:none}
+.name-row label{font-size:10px;color:var(--muted);align-self:center;white-space:nowrap}
+.share-btn{width:100%;background:#1DA1F2;border:none;color:#fff;font-size:12px;padding:9px;border-radius:4px;cursor:pointer;margin-top:8px}
+.share-btn:hover{opacity:.85}
 
-  /* Leaderboard */
-  .board-section { margin-top: 8px; }
-  .board-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
-  .board-tab {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 12px;
-    padding: 7px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .board-tab.active { background: var(--amber); color: #080C18; border-color: var(--amber); }
-  .board-list { display: flex; flex-direction: column; gap: 2px; }
-  .board-row {
-    display: grid;
-    grid-template-columns: 28px 1fr auto;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 10px;
-    border-radius: 4px;
-    font-size: 13px;
-  }
-  .board-row:nth-child(odd) { background: var(--bg); }
-  .board-row.me { background: rgba(245,166,35,0.12); border: 1px solid var(--amber); }
-  .board-rank { font-family: 'Inter', sans-serif; font-weight: 500; color: var(--muted); text-align: center; }
-  .board-rank.top { color: var(--amber); }
-  .board-name { font-family: 'Noto Serif JP', serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .board-moves { font-family: 'Inter', sans-serif; font-weight: 500; color: var(--amber); }
-  .board-moves small { color: var(--muted); font-weight: 400; }
-  .board-empty { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0; }
-  .board-path { font-size: 10px; color: var(--muted); grid-column: 2 / 4; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* === PIN TRAY === */
+.pin-tray{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:45;max-height:calc(100% - 80px);overflow-y:auto;pointer-events:none}
+.pin-tray:empty{display:none}
+.pin-chip{display:flex;align-items:center;gap:6px;background:rgba(17,23,38,0.92);border:1px solid var(--amber);border-radius:20px;padding:5px 10px 5px 12px;cursor:pointer;pointer-events:all;transition:all .15s;backdrop-filter:blur(6px);white-space:nowrap}
+.pin-chip:hover{background:rgba(245,166,35,0.15);transform:translateX(-2px)}
+.pin-chip-word{font-family:'Noto Serif JP',serif;font-size:12px;color:var(--amber)}
+.pin-chip-remove{background:none;border:none;color:var(--muted);font-size:14px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0}
+.pin-chip-remove:hover{color:var(--rose)}
+/* Tooltip pin button */
+.tt-pin{display:inline-block;margin-left:8px;cursor:pointer;font-size:12px;opacity:.6;transition:opacity .15s;user-select:none}
+.tt-pin:hover{opacity:1}
+.tt-pin.pinned{opacity:1;filter:saturate(2)}
 
-  /* Name input + share */
-  .name-row { display: flex; gap: 8px; margin: 4px 0 16px; }
-  .name-row input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Noto Serif JP', serif;
-    font-size: 13px;
-    padding: 8px 12px;
-    border-radius: 4px;
-    outline: none;
-  }
-  .name-row input:focus { border-color: var(--amber); }
-  .name-row label { font-size: 11px; color: var(--muted); align-self: center; white-space: nowrap; }
-  .share-btn {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--blue);
-    color: var(--blue);
-    font-size: 13px;
-    padding: 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: all 0.15s;
-  }
-  .share-btn:hover { background: var(--blue); color: #080C18; }
-
-  @media (max-width: 768px) {
-    .daily-panel { width: 100vw; }
-  }
-  .golf-leg {
-    text-align: center;
-  }
-  .golf-leg-label { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
-  .golf-leg-word { font-family: 'Noto Serif JP', serif; font-size: 18px; font-weight: 600; }
-  .golf-start .golf-leg-word { color: var(--blue); }
-  .golf-goal .golf-leg-word { color: var(--green); }
-  .golf-arrow { color: var(--muted); font-size: 14px; }
-  .golf-stat { text-align: center; }
-  .golf-stat-num { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 500; color: var(--amber); }
-  .golf-stat-label { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-  .golf-actions { display: flex; gap: 8px; }
-  .golf-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 12px;
-    padding: 7px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.15s;
-  }
-  .golf-btn:hover { border-color: var(--amber); color: var(--amber); }
-  .golf-btn.primary { background: var(--amber); color: #080C18; border-color: var(--amber); }
-  .golf-btn.primary:hover { opacity: 0.85; }
-
-  /* Golf path trail */
-  .golf-trail {
-    position: absolute;
-    bottom: 70px; left: 50%;
-    transform: translateX(-50%);
-    display: none;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 80%;
-    z-index: 40;
-  }
-  .golf-trail.visible { display: flex; }
-  .trail-word {
-    font-family: 'Noto Serif JP', serif;
-    font-size: 13px;
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 4px 10px;
-    border-radius: 12px;
-  }
-  .trail-word.start { border-color: var(--blue); color: var(--blue); }
-  .trail-word.goal { border-color: var(--green); color: var(--green); }
-  .trail-sep { color: var(--muted); font-size: 11px; }
-
-  /* Toast */
-  .toast {
-    position: fixed;
-    bottom: 110px; left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 12px 20px;
-    font-size: 13px;
-    opacity: 0;
-    transition: all 0.3s;
-    z-index: 300;
-    pointer-events: none;
-  }
-  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.success { border-color: var(--green); }
-  .toast.error { border-color: var(--rose); }
-  .toast.info { border-color: var(--blue); }
-
-  .header-links {
-    margin-left: auto;
-    display: flex;
-    gap: 16px;
-    flex-shrink: 0;
-  }
-  .header-links a {
-    font-size: 11px;
-    color: var(--muted);
-    text-decoration: none;
-    letter-spacing: 0.04em;
-  }
-  .header-links a:hover { color: var(--text); }
-
-  /* ===== CANVAS AREA ===== */
-  .canvas-area {
-    grid-column: 1;
-    grid-row: 2;
-    position: relative;
-    overflow: hidden;
-  }
-
-  #canvas {
-    position: absolute;
-    inset: 0;
-    cursor: grab;
-  }
-  #canvas:active { cursor: grabbing; }
-
-  /* ===== RIGHT SIDEBAR AD ===== */
-  .ad-sidebar {
-    grid-column: 2;
-    grid-row: 2;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    gap: 8px;
-  }
-  .ad-label {
-    font-size: 9px;
-    color: #2E3A55;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .ad-slot-side {
-    width: 136px;
-    min-height: 600px;
-    background: var(--border);
-    border-radius: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #2E3A55;
-    font-size: 10px;
-    /* 本番: display:block にしてAdSenseコードを入れる */
-  }
-
-  /* ===== BOTTOM AD BAR ===== */
-  .ad-bottom {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 8px 24px;
-  }
-  .ad-slot-bottom {
-    width: 728px;
-    height: 90px;
-    background: var(--border);
-    border-radius: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #2E3A55;
-    font-size: 10px;
-    flex-shrink: 0;
-    /* 本番: display:block にしてAdSenseコードを入れる */
-  }
-
-  /* ===== OVERLAY UI ===== */
-  .legend {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    opacity: 0;
-    transition: opacity 0.4s;
-    pointer-events: none;
-  }
-  .legend.visible { opacity: 1; }
-  .legend-item {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 11px; color: var(--muted); letter-spacing: 0.04em;
-  }
-  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
-  .tooltip {
-    position: fixed;
-    pointer-events: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 10px 14px;
-    font-size: 13px;
-    max-width: 220px;
-    opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 200;
-    line-height: 1.6;
-  }
-  .tooltip.visible { opacity: 1; }
-  .tooltip-word { font-family: 'Noto Serif JP', serif; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-  .tooltip-desc { color: var(--muted); font-size: 12px; }
-
-  .status {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-  }
-  .status-text { font-family: 'Noto Serif JP', serif; font-size: 14px; color: var(--muted); letter-spacing: 0.1em; }
-  .status-hint { margin-top: 10px; font-size: 11px; color: #2E3A55; letter-spacing: 0.06em; }
-  .loader {
-    width: 28px; height: 28px;
-    border: 2px solid var(--border); border-top-color: var(--amber);
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
-    margin: 0 auto 14px; display: none;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .history {
-    position: absolute;
-    bottom: 20px; right: 20px;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
-    opacity: 0; transition: opacity 0.4s;
-  }
-  .history.visible { opacity: 1; }
-  .history-label { font-size: 9px; color: #2E3A55; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
-  .history-item { font-family: 'Noto Serif JP', serif; font-size: 12px; color: var(--muted); cursor: pointer; transition: color 0.15s; }
-  .history-item:hover { color: var(--text); }
-  .history-item.current { color: var(--amber); cursor: default; }
-
-  @media (max-width: 768px) {
-    .layout { grid-template-columns: 1fr; grid-template-rows: 64px 1fr 60px; }
-    .ad-sidebar { display: none; }
-    .ad-slot-bottom { width: 320px; height: 50px; }
-  }
-
-  @media (prefers-reduced-motion: reduce) { .loader { animation: none; } }
+/* === MOBILE === */
+@media(max-width:768px){
+  .pin-tray{top:8px;right:8px}
+  .pin-chip{padding:4px 8px 4px 10px}
+  .pin-chip-word{font-size:11px}
+}
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  .ad-sidebar{display:none}
+  .ad-slot-bottom{height:50px}
+  header{gap:6px;padding:6px 10px}
+  .logo{font-size:12px}
+  .logo span{display:none}
+  .mode-tab{font-size:11px;padding:4px 8px}
+  .search-wrap{min-width:140px;gap:4px}
+  input#wordInput{font-size:13px;padding:7px 10px}
+  button#exploreBtn{padding:7px 10px;font-size:11px}
+  #engineSelect{display:none}
+  .header-links{display:none}
+  .golf-panel{padding:8px 10px;gap:10px}
+  .golf-leg-word{font-size:13px}
+  .golf-stat-num{font-size:16px}
+  .legend{bottom:10px;left:8px}
+  .legend-item{font-size:9px}
+  .history{bottom:10px;right:8px}
+  .loading-ad{width:250px;height:200px}
+  .daily-panel{width:100vw}
+  .comp-title{font-size:18px}
+}
+@media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}
 </style>
 </head>
 <body>
-
 <div class="layout">
-
-  <!-- ヘッダー -->
   <header>
     <div class="logo">語彙空間<span>Lexical Space</span></div>
-
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="explore">探索</button>
       <button class="mode-tab" data-mode="golf">ゴルフ</button>
       <button class="mode-tab" data-mode="daily">デイリー</button>
       <button class="mode-tab" data-mode="monthly">マンスリー</button>
     </div>
-
     <div class="search-wrap">
-      <input id="wordInput" type="text" placeholder="探索する言葉を入力…" autocomplete="off" />
+      <input id="wordInput" type="text" placeholder="言葉を入力…" autocomplete="off"/>
       <button id="exploreBtn">探索</button>
     </div>
-
     <select id="engineSelect" title="ダブルクリック時の検索エンジン">
       <option value="https://www.google.com/search?q=">Google</option>
       <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
-      <option value="https://www.bing.com/search?q=">Bing</option>
       <option value="https://ja.wikipedia.org/wiki/">Wikipedia</option>
-      <option value="https://www.weblio.jp/content/">Weblio辞書</option>
+      <option value="https://www.weblio.jp/content/">Weblio</option>
     </select>
-
     <div class="header-links">
+      <div class="usage-badge" id="usageBadge">残り <span class="count" id="usageCount">—</span>回</div>
       <a href="/privacy.html">プライバシー</a>
       <a href="mailto:your@email.com">お問い合わせ</a>
     </div>
   </header>
 
-  <!-- キャンバスエリア -->
   <div class="canvas-area">
     <canvas id="canvas"></canvas>
-
-    <!-- ワードゴルフ パネル -->
+    <!-- Upgrade prompt -->
+    <div class="upgrade-overlay" id="upgradeOverlay">
+      <div class="upgrade-card">
+        <div class="upgrade-icon">🚀</div>
+        <div class="upgrade-title">本日の無料回数に達しました</div>
+        <div class="upgrade-desc">語彙空間を気に入っていただけましたか？<br>プレミアムプランで無制限に探索できます。</div>
+        <div class="upgrade-plans">
+          <div class="upgrade-plan">
+            <div><div class="upgrade-plan-name">月額プラン</div><div class="upgrade-plan-detail">無制限探索・広告非表示・ヒント無制限</div></div>
+            <div class="upgrade-plan-price">¥500/月</div>
+          </div>
+          <div class="upgrade-plan">
+            <div><div class="upgrade-plan-name">年額プラン</div><div class="upgrade-plan-detail">2ヶ月分お得！</div></div>
+            <div class="upgrade-plan-price">¥5,000/年</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">※ 決済機能は近日公開予定です</div>
+        <button class="upgrade-close" id="upgradeClose">明日また無料で遊ぶ</button>
+      </div>
+    </div>
+    <div class="status" id="status">
+      <div class="status-text">言葉を入力して、語彙の宇宙を探索する</div>
+      <div class="status-hint">ノードをクリック→再探索 / ダブルクリック→検索エンジン</div>
+    </div>
     <div class="golf-panel" id="golfPanel">
-      <div class="golf-leg golf-start">
-        <div class="golf-leg-label">スタート</div>
-        <div class="golf-leg-word" id="golfStart">—</div>
-      </div>
+      <div class="golf-leg golf-start"><div class="golf-leg-label">START</div><div class="golf-leg-word" id="golfStart">—</div></div>
       <div class="golf-arrow">→</div>
-      <div class="golf-leg golf-goal">
-        <div class="golf-leg-label">ゴール</div>
-        <div class="golf-leg-word" id="golfGoal">—</div>
-      </div>
-      <div class="golf-stat">
-        <div class="golf-stat-num" id="golfMoves">0</div>
-        <div class="golf-stat-label">手数</div>
-      </div>
-      <div class="golf-stat">
-        <div class="golf-stat-num" id="golfPar">—</div>
-        <div class="golf-stat-label">パー</div>
-      </div>
+      <div class="golf-leg golf-goal"><div class="golf-leg-label">GOAL</div><div class="golf-leg-word" id="golfGoal">—</div></div>
+      <div class="golf-stat"><div class="golf-stat-num" id="golfMoves">0</div><div class="golf-stat-label">手数</div></div>
+      <div class="golf-stat"><div class="golf-stat-num" id="golfPar">—</div><div class="golf-stat-label">パー</div></div>
       <div class="golf-actions">
+        <button class="golf-btn" id="golfUndoBtn" disabled>↩ 戻る</button>
         <button class="golf-btn" id="golfHintBtn">ヒント</button>
         <button class="golf-btn" id="golfNewBtn">新しいお題</button>
       </div>
     </div>
-
-    <!-- ゴルフ経路トレイル -->
     <div class="golf-trail" id="golfTrail"></div>
-
-    <div class="status" id="status">
-      <div class="loader" id="loader"></div>
-      <div class="status-text" id="statusText">言葉を入力して、語彙の宇宙を探索する</div>
-      <div class="status-hint">ノードをクリックすると、そこを中心に再探索できます</div>
-    </div>
-
+    <div class="pin-tray" id="pinTray"></div>
     <div class="legend" id="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#F5A623"></div>中心語</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#5B8FDE"></div>類義語・関連語</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#4ECBA8"></div>対義語・対比</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#E06B8B"></div>感情・ニュアンス</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#9B72E8"></div>比喩・象徴</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>中心語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>類義語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>対義語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--rose)"></div>感情</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>比喩</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--goal)"></div>ゴール</div>
     </div>
-
-    <div class="history" id="history">
-      <div class="history-label">探索履歴</div>
-      <div id="historyItems"></div>
+    <div class="history" id="history"><div class="history-label">探索履歴</div><div id="historyItems"></div></div>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loadingText">語彙空間を探索中…</div>
+      <div class="loading-ad">広告スペース（300×250）</div>
     </div>
+    <div class="completion" id="completion"></div>
   </div>
 
-  <!-- 右サイドバー広告（160×600） -->
-  <div class="ad-sidebar">
-    <div class="ad-label">広告</div>
-    <div class="ad-slot-side" id="adSide">
-      <!--
-        AdSense審査通過後、ここを以下に書き換える:
-        <ins class="adsbygoogle"
-             style="display:block;width:136px;height:600px"
-             data-ad-client="ca-pub-YOUR-ID"
-             data-ad-slot="YOUR-SLOT-ID"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-      -->
-      広告スペース
-    </div>
-  </div>
-
-  <!-- 下部バナー広告（728×90 / モバイル320×50） -->
-  <div class="ad-bottom">
-    <div class="ad-slot-bottom" id="adBottom">
-      <!--
-        AdSense審査通過後、ここを以下に書き換える:
-        <ins class="adsbygoogle"
-             style="display:block;width:728px;height:90px"
-             data-ad-client="ca-pub-YOUR-ID"
-             data-ad-slot="YOUR-SLOT-ID-2"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-      -->
-      広告スペース（728×90）
-    </div>
-  </div>
-
+  <div class="ad-sidebar"><div class="ad-label">広告</div><div class="ad-slot-side">広告スペース</div></div>
+  <div class="ad-bottom"><div class="ad-slot-bottom">広告スペース</div></div>
 </div>
 
-<div class="tooltip" id="tooltip">
-  <div class="tooltip-word" id="ttWord"></div>
-  <div class="tooltip-desc" id="ttDesc"></div>
-</div>
-
+<div class="tooltip" id="tooltip"><div class="tooltip-word" id="ttWord"></div><div class="tooltip-desc" id="ttDesc"></div><span class="tt-pin" id="ttPin">📌</span></div>
 <div class="toast" id="toast"></div>
 
-<!-- ===== デイリーチャレンジ パネル ===== -->
 <div class="daily-panel" id="dailyPanel">
-  <div class="daily-header">
-    <div>
-      <div class="daily-title" id="dailyTitle">デイリーチャレンジ</div>
-      <div class="daily-date" id="dailyDate">—</div>
-    </div>
-    <button class="daily-close" id="dailyClose">×</button>
-  </div>
+  <div class="daily-header"><div><div class="daily-title" id="dailyTitle">デイリーチャレンジ</div><div class="daily-date" id="dailyDate">—</div></div><button class="daily-close" id="dailyClose">×</button></div>
   <div class="daily-body">
-    <div class="name-row">
-      <label>ハンドルネーム</label>
-      <input id="handleInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off" />
-    </div>
-
-    <!-- お題一覧 -->
+    <div class="name-row"><label>ハンドルネーム</label><input id="handleInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/></div>
     <div id="puzzleList"></div>
-
-    <!-- ランキング -->
     <div class="board-section">
-      <div class="board-tabs" id="boardTabs">
-        <button class="board-tab active" data-puzzle="0">第1問</button>
-        <button class="board-tab" data-puzzle="1">第2問</button>
-        <button class="board-tab" data-puzzle="2">第3問</button>
-      </div>
-      <div class="board-list" id="boardList">
-        <div class="board-empty">読み込み中…</div>
-      </div>
-      <button class="share-btn" id="shareBoardBtn">この結果を共有する</button>
+      <div class="board-tabs" id="boardTabs"><button class="board-tab active" data-puzzle="0">第1問</button><button class="board-tab" data-puzzle="1">第2問</button><button class="board-tab" data-puzzle="2">第3問</button></div>
+      <div class="board-list" id="boardList"><div class="board-empty">読み込み中…</div></div>
+      <button class="share-btn" id="shareBoardBtn">Xで共有する</button>
     </div>
   </div>
 </div>
 
 <script>
-const canvasEl = document.getElementById('canvas');
-const ctx = canvasEl.getContext('2d');
-const canvasArea = document.querySelector('.canvas-area');
-const wordInput = document.getElementById('wordInput');
-const exploreBtn = document.getElementById('exploreBtn');
-const statusEl = document.getElementById('status');
-const statusText = document.getElementById('statusText');
-const loaderEl = document.getElementById('loader');
-const legendEl = document.getElementById('legend');
-const tooltip = document.getElementById('tooltip');
-const ttWord = document.getElementById('ttWord');
-const ttDesc = document.getElementById('ttDesc');
-const historyEl = document.getElementById('history');
-const historyItems = document.getElementById('historyItems');
+// ===== DOM =====
+const C=document.getElementById('canvas'),X=C.getContext('2d'),
+CA=document.querySelector('.canvas-area'),
+WI=document.getElementById('wordInput'),EB=document.getElementById('exploreBtn'),
+SE=document.getElementById('status'),LO=document.getElementById('loadingOverlay'),
+LT=document.getElementById('loadingText'),
+LE=document.getElementById('legend'),TT=document.getElementById('tooltip'),
+TTW=document.getElementById('ttWord'),TTD=document.getElementById('ttDesc'),
+HI=document.getElementById('history'),HII=document.getElementById('historyItems'),
+GP=document.getElementById('golfPanel'),GT=document.getElementById('golfTrail'),
+GS=document.getElementById('golfStart'),GG=document.getElementById('golfGoal'),
+GM=document.getElementById('golfMoves'),GPR=document.getElementById('golfPar'),
+GU=document.getElementById('golfUndoBtn'),GH=document.getElementById('golfHintBtn'),
+GN=document.getElementById('golfNewBtn'),CO=document.getElementById('completion'),
+DP=document.getElementById('dailyPanel'),DT=document.getElementById('dailyTitle'),
+DD=document.getElementById('dailyDate'),DC=document.getElementById('dailyClose'),
+HN=document.getElementById('handleInput'),PL=document.getElementById('puzzleList'),
+BT=document.getElementById('boardTabs'),BL=document.getElementById('boardList'),
+SB=document.getElementById('shareBoardBtn'),ES=document.getElementById('engineSelect'),
+TE=document.getElementById('toast'),
+UB=document.getElementById('usageBadge'),UC=document.getElementById('usageCount'),
+UO=document.getElementById('upgradeOverlay'),UCL=document.getElementById('upgradeClose'),
+PT=document.getElementById('pinTray'),TTP=document.getElementById('ttPin');
 
-const COLORS = {
-  center: '#F5A623', synonym: '#5B8FDE',
-  antonym: '#4ECBA8', emotion: '#E06B8B', metaphor: '#9B72E8',
-};
+// ===== COLORS =====
+const COL={center:'#F5A623',synonym:'#5B8FDE',antonym:'#4ECBA8',emotion:'#E06B8B',metaphor:'#9B72E8',goal:'#FF6B6B'};
 
-let nodes = [], edges = [], animFrame = null;
-let pan = { x: 0, y: 0 }, dragging = false;
-let dragStart = { x: 0, y: 0 }, panStart = { x: 0, y: 0 };
-let wordHistory = [], hoveredNode = null, simTick = 0;
+// ===== STATE =====
+let nodes=[],edges=[],gen=0,pan={x:0,y:0},
+drag=false,moved=false,dStart={x:0,y:0},pStart={x:0,y:0},
+wHist=[],hoverN=null,simTick=0,animFrame=null,time=0,
+clickTimer=null,lastTap=0;
 
-function resize() {
-  canvasEl.width = canvasArea.clientWidth;
-  canvasEl.height = canvasArea.clientHeight;
-}
+// Client-side cache: word→API result
+const vocabCache={};
+// Vocabulary memory during play (all nodes ever seen)
+const vocabMem=new Map();
+// Live search words (other users)
+let liveWords=[];
+
+// Stars (animated background)
+const stars=Array.from({length:200},()=>({
+  x:Math.random(),y:Math.random(),r:Math.random()*1.3,
+  a:Math.random()*0.4+0.05,dx:(Math.random()-0.5)*0.00003,dy:Math.random()*0.00008+0.00002
+}));
+
+// Golf state
+const golf={active:false,start:'',goal:'',par:0,moves:0,path:[],
+  daily:false,dailyIdx:0,dailyPeriod:'daily',
+  undoUsed:false,prevState:null};
+
+// Daily/Monthly state
+const daily={period:'daily',date:'',puzzles:[],current:0,results:{}};
+let handleName='';
+HN.addEventListener('input',()=>{handleName=HN.value.trim()});
+
+// ===== RESIZE =====
+function resize(){C.width=CA.clientWidth;C.height=CA.clientHeight}
 resize();
-window.addEventListener('resize', () => { resize(); draw(); });
+window.addEventListener('resize',()=>{resize();draw()});
 
-// Physics
-function initPhysics() {
-  const cx = canvasEl.width / 2, cy = canvasEl.height / 2;
-  nodes.forEach(n => {
-    n.vx = 0; n.vy = 0;
-    if (!n.fixed) {
-      n.x = cx + (Math.random() - 0.5) * 200;
-      n.y = cy + (Math.random() - 0.5) * 200;
+// ===== PHYSICS =====
+function initPhysics(){
+  const cx=C.width/2,cy=C.height/2;
+  nodes.forEach(n=>{n.vx=0;n.vy=0;
+    if(n.fixed){n.x=cx;n.y=cy}
+    else if(!n.x||n.generation===gen){
+      const a=Math.random()*Math.PI*2,d=120+Math.random()*80;
+      n.x=cx+Math.cos(a)*d;n.y=cy+Math.sin(a)*d;
     }
-  });
-  simTick = 0;
+  });simTick=0;
 }
-
-function tick() {
-  if (simTick > 300) return;
-  simTick++;
-  const centerNode = nodes.find(n => n.fixed);
-  nodes.forEach(n => {
-    if (n.fixed) return;
-    nodes.forEach(m => {
-      if (m === n) return;
-      const dx = n.x - m.x, dy = n.y - m.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const force = 4000 / (dist * dist);
-      n.vx += (dx / dist) * force; n.vy += (dy / dist) * force;
+function tick(){
+  if(simTick>300)return;simTick++;
+  const center=nodes.find(n=>n.fixed&&n.generation===gen);
+  if(!center)return;
+  nodes.forEach(n=>{
+    if(n.fixed)return;
+    if(n.generation<gen-3)return; // skip very old
+    nodes.forEach(m=>{
+      if(m===n||m.generation<gen-3)return;
+      const dx=n.x-m.x,dy=n.y-m.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+      const f=3000/(d*d);n.vx+=(dx/d)*f;n.vy+=(dy/d)*f;
     });
-    if (centerNode) {
-      const dx = centerNode.x - n.x, dy = centerNode.y - n.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const force = (dist - (n.targetDist || 180)) * 0.004;
-      n.vx += (dx / dist) * force; n.vy += (dy / dist) * force;
+    if(center){
+      const dx=center.x-n.x,dy=center.y-n.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+      const target=n.generation===gen?(n.targetDist||170):d+20; // old nodes drift out
+      const f=(d-target)*(n.generation===gen?0.004:0.001);
+      n.vx+=(dx/d)*f;n.vy+=(dy/d)*f;
     }
-    n.vx *= 0.82; n.vy *= 0.82;
-    n.x += n.vx; n.y += n.vy;
+    n.vx*=0.82;n.vy*=0.82;n.x+=n.vx;n.y+=n.vy;
   });
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-  if (!window._stars) {
-    window._stars = Array.from({ length: 140 }, () => ({
-      x: Math.random(), y: Math.random(), r: Math.random() * 1.2, a: Math.random() * 0.4 + 0.05
-    }));
+// ===== NODE OPACITY (generation-based fading) =====
+function nodeOpacity(n){
+  const age=gen-n.generation;
+  if(age<0)return 0;
+  if(age>=4)return 0;
+  // Sequential appear
+  if(n.appearAt&&Date.now()<n.appearAt)return 0;
+  if(n.appearAt&&Date.now()<n.appearAt+300)return(Date.now()-n.appearAt)/300*(1-age*0.25);
+  return Math.max(0,1-age*0.25);
+}
+
+// ===== DRAW =====
+function draw(){
+  X.clearRect(0,0,C.width,C.height);time++;
+  // Animated starfield
+  stars.forEach(s=>{
+    s.x=(s.x+s.dx+1)%1;s.y=(s.y+s.dy+1)%1;
+    const twinkle=0.7+0.3*Math.sin(time*0.02+s.x*50);
+    X.beginPath();X.arc(s.x*C.width,s.y*C.height,s.r,0,Math.PI*2);
+    X.fillStyle=`rgba(212,220,240,${s.a*twinkle})`;X.fill();
+  });
+
+  // Draw edges
+  edges.forEach(e=>{
+    const a=nodes.find(n=>n.id===e.source),b=nodes.find(n=>n.id===e.target);
+    if(!a||!b)return;
+    const oA=nodeOpacity(a),oB=nodeOpacity(b);
+    if(oA<=0||oB<=0)return;
+    const o=Math.min(oA,oB);
+    const pull=b.pull||0,str=Math.min(1,pull/10);
+    X.globalAlpha=o*(0.25+str*0.5);
+    X.beginPath();X.moveTo(a.x,a.y);X.lineTo(b.x,b.y);
+    X.strokeStyle=COL[b.type]||'#3D4560';
+    X.lineWidth=1+str*2;X.stroke();
+  });
+  X.globalAlpha=1;
+
+  // Clean up very old nodes
+  nodes=nodes.filter(n=>gen-n.generation<4);
+  edges=edges.filter(e=>nodes.some(n=>n.id===e.source)&&nodes.some(n=>n.id===e.target));
+
+  // Draw nodes
+  nodes.forEach(n=>{
+    const o=nodeOpacity(n);if(o<=0)return;
+    const isHov=n===hoverN;
+    const isGoal=golf.active&&n.word===golf.goal;
+    const col=isGoal?COL.goal:(COL[n.type]||'#5B6A8A');
+    const r=n.fixed&&n.generation===gen?24:(isHov?18:14);
+
+    // Live blink: if other user searched this word
+    const blink=liveWords.includes(n.word);
+    const blinkAlpha=blink?(0.6+0.4*Math.sin(time*0.15)):1;
+
+    X.globalAlpha=o*blinkAlpha;
+
+    // Glow
+    const grd=X.createRadialGradient(n.x,n.y,0,n.x,n.y,r*2.5);
+    grd.addColorStop(0,col+(n.fixed&&n.generation===gen?'AA':'55'));
+    grd.addColorStop(1,col+'00');
+    X.beginPath();X.arc(n.x,n.y,r*2.5,0,Math.PI*2);X.fillStyle=grd;X.fill();
+
+    // Circle
+    X.beginPath();X.arc(n.x,n.y,r,0,Math.PI*2);
+    X.fillStyle=(n.fixed&&n.generation===gen)?col:(isGoal?'#1a0a0a':'#111726');
+    X.strokeStyle=col;X.lineWidth=isGoal?2.5:(n.fixed?0:(isHov?2:1.5));
+    X.fill();if(!n.fixed||n.generation!==gen)X.stroke();
+
+    // Label
+    const isCur=n.fixed&&n.generation===gen;
+    X.font=isCur?`600 13px 'Noto Serif JP',serif`:`400 11px 'Noto Serif JP',serif`;
+    X.fillStyle=isCur?'#080C18':col;
+    X.textAlign='center';X.textBaseline='middle';
+    X.fillText(n.word,n.x,n.y);
+    if(!isCur&&n.reading){
+      X.font=`300 8px 'Inter',sans-serif`;X.fillStyle=col+'88';
+      X.fillText(n.reading,n.x,n.y+r+9);
+    }
+  });
+  X.globalAlpha=1;
+}
+
+function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
+
+// ===== API (with client cache) =====
+async function fetchWords(word){
+  if(vocabCache[word]){
+    // キャッシュヒットでもサーバーキャッシュを取得して残り回数を更新
+    const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word})});
+    const data=await resp.json();
+    if(resp.status===429)return{_error:'daily_limit',_message:data.message};
+    vocabCache[word]=data;return data;
   }
-  window._stars.forEach(s => {
-    ctx.beginPath();
-    ctx.arc(s.x * canvasEl.width, s.y * canvasEl.height, s.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(212,220,240,${s.a})`; ctx.fill();
-  });
-  if (nodes.length === 0) return;
+  const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word})});
+  if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
+  if(!resp.ok)throw new Error('API error '+resp.status);
+  const data=await resp.json();vocabCache[word]=data;return data;
+}
+async function fetchGravity(word){
+  try{const r=await fetch(`/api/transitions?word=${encodeURIComponent(word)}`);
+    if(!r.ok)return{};const d=await r.json();const m={};(d.neighbors||[]).forEach(n=>{m[n.word]=n.count});return m;
+  }catch{return{}}
+}
+function logTransition(from,to){
+  if(!from||!to||from===to)return;
+  fetch('/api/transitions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}).catch(()=>{});
+}
 
-  edges.forEach(e => {
-    const a = nodes.find(n => n.id === e.source), b = nodes.find(n => n.id === e.target);
-    if (!a || !b) return;
-    // よく辿られる経路ほど線を太く明るく（引力の可視化）
-    const pull = b.pull || 0;
-    const strength = Math.min(1, pull / 10);
-    const alpha = Math.round((0x44 + strength * 0x88)).toString(16).padStart(2, '0');
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = (COLORS[b.type] || '#3D4560') + alpha;
-    ctx.lineWidth = 1 + strength * 2.5; ctx.stroke();
-  });
+// ===== EXPLORE (gradual transition + sequential appearance) =====
+async function explore(word,fromWord){
+  if(!word.trim())return;
+  // Game protection: block explore from history during golf
+  if(golf.active&&fromWord==='__history__')return;
+  if(fromWord&&fromWord!=='__history__')logTransition(fromWord,word);
 
-  nodes.forEach(n => {
-    const isHovered = n === hoveredNode;
-    const col = COLORS[n.type] || '#5B6A8A';
-    const r = n.fixed ? 26 : (isHovered ? 20 : 16);
-    const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 2.5);
-    grd.addColorStop(0, col + (n.fixed ? 'AA' : '55'));
-    grd.addColorStop(1, col + '00');
-    ctx.beginPath(); ctx.arc(n.x, n.y, r * 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = grd; ctx.fill();
-    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = n.fixed ? col : '#111726';
-    ctx.strokeStyle = col;
-    ctx.lineWidth = n.fixed ? 0 : (isHovered ? 2 : 1.5);
-    ctx.fill(); if (!n.fixed) ctx.stroke();
-    ctx.font = n.fixed ? `600 14px 'Noto Serif JP',serif` : `400 12px 'Noto Serif JP',serif`;
-    ctx.fillStyle = n.fixed ? '#080C18' : col;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(n.word, n.x, n.y);
-    if (!n.fixed && n.reading) {
-      ctx.font = `300 9px 'Inter',sans-serif`;
-      ctx.fillStyle = col + '88';
-      ctx.fillText(n.reading, n.x, n.y + r + 10);
+  EB.disabled=true;
+  SE.style.opacity='0';
+  LO.classList.add('visible');
+  LT.textContent=`「${word}」の語彙空間を探索中…`;
+
+  // Refresh ad during loading (placeholder)
+  refreshAd();
+
+  try{
+    const[result,gravity]=await Promise.all([fetchWords(word),fetchGravity(word)]);
+
+    // Check for rate limit error
+    if(result._error==='daily_limit'){
+      LO.classList.remove('visible');
+      showUpgrade(result._message);
+      EB.disabled=false;
+      return;
     }
-  });
-}
 
-function loop() { tick(); draw(); animFrame = requestAnimationFrame(loop); }
+    // Update usage badge
+    if(result._remaining!=null)updateUsage(result._remaining,result._limit);
 
-// API — Vercelのサーバーサイドエンドポイントを呼ぶ（APIキーはサーバー側）
-async function fetchWords(word) {
-  const resp = await fetch('/api/claude', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ word }),
-  });
-  if (!resp.ok) throw new Error('API error');
-  return resp.json();
-}
+    gen++;
+    const cx=C.width/2,cy=C.height/2;
 
-// 全ユーザーの遷移重みを取得（「よく辿る経路」を引力に反映）
-async function fetchGravity(word) {
-  try {
-    const resp = await fetch(`/api/transitions?word=${encodeURIComponent(word)}`);
-    if (!resp.ok) return {};
-    const data = await resp.json();
-    const map = {};
-    (data.neighbors || []).forEach(n => { map[n.word] = n.count; });
-    return map;
-  } catch { return {}; }
-}
+    // Old center: unfix
+    nodes.forEach(n=>{if(n.fixed&&n.generation<gen)n.fixed=false});
 
-// 遷移をログに記録（fire-and-forget）
-function logTransition(from, to) {
-  if (!from || !to || from === to) return;
-  fetch('/api/transitions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to }),
-  }).catch(() => {});
-}
+    // New center
+    const centerNode={id:`c${gen}`,word,type:'center',fixed:true,x:cx,y:cy,generation:gen};
+    nodes.push(centerNode);
 
-async function explore(word, fromWord) {
-  if (!word.trim()) return;
-
-  // 遷移ログ：前の中心語 → 新しい語
-  if (fromWord) logTransition(fromWord, word);
-
-  exploreBtn.disabled = true;
-  statusEl.style.opacity = '1';
-  loaderEl.style.display = 'block';
-  statusText.textContent = `「${word}」の語彙空間を探索中…`;
-  legendEl.classList.remove('visible');
-  historyEl.classList.remove('visible');
-  if (animFrame) cancelAnimationFrame(animFrame);
-  nodes = []; edges = []; draw();
-
-  try {
-    // 語彙生成と引力データを並行取得
-    const [result, gravity] = await Promise.all([fetchWords(word), fetchGravity(word)]);
-    const cx = canvasEl.width / 2, cy = canvasEl.height / 2;
-    nodes = [{ id: 'center', word, type: 'center', fixed: true, x: cx, y: cy }];
-
-    // 最大遷移回数（正規化用）
-    const maxCount = Math.max(1, ...Object.values(gravity));
-
-    result.words.forEach((w, i) => {
-      // よく辿られる語ほど中心に近づける（引力が強い）
-      const pull = gravity[w.word] || 0;
-      const ratio = pull / maxCount;            // 0〜1
-      const baseDist = 150 + Math.random() * 80;
-      const targetDist = baseDist - ratio * 70; // よく辿る語は最大70px近く
-      nodes.push({
-        id: `n${i}`, word: w.word, reading: w.reading,
-        type: w.type, description: w.description,
-        targetDist, pull,                        // pull: 引力の強さ（描画にも使う）
-      });
-      edges.push({ source: 'center', target: `n${i}` });
+    // Add new nodes with staggered appearance
+    const maxC=Math.max(1,...Object.values(gravity));
+    const filtered=(result.words||[]).filter(w=>w.word!==word); // exclude same word
+    filtered.forEach((w,i)=>{
+      const pull=gravity[w.word]||0;
+      const ratio=pull/maxC;
+      const base=140+Math.random()*70;
+      const td=base-ratio*60;
+      const nd={
+        id:`n${gen}_${i}`,word:w.word,reading:w.reading,type:w.type,
+        description:w.description,targetDist:td,pull,generation:gen,
+        appearAt:Date.now()+i*120 // staggered: 120ms apart
+      };
+      nodes.push(nd);edges.push({source:`c${gen}`,target:nd.id});
+      // Store in vocab memory
+      vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
     });
 
-    if (!wordHistory.includes(word)) { wordHistory.unshift(word); if (wordHistory.length > 6) wordHistory.pop(); }
+    if(!wHist.includes(word)){wHist.unshift(word);if(wHist.length>8)wHist.pop()}
     renderHistory(word);
-    statusEl.style.opacity = '0';
-    legendEl.classList.add('visible');
-    historyEl.classList.add('visible');
-    pan = { x: 0, y: 0 };
-    initPhysics(); loop();
+    LE.classList.add('visible');HI.classList.add('visible');
+    pan={x:0,y:0};
+    initPhysics();
+    if(animFrame)cancelAnimationFrame(animFrame);
+    loop();
 
-    // ゴルフモード：ゴール到達判定
-    if (golf.active) handleGolfMove(word);
-  } catch (err) {
-    loaderEl.style.display = 'none';
-    statusText.textContent = 'エラーが発生しました。再度お試しください。';
-  } finally {
-    exploreBtn.disabled = false;
-  }
+    LO.classList.remove('visible');
+
+    // Golf: goal check
+    if(golf.active)handleGolfMove(word);
+  }catch(err){
+    LO.classList.remove('visible');
+    toast('エラーが発生しました','error');
+    console.error(err);
+  }finally{EB.disabled=false}
 }
 
-function renderHistory(current) {
-  historyItems.innerHTML = wordHistory.map(w =>
-    `<div class="history-item ${w === current ? 'current' : ''}" data-word="${w}">${w}</div>`
-  ).join('');
-  historyItems.querySelectorAll('[data-word]').forEach(el => {
-    if (!el.classList.contains('current'))
-      el.addEventListener('click', () => { wordInput.value = el.dataset.word; explore(el.dataset.word); });
+// ===== HISTORY (with game protection) =====
+function renderHistory(cur){
+  HII.innerHTML=wHist.map(w=>{
+    const isCur=w===cur;
+    const locked=golf.active&&!isCur;
+    return `<div class="history-item ${isCur?'current':''} ${locked?'locked':''}" data-word="${w}">${w}</div>`;
+  }).join('');
+  HII.querySelectorAll('[data-word]').forEach(el=>{
+    if(!el.classList.contains('current')&&!el.classList.contains('locked')){
+      el.addEventListener('click',()=>{WI.value=el.dataset.word;explore(el.dataset.word,'__history__')});
+    }
   });
 }
 
-function getNodeAt(mx, my) {
-  const rect = canvasEl.getBoundingClientRect();
-  const x = mx - rect.left, y = my - rect.top;
-  return nodes.find(n => { const r = n.fixed ? 26 : 16; return (n.x-x)**2 + (n.y-y)**2 < (r+6)**2; });
+// ===== INTERACTIONS =====
+function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);return c?c.word:null}
+function getNodeAt(mx,my){
+  const r=C.getBoundingClientRect(),x=mx-r.left,y=my-r.top;
+  // Prioritize current gen, then older
+  const sorted=[...nodes].sort((a,b)=>(b.generation-a.generation));
+  return sorted.find(n=>{
+    if(nodeOpacity(n)<=0.1)return false;
+    const nr=n.fixed&&n.generation===gen?24:14;
+    return(n.x-x)**2+(n.y-y)**2<(nr+6)**2;
+  });
 }
 
-// 現在の中心語を取得
-function currentCenter() {
-  const c = nodes.find(n => n.fixed);
-  return c ? c.word : null;
-}
-
-// ===== ダブルクリック → 外部検索 =====
-const engineSelect = document.getElementById('engineSelect');
-canvasEl.addEventListener('dblclick', e => {
-  const node = getNodeAt(e.clientX, e.clientY);
-  if (!node) return;
-  e.preventDefault();
-  const base = engineSelect.value;
-  window.open(base + encodeURIComponent(node.word), '_blank', 'noopener');
+// Double-click → external search
+C.addEventListener('dblclick',e=>{
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(!n)return;e.preventDefault();
+  window.open(ES.value+encodeURIComponent(n.word),'_blank','noopener');
 });
 
-// ===== クリック（シングル）→ 再探索。ダブルクリックと区別するため遅延 =====
-let clickTimer = null;
-let moved = false;
-
-canvasEl.addEventListener('mousedown', e => {
-  dragging = true; moved = false;
-  dragStart = { x: e.clientX, y: e.clientY }; panStart = { ...pan };
-});
-
-canvasEl.addEventListener('mousemove', e => {
-  if (dragging) {
-    if (Math.abs(e.clientX - dragStart.x) > 4 || Math.abs(e.clientY - dragStart.y) > 4) moved = true;
-    pan.x = panStart.x + (e.clientX - dragStart.x);
-    pan.y = panStart.y + (e.clientY - dragStart.y);
-    const c = nodes.find(n => n.fixed);
-    if (c) { c.x = canvasEl.width/2 - pan.x; c.y = canvasEl.height/2 - pan.y; }
+// Mouse
+C.addEventListener('mousedown',e=>{drag=true;moved=false;dStart={x:e.clientX,y:e.clientY};pStart={...pan}});
+C.addEventListener('mousemove',e=>{
+  if(drag){
+    if(Math.abs(e.clientX-dStart.x)>4||Math.abs(e.clientY-dStart.y)>4)moved=true;
+    pan.x=pStart.x+(e.clientX-dStart.x);pan.y=pStart.y+(e.clientY-dStart.y);
+    const c=nodes.find(n=>n.fixed&&n.generation===gen);
+    if(c){c.x=C.width/2-pan.x;c.y=C.height/2-pan.y}
     return;
   }
-  const node = getNodeAt(e.clientX, e.clientY);
-  hoveredNode = node || null;
-  canvasEl.style.cursor = node ? 'pointer' : 'grab';
-  if (node) {
-    ttWord.textContent = node.word;
-    ttDesc.textContent = (node.description || '') + (node.fixed ? '' : '  ·  ダブルクリックで検索');
-    tooltip.classList.add('visible');
-    tooltip.style.left = (e.clientX + 16) + 'px';
-    tooltip.style.top = (e.clientY - 40) + 'px';
-  } else { tooltip.classList.remove('visible'); }
+  const n=getNodeAt(e.clientX,e.clientY);hoverN=n||null;
+  C.style.cursor=n?'pointer':'grab';
+  if(n){
+    TTW.textContent=n.word;
+    TTD.textContent=(n.description||'')+(n.fixed?'':'  ·  Wクリック→検索');
+    TTP.classList.toggle('pinned',pins.has(n.word));
+    TTP.title=pins.has(n.word)?'ピンを外す':'ピン留め';
+    TTP._word=n.word;
+    TT.classList.add('visible');TT.style.left=(e.clientX+14)+'px';TT.style.top=(e.clientY-36)+'px';
+  }else TT.classList.remove('visible');
 });
-
-canvasEl.addEventListener('mouseup', e => {
-  dragging = false;
-  if (moved) return;
-  const node = getNodeAt(e.clientX, e.clientY);
-  if (node && !node.fixed) {
-    // 遅延させてダブルクリックなら再探索をキャンセル
-    if (clickTimer) clearTimeout(clickTimer);
-    clickTimer = setTimeout(() => {
-      const from = currentCenter();
-      wordInput.value = node.word;
-      explore(node.word, from);
-    }, 220);
+C.addEventListener('mouseup',e=>{
+  drag=false;if(moved)return;
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(n&&!(n.fixed&&n.generation===gen)){
+    if(clickTimer)clearTimeout(clickTimer);
+    clickTimer=setTimeout(()=>{
+      const from=currentCenter();WI.value=n.word;
+      // Golf: save prev state for undo
+      if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
+      explore(n.word,from);
+    },220);
   }
 });
-canvasEl.addEventListener('dblclick', () => { if (clickTimer) clearTimeout(clickTimer); });
-canvasEl.addEventListener('mouseleave', () => { dragging = false; tooltip.classList.remove('visible'); });
+C.addEventListener('dblclick',()=>{if(clickTimer)clearTimeout(clickTimer)});
+C.addEventListener('mouseleave',()=>{drag=false;TT.classList.remove('visible')});
 
-// タッチ
-canvasEl.addEventListener('touchstart', e => {
-  const t = e.touches[0]; dragStart = { x: t.clientX, y: t.clientY }; panStart = { ...pan }; dragging = true; moved = false;
-}, { passive: true });
-canvasEl.addEventListener('touchmove', e => {
-  e.preventDefault();
-  const t = e.touches[0];
-  if (Math.abs(t.clientX - dragStart.x) > 4 || Math.abs(t.clientY - dragStart.y) > 4) moved = true;
-  pan.x = panStart.x + (t.clientX - dragStart.x); pan.y = panStart.y + (t.clientY - dragStart.y);
-  const c = nodes.find(n => n.fixed);
-  if (c) { c.x = canvasEl.width/2 - pan.x; c.y = canvasEl.height/2 - pan.y; }
-}, { passive: false });
-
-let lastTap = 0;
-canvasEl.addEventListener('touchend', e => {
-  dragging = false;
-  if (moved) return;
-  const t = e.changedTouches[0];
-  const node = getNodeAt(t.clientX, t.clientY);
-  if (!node || node.fixed) return;
-  const now = Date.now();
-  if (now - lastTap < 300) {
-    // ダブルタップ → 検索
-    window.open(engineSelect.value + encodeURIComponent(node.word), '_blank', 'noopener');
-    lastTap = 0;
-  } else {
-    lastTap = now;
-    setTimeout(() => {
-      if (lastTap === now) { // シングルのまま
-        const from = currentCenter();
-        wordInput.value = node.word;
-        explore(node.word, from);
-      }
-    }, 310);
+// Touch
+C.addEventListener('touchstart',e=>{
+  const t=e.touches[0];dStart={x:t.clientX,y:t.clientY};pStart={...pan};drag=true;moved=false;
+},{passive:true});
+C.addEventListener('touchmove',e=>{
+  e.preventDefault();const t=e.touches[0];
+  if(Math.abs(t.clientX-dStart.x)>4||Math.abs(t.clientY-dStart.y)>4)moved=true;
+  pan.x=pStart.x+(t.clientX-dStart.x);pan.y=pStart.y+(t.clientY-dStart.y);
+  const c=nodes.find(n=>n.fixed&&n.generation===gen);
+  if(c){c.x=C.width/2-pan.x;c.y=C.height/2-pan.y}
+},{passive:false});
+C.addEventListener('touchend',e=>{
+  drag=false;if(moved)return;
+  const t=e.changedTouches[0],n=getNodeAt(t.clientX,t.clientY);
+  if(!n||n.fixed&&n.generation===gen)return;
+  const now=Date.now();
+  if(now-lastTap<300){
+    window.open(ES.value+encodeURIComponent(n.word),'_blank','noopener');lastTap=0;
+  }else{
+    lastTap=now;
+    setTimeout(()=>{if(lastTap===now){
+      const from=currentCenter();WI.value=n.word;
+      if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
+      explore(n.word,from);
+    }},310);
   }
 });
 
-exploreBtn.addEventListener('click', () => explore(wordInput.value, currentCenter()));
-wordInput.addEventListener('keydown', e => { if (e.key === 'Enter') explore(wordInput.value, currentCenter()); });
+EB.addEventListener('click',()=>explore(WI.value,currentCenter()));
+WI.addEventListener('keydown',e=>{if(e.key==='Enter')explore(WI.value,currentCenter())});
 
-// ===================================================================
-// ===== トースト通知 =====
-const toastEl = document.getElementById('toast');
-let toastTimer = null;
-function toast(msg, type = 'info', ms = 2600) {
-  toastEl.textContent = msg;
-  toastEl.className = 'toast visible ' + type;
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('visible'), ms);
+// ===== TOAST =====
+let toastT=null;
+function toast(msg,type='info',ms=2600){
+  TE.textContent=msg;TE.className='toast visible '+type;
+  if(toastT)clearTimeout(toastT);toastT=setTimeout(()=>TE.classList.remove('visible'),ms);
 }
 
-// ===================================================================
-// ===== ワードゴルフ =====
-const golf = { active: false, start: '', goal: '', par: 0, moves: 0, path: [] };
-
-const golfPanel = document.getElementById('golfPanel');
-const golfTrail = document.getElementById('golfTrail');
-const golfStartEl = document.getElementById('golfStart');
-const golfGoalEl = document.getElementById('golfGoal');
-const golfMovesEl = document.getElementById('golfMoves');
-const golfParEl = document.getElementById('golfPar');
-const golfHintBtn = document.getElementById('golfHintBtn');
-const golfNewBtn = document.getElementById('golfNewBtn');
-
-async function startGolf() {
-  toast('お題を生成中…', 'info', 1500);
-  try {
-    const resp = await fetch('/api/golf', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'pair' }),
-    });
-    const data = await resp.json();
-    golf.active = true;
-    golf.start = data.start; golf.goal = data.goal; golf.par = data.par || 5;
-    golf.moves = 0; golf.path = [data.start];
-    golfStartEl.textContent = golf.start;
-    golfGoalEl.textContent = golf.goal;
-    golfParEl.textContent = golf.par;
-    golfMovesEl.textContent = '0';
-    golfPanel.classList.add('visible');
-    renderTrail();
-    wordInput.value = golf.start;
-    explore(golf.start);   // スタート語から開始（ログfromなし）
-    toast(`「${golf.start}」から「${golf.goal}」へ！`, 'success');
-  } catch {
-    toast('お題の生成に失敗しました', 'error');
-  }
+// ===== X (TWITTER) SHARE =====
+function shareOnX(text){
+  const url='https://twitter.com/intent/tweet?text='+encodeURIComponent(text);
+  window.open(url,'_blank','noopener,width=550,height=420');
 }
 
-function renderTrail() {
-  golfTrail.classList.add('visible');
-  const parts = golf.path.map((w, i) => {
-    const cls = i === 0 ? 'trail-word start' : 'trail-word';
+// ===== AD REFRESH =====
+function refreshAd(){
+  try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch{}
+}
+// Periodic refresh every 60s during play
+setInterval(refreshAd,60000);
+
+// ===== LIVE SEARCH POLLING =====
+async function pollLive(){
+  try{const r=await fetch('/api/live');const d=await r.json();liveWords=d.words||[]}catch{liveWords=[]}
+}
+setInterval(pollLive,5000);
+pollLive();
+
+// ===== GOLF =====
+function handleGolfMove(word){
+  if(word===golf.start&&golf.path.length===1)return;
+  golf.moves++;golf.path.push(word);
+  GM.textContent=golf.moves;renderTrail();
+  if(word===golf.goal)finishGolf();
+}
+function renderTrail(){
+  GT.classList.add('visible');
+  const parts=golf.path.map((w,i)=>{
+    const cls=i===0?'trail-word start':'trail-word';
     return `<span class="${cls}">${w}</span>`;
   });
-  // ゴール表示
   parts.push('<span class="trail-sep">…→</span>');
   parts.push(`<span class="trail-word goal">${golf.goal}</span>`);
-  golfTrail.innerHTML = parts.join('<span class="trail-sep">→</span>');
+  GT.innerHTML=parts.join('<span class="trail-sep">→</span>');
 }
 
-// ゴルフ中に語を選んだとき
-function handleGolfMove(word) {
-  if (word === golf.start && golf.path.length === 1) return; // 初期表示
-  golf.moves++;
-  golf.path.push(word);
-  golfMovesEl.textContent = golf.moves;
-  renderTrail();
+async function finishGolf(){
+  const par=golf.par,diff=golf.moves-par;
+  const grade=diff<=-2?'イーグル！':diff===-1?'バーディー！':diff===0?'パー':diff===1?'ボギー':`+${diff}`;
+  golf.active=false;
+  const fullPath=[...golf.path];
 
-  if (word === golf.goal) {
-    finishGolf();
-  }
-}
+  // Distance measurement
+  let distData=[];
+  try{
+    const r=await fetch('/api/golf',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'distance',words:fullPath,goal:golf.goal})});
+    const d=await r.json();distData=d.distances||[];
+  }catch{}
 
-function finishGolf() {
-  const par = golf.par;
-  const diff = golf.moves - par;
-  let grade = diff <= -2 ? 'イーグル！' : diff === -1 ? 'バーディー！' : diff === 0 ? 'パー' : diff === 1 ? 'ボギー' : `+${diff}`;
-  toast(`ゴール！ ${golf.moves}手（${grade}）`, 'success', 4000);
-  golf.active = false;
+  // Build completion overlay
+  const pathHTML=fullPath.map((w,i)=>{
+    const dist=distData.find(d=>d.word===w);
+    const dNum=dist?dist.distance:'?';
+    const dReason=dist?dist.reason:'';
+    const col=dNum<=3?'var(--green)':dNum<=6?'var(--amber)':'var(--rose)';
+    const isGoal=w===golf.goal;
+    return `<div class="comp-node" style="border-color:${isGoal?'var(--goal)':col}">
+      <div class="comp-node-word" style="color:${isGoal?'var(--goal)':'var(--text)'}">${w}</div>
+      ${!isGoal?`<div class="comp-node-dist" style="color:${col}">距離: ${dNum}</div><div class="comp-node-reason">${dReason}</div>`:'<div class="comp-node-dist" style="color:var(--goal)">GOAL!</div>'}
+    </div>${i<fullPath.length-1?'<div class="comp-arrow">→</div>':''}`;
+  }).join('');
 
-  const fullPath = [...golf.path]; // golf.goal は既に path 末尾に入っている
+  const periodLabel=golf.daily?(golf.dailyPeriod==='monthly'?'マンスリー':'デイリー'):'';
+  const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
 
-  // デイリー/マンスリーチャレンジならランキングに登録
-  if (golf.daily) {
-    const idx = golf.dailyIdx;
-    const period = golf.dailyPeriod || 'daily';
-    daily.results[resultKey(period, idx)] = { moves: golf.moves, path: fullPath };
-    submitScore(period, idx, golf.moves, fullPath).then(() => {
-      // 登録した期間が今開いている期間と同じならランキング更新
-      if (daily.period === period) {
-        dailyPanel.classList.add('visible');
-        renderPuzzles();
-        loadBoard(idx);
-      }
+  CO.innerHTML=`
+    <div class="comp-title">ゴール！🎉</div>
+    <div class="comp-grade">${golf.moves}手（パー${par}）— ${grade}</div>
+    <div class="comp-path">${pathHTML}</div>
+    <div class="comp-actions">
+      <button class="comp-btn twitter" onclick="shareOnX(\`${shareText.replace(/`/g,"'")}\`)">Xで共有</button>
+      <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
+    </div>`;
+  CO.classList.add('visible');
+
+  // Daily/Monthly: submit score
+  if(golf.daily){
+    const idx=golf.dailyIdx,per=golf.dailyPeriod||'daily';
+    daily.results[per+':'+idx]={moves:golf.moves,path:fullPath};
+    submitScore(per,idx,golf.moves,fullPath).then(()=>{
+      if(daily.period===per){DP.classList.add('visible');renderPuzzles();loadBoard(idx)}
     });
-    golf.daily = false;
-
-    const label = period === 'monthly' ? 'マンスリー' : 'デイリー';
-    const shareText =
-      `語彙ゴルフ ${label} 🏌️ ${daily.date}\n` +
-      `第${idx+1}問：${golf.start}→${golf.goal}\n` +
-      `${golf.moves}手（パー${par}）${grade}\n` +
-      `${fullPath.join('→')}\n\n${location.origin}`;
-    shareResult(shareText);
-    return;
-  }
-
-  // 通常ゴルフ：結果を共有
-  const shareText = `語彙ゴルフ 🏌️\n${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(shareText)
-      .then(() => toast('結果をクリップボードにコピーしました', 'info', 3000))
-      .catch(() => {});
+    golf.daily=false;
   }
 }
 
-golfHintBtn.addEventListener('click', async () => {
-  if (!golf.active) return;
-  const from = currentCenter();
-  toast('ヒントを取得中…', 'info', 1500);
-  try {
-    const resp = await fetch('/api/golf', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'hint', from, goal: golf.goal }),
-    });
-    const data = await resp.json();
-    toast('ヒント: ' + (data.hints || []).join(' / '), 'info', 5000);
-  } catch {
-    toast('ヒントの取得に失敗しました', 'error');
-  }
+// Undo (1 per game)
+GU.addEventListener('click',()=>{
+  if(!golf.active||golf.undoUsed||!golf.prevState)return;
+  golf.undoUsed=true;GU.disabled=true;
+  golf.moves=golf.prevState.moves;golf.path=[...golf.prevState.path];
+  GM.textContent=golf.moves;renderTrail();
+  WI.value=golf.prevState.word;
+  gen--;// step back one generation visually
+  explore(golf.prevState.word);
+  toast('手戻りしました（残り0回）','info');
 });
 
-golfNewBtn.addEventListener('click', startGolf);
+async function startGolf(){
+  toast('お題を生成中…','info',1500);
+  try{
+    const r=await fetch('/api/golf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pair'})});
+    if(r.status===429){const d=await r.json();toast(d.message||'ゴルフ上限到達','error',3000);return}
+    const d=await r.json();
+    golf.active=true;golf.start=d.start;golf.goal=d.goal;golf.par=d.par||5;
+    golf.moves=0;golf.path=[d.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;
+    GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+    GU.disabled=false;GP.classList.add('visible');renderTrail();
+    WI.value=golf.start;explore(golf.start);
+    toast(`「${golf.start}」→「${golf.goal}」`,  'success');
+  }catch{toast('お題の生成に失敗しました','error')}
+}
 
-// ===== モード切替 =====
-document.querySelectorAll('.mode-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+GH.addEventListener('click',async()=>{
+  if(!golf.active)return;toast('ヒント取得中…','info',1500);
+  try{const r=await fetch('/api/golf',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'hint',from:currentCenter(),goal:golf.goal})});
+    if(r.status===429){const d=await r.json();toast(d.message||'ヒント上限到達','error',3000);return}
+    const d=await r.json();toast('ヒント: '+(d.hints||[]).join(' / '),'info',5000);
+  }catch{toast('ヒント取得失敗','error')}
+});
+GN.addEventListener('click',startGolf);
+
+// ===== DAILY/MONTHLY =====
+function resultKey(p,i){return p+':'+i}
+async function openChallenge(period){
+  daily.period=period;daily.current=0;
+  DP.classList.add('visible');
+  DT.textContent=period==='monthly'?'マンスリーチャレンジ':'デイリーチャレンジ';
+  PL.innerHTML='<div class="board-empty">読み込み中…</div>';
+  try{const r=await fetch(`/api/daily?period=${period}`);const d=await r.json();
+    daily.date=d.date;daily.puzzles=d.puzzles||[];
+    DD.textContent=(period==='monthly'?'今月 ':'')+d.date;
+    renderPuzzles();loadBoard(daily.current);
+  }catch{PL.innerHTML='<div class="board-empty">読み込みに失敗しました</div>'}
+}
+function renderPuzzles(){
+  PL.innerHTML=daily.puzzles.map((p,i)=>{
+    const res=daily.results[resultKey(daily.period,i)];
+    return `<div class="puzzle-card ${res?'cleared':''}" data-puzzle="${i}">
+      <div class="puzzle-top"><span class="puzzle-diff diff-${p.difficulty}">${p.difficulty}</span><span class="puzzle-par">パー ${p.par}</span></div>
+      <div class="puzzle-route"><span class="puzzle-word s">${p.start}</span><span class="arrow">→</span><span class="puzzle-word g">${p.goal}</span></div>
+      ${res?`<div class="puzzle-result">クリア済み：${res.moves}手</div>`:''}
+    </div>`;
+  }).join('');
+  PL.querySelectorAll('.puzzle-card').forEach(c=>c.addEventListener('click',()=>startDailyPuzzle(Number(c.dataset.puzzle))));
+}
+function startDailyPuzzle(idx){
+  const p=daily.puzzles[idx];if(!p)return;DP.classList.remove('visible');
+  golf.active=true;golf.start=p.start;golf.goal=p.goal;golf.par=p.par||5;
+  golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;
+  golf.daily=true;golf.dailyIdx=idx;golf.dailyPeriod=daily.period;
+  GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+  GU.disabled=false;GP.classList.add('visible');renderTrail();
+  WI.value=golf.start;explore(golf.start);
+  toast(`${daily.period==='monthly'?'マンスリー':''}第${idx+1}問`,  'success');
+}
+async function loadBoard(pi){
+  daily.current=pi;
+  BT.querySelectorAll('.board-tab').forEach(t=>t.classList.toggle('active',Number(t.dataset.puzzle)===pi));
+  BL.innerHTML='<div class="board-empty">読み込み中…</div>';
+  try{const r=await fetch(`/api/daily?action=board&period=${daily.period}&puzzle=${pi}`);
+    const d=await r.json();renderBoard(d.board||[]);
+  }catch{BL.innerHTML='<div class="board-empty">読み込み失敗</div>'}
+}
+function renderBoard(board){
+  if(!board.length){BL.innerHTML='<div class="board-empty">まだ記録がありません</div>';return}
+  BL.innerHTML=board.map((row,i)=>{
+    const rank=i+1,isMe=handleName&&row.name===handleName;
+    const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    return `<div class="board-row ${isMe?'me':''}"><div class="board-rank ${rank<=3?'top':''}">${medal}</div>
+      <div class="board-name">${esc(row.name)}</div><div class="board-moves">${row.moves}<small>手</small></div>
+      ${row.path?`<div class="board-path">${esc(row.path)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+BT.querySelectorAll('.board-tab').forEach(t=>t.addEventListener('click',()=>loadBoard(Number(t.dataset.puzzle))));
+DC.addEventListener('click',()=>DP.classList.remove('visible'));
+async function submitScore(period,pi,moves,path){
+  try{await fetch('/api/daily',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'submit',period,puzzle:pi,name:handleName||'名無し',moves,path})})}catch{}
+}
+SB.addEventListener('click',()=>{
+  const idx=daily.current,p=daily.puzzles[idx],res=daily.results[resultKey(daily.period,idx)];
+  const label=daily.period==='monthly'?'マンスリー':'デイリー';
+  let text=`語彙ゴルフ ${label} 🏌️ ${daily.date}\n第${idx+1}問：${p?p.start+'→'+p.goal:''}`;
+  if(res)text+=`\n私の記録：${res.moves}手（パー${p.par}）`;
+  text+=`\n\nあなたも挑戦 → ${location.origin}`;
+  shareOnX(text);
+});
+
+// ===== MODE SWITCH =====
+document.querySelectorAll('.mode-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
     tab.classList.add('active');
-    const mode = tab.dataset.mode;
-    // 一旦すべて閉じる
-    golf.active = false;
-    golfPanel.classList.remove('visible');
-    golfTrail.classList.remove('visible');
-    dailyPanel.classList.remove('visible');
-
-    if (mode === 'golf') {
-      startGolf();
-    } else if (mode === 'daily') {
-      openChallenge('daily');
-    } else if (mode === 'monthly') {
-      openChallenge('monthly');
-    }
+    const m=tab.dataset.mode;
+    golf.active=false;GP.classList.remove('visible');GT.classList.remove('visible');
+    DP.classList.remove('visible');CO.classList.remove('visible');
+    if(m==='golf')startGolf();
+    else if(m==='daily')openChallenge('daily');
+    else if(m==='monthly')openChallenge('monthly');
   });
 });
 
-// ===================================================================
-// ===== デイリー / マンスリー チャレンジ & ランキング =====
-const dailyPanel = document.getElementById('dailyPanel');
-const dailyTitle = document.getElementById('dailyTitle');
-const dailyDate = document.getElementById('dailyDate');
-const dailyClose = document.getElementById('dailyClose');
-const handleInput = document.getElementById('handleInput');
-const puzzleList = document.getElementById('puzzleList');
-const boardTabs = document.getElementById('boardTabs');
-const boardList = document.getElementById('boardList');
-const shareBoardBtn = document.getElementById('shareBoardBtn');
+// ===== PIN SYSTEM =====
+const pins=new Set(); // ピン留めした語のSet
 
-const daily = {
-  period: 'daily', date: '', puzzles: [], current: 0,
-  results: {},   // {"period:idx": {moves, path}} クリア済み記録（端末ローカル）
-};
-
-// 結果記録のキー（period混在対応）
-function resultKey(period, idx) { return `${period}:${idx}`; }
-
-// ハンドルネームは端末に保持（メモリのみ。ブラウザストレージは使わない）
-let handleName = '';
-handleInput.addEventListener('input', () => { handleName = handleInput.value.trim(); });
-
-async function openChallenge(period) {
-  daily.period = period;
-  daily.current = 0;
-  dailyPanel.classList.add('visible');
-  dailyTitle.textContent = period === 'monthly' ? 'マンスリーチャレンジ' : 'デイリーチャレンジ';
-  puzzleList.innerHTML = '<div class="board-empty">お題を読み込み中…</div>';
-  try {
-    const resp = await fetch(`/api/daily?period=${period}`);
-    const data = await resp.json();
-    daily.date = data.date;
-    daily.puzzles = data.puzzles || [];
-    dailyDate.textContent = (period === 'monthly' ? '今月 ' : '') + data.date;
-    renderPuzzles();
-    loadBoard(daily.current);
-  } catch {
-    puzzleList.innerHTML = '<div class="board-empty">読み込みに失敗しました</div>';
+function togglePin(word){
+  if(!word)return;
+  if(pins.has(word)){
+    pins.delete(word);
+    toast(`「${word}」のピンを外しました`,'info',1500);
+  }else{
+    pins.add(word);
+    toast(`「${word}」をピン留めしました 📌`,'success',1500);
   }
+  renderPinTray();
+  // ツールチップのピンアイコンも更新
+  if(TTP._word===word)TTP.classList.toggle('pinned',pins.has(word));
 }
 
-function renderPuzzles() {
-  puzzleList.innerHTML = daily.puzzles.map((p, i) => {
-    const res = daily.results[resultKey(daily.period, i)];
-    const cleared = res ? 'cleared' : '';
-    const resultLine = res ? `<div class="puzzle-result">クリア済み：${res.moves}手</div>` : '';
-    return `
-      <div class="puzzle-card ${cleared}" data-puzzle="${i}">
-        <div class="puzzle-top">
-          <span class="puzzle-diff diff-${p.difficulty}">${p.difficulty}</span>
-          <span class="puzzle-par">パー ${p.par}</span>
-        </div>
-        <div class="puzzle-route">
-          <span class="puzzle-word s">${p.start}</span>
-          <span class="arrow">→</span>
-          <span class="puzzle-word g">${p.goal}</span>
-        </div>
-        ${resultLine}
-      </div>`;
-  }).join('');
+function renderPinTray(){
+  PT.innerHTML=[...pins].map(w=>`
+    <div class="pin-chip" data-word="${w}">
+      <span class="pin-chip-word">${w}</span>
+      <button class="pin-chip-remove" data-remove="${w}" title="ピンを外す">×</button>
+    </div>`).join('');
 
-  puzzleList.querySelectorAll('.puzzle-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const idx = Number(card.dataset.puzzle);
-      startDailyPuzzle(idx);
+  // チップクリック → 探索
+  PT.querySelectorAll('.pin-chip').forEach(chip=>{
+    chip.addEventListener('click',e=>{
+      if(e.target.classList.contains('pin-chip-remove'))return;
+      const word=chip.dataset.word;
+      WI.value=word;explore(word,currentCenter());
+    });
+  });
+  // 削除ボタン
+  PT.querySelectorAll('.pin-chip-remove').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      togglePin(btn.dataset.remove);
     });
   });
 }
 
-// デイリー/マンスリーのお題をゴルフとして開始
-function startDailyPuzzle(idx) {
-  const p = daily.puzzles[idx];
-  if (!p) return;
-  dailyPanel.classList.remove('visible');
-  golf.active = true;
-  golf.start = p.start; golf.goal = p.goal; golf.par = p.par || 5;
-  golf.moves = 0; golf.path = [p.start];
-  golf.daily = true; golf.dailyIdx = idx;
-  golf.dailyPeriod = daily.period;   // どのチャレンジか記憶
-  golfStartEl.textContent = golf.start;
-  golfGoalEl.textContent = golf.goal;
-  golfParEl.textContent = golf.par;
-  golfMovesEl.textContent = '0';
-  golfPanel.classList.add('visible');
-  renderTrail();
-  wordInput.value = golf.start;
-  explore(golf.start);
-  const label = daily.period === 'monthly' ? 'マンスリー' : '';
-  toast(`${label}第${idx+1}問：「${golf.start}」→「${golf.goal}」`, 'success');
-}
-
-// ランキング読み込み
-async function loadBoard(puzzleIdx) {
-  daily.current = puzzleIdx;
-  boardTabs.querySelectorAll('.board-tab').forEach(t =>
-    t.classList.toggle('active', Number(t.dataset.puzzle) === puzzleIdx));
-  boardList.innerHTML = '<div class="board-empty">読み込み中…</div>';
-  try {
-    const resp = await fetch(`/api/daily?action=board&period=${daily.period}&puzzle=${puzzleIdx}`);
-    const data = await resp.json();
-    renderBoard(data.board || []);
-  } catch {
-    boardList.innerHTML = '<div class="board-empty">読み込みに失敗しました</div>';
-  }
-}
-
-function renderBoard(board) {
-  if (!board.length) {
-    boardList.innerHTML = '<div class="board-empty">まだ記録がありません。最初の挑戦者になろう！</div>';
-    return;
-  }
-  boardList.innerHTML = board.map((row, i) => {
-    const rank = i + 1;
-    const isMe = handleName && row.name === handleName;
-    const rankCls = rank <= 3 ? 'top' : '';
-    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-    return `
-      <div class="board-row ${isMe ? 'me' : ''}">
-        <div class="board-rank ${rankCls}">${medal}</div>
-        <div class="board-name">${escapeHtml(row.name)}</div>
-        <div class="board-moves">${row.moves}<small>手</small></div>
-        ${row.path ? `<div class="board-path">${escapeHtml(row.path)}</div>` : ''}
-      </div>`;
-  }).join('');
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-// ランキングのタブ切替
-boardTabs.querySelectorAll('.board-tab').forEach(t => {
-  t.addEventListener('click', () => loadBoard(Number(t.dataset.puzzle)));
+// ツールチップのピンボタン
+TTP.addEventListener('click',e=>{
+  e.stopPropagation();
+  togglePin(TTP._word);
 });
 
-dailyClose.addEventListener('click', () => dailyPanel.classList.remove('visible'));
-
-// スコアをサーバーへ登録
-async function submitScore(period, puzzleIdx, moves, path) {
-  const name = handleName || '名無し';
-  try {
-    await fetch('/api/daily', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'submit', period, puzzle: puzzleIdx, name, moves, path }),
-    });
-  } catch {}
+// ===== USAGE & UPGRADE =====
+function updateUsage(remaining,limit){
+  UC.textContent=remaining;
+  UB.classList.toggle('low',remaining<=5);
 }
-
-// ランキング全体を共有
-shareBoardBtn.addEventListener('click', () => {
-  const idx = daily.current;
-  const p = daily.puzzles[idx];
-  const res = daily.results[resultKey(daily.period, idx)];
-  const label = daily.period === 'monthly' ? 'マンスリー' : 'デイリー';
-  let text = `語彙ゴルフ ${label} 🏌️ ${daily.date}\n第${idx+1}問：${p ? p.start + '→' + p.goal : ''}\n`;
-  if (res) text += `私の記録：${res.moves}手（パー${p.par}）\n`;
-  text += `\nあなたも挑戦 → ${location.origin}`;
-  shareResult(text);
-});
-
-// 共有：Web Share API → なければクリップボード
-function shareResult(text) {
-  if (navigator.share) {
-    navigator.share({ text }).catch(() => {});
-  } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(text)
-      .then(() => toast('共有テキストをコピーしました', 'info', 3000))
-      .catch(() => toast('コピーに失敗しました', 'error'));
-  }
+function showUpgrade(){
+  UO.classList.add('visible');
 }
+UCL.addEventListener('click',()=>UO.classList.remove('visible'));
+
+// 起動時に残り回数を取得
+async function loadUsage(){
+  try{const r=await fetch('/api/usage');const d=await r.json();
+    updateUsage(d.explore.remaining,d.explore.limit);
+  }catch{}
+}
+loadUsage();
 
 draw();
 </script>
