@@ -80,6 +80,11 @@ export default async function handler(req, res) {
               renewsAt: s.current_period_end,
               cancelAtEnd: s.cancel_at_period_end,
             };
+            // アクティブなサブスクを確認できたのでTTLを延長（35日）
+            try {
+              await redis('SET', `premium:${email}`, s.id);
+              await redis('EXPIRE', `premium:${email}`, 3024000);
+            } catch {}
           }
         }
       } catch {}

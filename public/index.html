@@ -57,6 +57,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .usage-badge .count{color:var(--amber);font-weight:500}
 .usage-badge.low .count{color:var(--rose)}
 
+/* === ACCOUNT TAB (always visible) === */
+.account-tab{background:var(--surface);border:1px solid var(--amber);color:var(--amber);font-family:'Noto Serif JP',serif;font-size:13px;padding:6px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.account-tab:hover{background:var(--amber);color:#080C18}
+.account-tab.premium{background:linear-gradient(135deg,#F5A623,#FF8C42);color:#080C18;border-color:#F5A623;font-weight:600}
+
 /* === ACCOUNT PANEL === */
 .account-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
 .account-overlay.visible{display:flex}
@@ -236,7 +241,6 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   .pin-tray{top:8px;right:8px}
   .pin-chip{padding:5px 10px 5px 12px}
   .pin-chip-word{font-size:14px}
-}
   .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
   .ad-sidebar{display:none}
   .ad-slot-bottom{height:50px}
@@ -244,6 +248,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   .logo{font-size:15px}
   .logo span{display:none}
   .mode-tab{font-size:14px;padding:5px 10px}
+  .account-tab{font-size:13px;padding:5px 10px}
   .search-wrap{min-width:140px;gap:4px}
   input#wordInput{font-size:16px;padding:9px 12px}
   button#exploreBtn{padding:9px 12px;font-size:14px}
@@ -271,6 +276,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <button class="mode-tab" data-mode="daily">デイリー</button>
       <button class="mode-tab" data-mode="monthly">マンスリー</button>
     </div>
+    <button class="account-tab" id="accountTab">プラン</button>
     <div class="search-wrap">
       <input id="wordInput" type="text" placeholder="言葉を入力…" autocomplete="off"/>
       <button id="exploreBtn">探索</button>
@@ -1214,6 +1220,7 @@ TTP.addEventListener('click',e=>{
 
 // ===== USAGE & UPGRADE =====
 function updateUsage(remaining,limit){
+  if(typeof updateAccountTab==='function')updateAccountTab();
   if(premiumEmail){UB.innerHTML='<span class="count">✨ プレミアム</span>';UB.classList.remove('low');UB.classList.add('premium');return}
   UB.classList.remove('premium');
   UC.textContent=remaining;
@@ -1233,6 +1240,23 @@ const accPlanDetail=document.getElementById('accountPlanDetail');
 
 // バッジクリック：課金者ならアカウント画面、未課金ならアップグレード画面
 UB.addEventListener('click',()=>{
+  if(premiumEmail)openAccount();
+  else showUpgrade();
+});
+
+// アカウントタブ（常時表示・モバイルでも見える）
+const accountTab=document.getElementById('accountTab');
+function updateAccountTab(){
+  if(!accountTab)return;
+  if(premiumEmail){
+    accountTab.textContent='✨ 会員';
+    accountTab.classList.add('premium');
+  }else{
+    accountTab.textContent='プラン';
+    accountTab.classList.remove('premium');
+  }
+}
+accountTab.addEventListener('click',()=>{
   if(premiumEmail)openAccount();
   else showUpgrade();
 });
@@ -1346,7 +1370,25 @@ async function handleCheckoutReturn(){
 
 // 起動時に残り回数を取得
 async function loadUsage(){
-  if(premiumEmail){updateUsage(9999);return}
+  // 課金情報があればサーバーで再検証（localStorageを盲信しない）
+  if(premiumEmail){
+    try{
+      const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
+      const d=await r.json();
+      if(d.premium){
+        updateUsage(9999);
+        return;
+      }else{
+        // サーバーで課金が確認できない→ローカル情報をクリア
+        premiumEmail='';
+        try{localStorage.removeItem('premiumEmail')}catch{}
+      }
+    }catch{
+      // 通信失敗時はローカル情報を信じて続行
+      updateUsage(9999);
+      return;
+    }
+  }
   try{const r=await fetch('/api/usage');const d=await r.json();
     updateUsage(d.explore.remaining,d.explore.limit);
   }catch{}
