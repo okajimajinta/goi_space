@@ -129,6 +129,12 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
 .status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
 .status-hint{margin-top:8px;font-size:14px;color:#2E3A55}
+.center-search{display:flex;gap:8px;justify-content:center;margin:18px 0;pointer-events:auto}
+.center-search input{width:min(340px,60vw);background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:12px 18px;border-radius:8px;outline:none;transition:border-color .2s}
+.center-search input::placeholder{color:var(--muted)}
+.center-search input:focus{border-color:var(--amber)}
+.center-search button{background:var(--amber);color:#080C18;border:none;padding:12px 22px;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}
+.center-search button:hover{opacity:.85}
 
 /* === GOLF PANEL === */
 .golf-panel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:none;align-items:center;gap:14px;z-index:50;backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw}
@@ -349,6 +355,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
     </div>
     <div class="status" id="status">
       <div class="status-text">言葉を入力して、語彙の宇宙を探索する</div>
+      <div class="center-search" id="centerSearch">
+        <input id="centerInput" type="text" placeholder="探索する言葉を入力…" autocomplete="off"/>
+        <button id="centerBtn">探索</button>
+      </div>
       <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
     </div>
     <div class="golf-panel" id="golfPanel">
@@ -923,6 +933,18 @@ C.addEventListener('contextmenu',e=>{
 EB.addEventListener('click',()=>explore(WI.value,currentCenter()));
 WI.addEventListener('keydown',e=>{if(e.key==='Enter')explore(WI.value,currentCenter())});
 
+// 中央の検索バー（初回アクセス時）
+const centerInput=document.getElementById('centerInput');
+const centerBtn=document.getElementById('centerBtn');
+function centerSearch(){
+  const v=centerInput.value.trim();
+  if(!v)return;
+  WI.value=v;
+  explore(v,currentCenter());
+}
+centerBtn.addEventListener('click',centerSearch);
+centerInput.addEventListener('keydown',e=>{if(e.key==='Enter')centerSearch()});
+
 // ===== TOAST =====
 let toastT=null;
 function toast(msg,type='info',ms=2600){
@@ -1145,8 +1167,32 @@ SB.addEventListener('click',()=>{
 
 // ===== MODE SWITCH (進行状態を保存して途中再開) =====
 let currentMode='explore';
-// 各モードの中断状態を保存
+// 各モードの中断状態を保存（ゴルフ進行＋キャンバスの語彙空間）
 const savedSessions={golf:null,daily:null,monthly:null};
+const savedCanvas={explore:null,golf:null,daily:null,monthly:null};
+
+// 現在のキャンバス（ノード・エッジ）を保存
+function snapshotCanvas(){
+  return {nodes:nodes.map(n=>({...n})),edges:edges.map(e=>({...e})),gen};
+}
+// キャンバスを復元（なければ空に）
+function restoreCanvas(snap){
+  if(snap){
+    nodes=snap.nodes.map(n=>({...n}));
+    edges=snap.edges.map(e=>({...e}));
+    gen=snap.gen;
+  }else{
+    nodes=[];edges=[];
+  }
+  if(animFrame)cancelAnimationFrame(animFrame);
+  loop();
+}
+// キャンバスを完全にクリア
+function clearCanvas(){
+  nodes=[];edges=[];
+  if(animFrame)cancelAnimationFrame(animFrame);
+  draw();
+}
 
 // 現在のゴルフ状態のスナップショットを取る
 function snapshotGolf(){
@@ -1166,12 +1212,13 @@ function restoreGolf(s){
   golf.prevState=s.prevState;golf.daily=s.daily;golf.dailyIdx=s.dailyIdx;golf.dailyPeriod=s.dailyPeriod;
   GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent=golf.moves;
   GU.disabled=golf.undoUsed;GP.classList.add('visible');renderTrail();
-  // 中断時の中心語で語彙空間を再描画（手数を増やさないよう抑制）
-  WI.value=s.centerWord;explore(s.centerWord,null,{suppressGolfMove:true});
+  SE.style.opacity='0';// 再開時は初期ステータスを隠す
   toast('続きから再開しました','info',1800);
 }
 
 function leaveMode(mode){
+  // キャンバス状態を保存（全モード）
+  savedCanvas[mode]=snapshotCanvas();
   // ゴルフ系モードを離れるとき、進行中なら保存
   if((mode==='golf'||mode==='daily'||mode==='monthly')&&golf.active){
     savedSessions[mode]=snapshotGolf();
@@ -1181,6 +1228,10 @@ function leaveMode(mode){
 document.querySelectorAll('.mode-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     const m=tab.dataset.mode;
+    if(m===currentMode){
+      // 同じモードを再クリックした場合は何もしない（誤操作防止）
+      return;
+    }
     // 現在のモードの状態を保存
     leaveMode(currentMode);
 
@@ -1189,19 +1240,29 @@ document.querySelectorAll('.mode-tab').forEach(tab=>{
 
     golf.active=false;GP.classList.remove('visible');GT.classList.remove('visible');
     DP.classList.remove('visible');CO.classList.remove('visible');
+    // 前モードのノードを必ずクリア（混在を防ぐ）
+    clearCanvas();
     currentMode=m;
 
     if(m==='golf'){
-      if(savedSessions.golf){restoreGolf(savedSessions.golf)}
+      if(savedSessions.golf){restoreGolf(savedSessions.golf);restoreCanvas(savedCanvas.golf)}
       else startGolf();
     }else if(m==='daily'){
-      if(savedSessions.daily){daily.period='daily';restoreGolf(savedSessions.daily)}
+      if(savedSessions.daily){daily.period='daily';restoreGolf(savedSessions.daily);restoreCanvas(savedCanvas.daily)}
       else openChallenge('daily');
     }else if(m==='monthly'){
-      if(savedSessions.monthly){daily.period='monthly';restoreGolf(savedSessions.monthly)}
+      if(savedSessions.monthly){daily.period='monthly';restoreGolf(savedSessions.monthly);restoreCanvas(savedCanvas.monthly)}
       else openChallenge('monthly');
+    }else if(m==='explore'){
+      // 探索モード：保存済みの語彙空間があれば復元、なければ空＋中央検索バー表示
+      restoreCanvas(savedCanvas.explore);
+      if(!savedCanvas.explore||!savedCanvas.explore.nodes.length){
+        SE.style.opacity='1';
+        if(centerInput)centerInput.value='';
+      }else{
+        SE.style.opacity='0';
+      }
     }
-    // explore モードは特に何もしない（現在の語彙空間がそのまま残る）
   });
 });
 
