@@ -291,7 +291,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
     </div>
     <div class="status" id="status">
       <div class="status-text">言葉を入力して、語彙の宇宙を探索する</div>
-      <div class="status-hint">ノードをクリック→再探索 / ダブルクリック→検索エンジン</div>
+      <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
     </div>
     <div class="golf-panel" id="golfPanel">
       <div class="golf-leg golf-start"><div class="golf-leg-label">START</div><div class="golf-leg-word" id="golfStart">—</div></div>
@@ -373,10 +373,10 @@ PT=document.getElementById('pinTray'),TTP=document.getElementById('ttPin');
 const COL={center:'#F5A623',synonym:'#5B8FDE',antonym:'#4ECBA8',emotion:'#E06B8B',metaphor:'#9B72E8',goal:'#FF6B6B'};
 
 // ===== STATE =====
-let nodes=[],edges=[],gen=0,pan={x:0,y:0},
+let nodes=[],edges=[],gen=0,pan={x:0,y:0},zoom=1,
 drag=false,moved=false,dStart={x:0,y:0},pStart={x:0,y:0},dLast={x:0,y:0},
 wHist=[],hoverN=null,simTick=0,animFrame=null,time=0,
-clickTimer=null,lastTap=0;
+clickTimer=null,lastTap=0,pinchDist=0;
 
 // Client-side cache: word→API result
 const vocabCache={};
@@ -461,6 +461,11 @@ function draw(){
     X.fillStyle=`rgba(212,220,240,${s.a*twinkle})`;X.fill();
   });
 
+  // Apply zoom (scale around canvas center)
+  X.save();
+  const ccx=C.width/2,ccy=C.height/2;
+  X.translate(ccx,ccy);X.scale(zoom,zoom);X.translate(-ccx,-ccy);
+
   // Draw edges
   edges.forEach(e=>{
     const a=nodes.find(n=>n.id===e.source),b=nodes.find(n=>n.id===e.target);
@@ -518,6 +523,7 @@ function draw(){
     }
   });
   X.globalAlpha=1;
+  X.restore();
 }
 
 function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
@@ -639,7 +645,10 @@ function renderHistory(cur){
 // ===== INTERACTIONS =====
 function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);return c?c.word:null}
 function getNodeAt(mx,my){
-  const r=C.getBoundingClientRect(),x=mx-r.left,y=my-r.top;
+  const r=C.getBoundingClientRect();
+  // スクリーン座標→ワールド座標（ズーム逆変換）
+  const ccx=C.width/2,ccy=C.height/2;
+  const x=(mx-r.left-ccx)/zoom+ccx,y=(my-r.top-ccy)/zoom+ccy;
   // Prioritize current gen, then older
   const sorted=[...nodes].sort((a,b)=>(b.generation-a.generation));
   return sorted.find(n=>{
@@ -661,8 +670,8 @@ C.addEventListener('mousedown',e=>{drag=true;moved=false;dStart={x:e.clientX,y:e
 C.addEventListener('mousemove',e=>{
   if(drag){
     if(Math.abs(e.clientX-dStart.x)>4||Math.abs(e.clientY-dStart.y)>4)moved=true;
-    // 全ノードを差分だけ移動（画面全体のパン）
-    const ddx=e.clientX-dLast.x,ddy=e.clientY-dLast.y;
+    // 全ノードを差分だけ移動（画面全体のパン、ズーム考慮）
+    const ddx=(e.clientX-dLast.x)/zoom,ddy=(e.clientY-dLast.y)/zoom;
     nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
     dLast={x:e.clientX,y:e.clientY};
     return;
@@ -671,7 +680,7 @@ C.addEventListener('mousemove',e=>{
   C.style.cursor=n?'pointer':'grab';
   if(n){
     TTW.textContent=n.word;
-    TTD.textContent=(n.description||'')+(n.fixed?'':'  ·  Wクリック→検索');
+    TTD.textContent=(n.description||'')+(n.fixed?'':'  ·  Wクリック→検索 / 右クリック→ピン');
     TTP.classList.toggle('pinned',pins.has(n.word));
     TTP.title=pins.has(n.word)?'ピンを外す':'ピン留め';
     TTP._word=n.word;
@@ -696,17 +705,39 @@ C.addEventListener('mouseleave',()=>{drag=false;TT.classList.remove('visible')})
 
 // Touch
 C.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    // ピンチ開始
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    pinchDist=Math.sqrt(dx*dx+dy*dy);
+    drag=false;
+    return;
+  }
   const t=e.touches[0];dStart={x:t.clientX,y:t.clientY};dLast={x:t.clientX,y:t.clientY};drag=true;moved=false;
 },{passive:true});
 C.addEventListener('touchmove',e=>{
-  e.preventDefault();const t=e.touches[0];
+  e.preventDefault();
+  if(e.touches.length===2){
+    // ピンチズーム
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(pinchDist>0){
+      zoom*=d/pinchDist;
+      zoom=Math.max(0.4,Math.min(3,zoom));
+    }
+    pinchDist=d;moved=true;
+    return;
+  }
+  const t=e.touches[0];
   if(Math.abs(t.clientX-dStart.x)>4||Math.abs(t.clientY-dStart.y)>4)moved=true;
-  const ddx=t.clientX-dLast.x,ddy=t.clientY-dLast.y;
+  const ddx=(t.clientX-dLast.x)/zoom,ddy=(t.clientY-dLast.y)/zoom;
   nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
   dLast={x:t.clientX,y:t.clientY};
 },{passive:false});
 C.addEventListener('touchend',e=>{
-  drag=false;if(moved)return;
+  if(e.touches.length>0){pinchDist=0;return}
+  drag=false;pinchDist=0;if(moved)return;
   const t=e.changedTouches[0],n=getNodeAt(t.clientX,t.clientY);
   if(!n||n.fixed&&n.generation===gen)return;
   const now=Date.now();
@@ -719,6 +750,23 @@ C.addEventListener('touchend',e=>{
       if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
       explore(n.word,from);
     }},310);
+  }
+});
+
+// ===== ZOOM (wheel) =====
+C.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const factor=e.deltaY<0?1.1:0.9;
+  zoom*=factor;
+  zoom=Math.max(0.4,Math.min(3,zoom));
+},{passive:false});
+
+// ===== RIGHT-CLICK → PIN =====
+C.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(n&&!(n.fixed&&n.generation===gen)){
+    togglePin(n.word);
   }
 });
 
