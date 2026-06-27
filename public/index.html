@@ -270,16 +270,16 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         <div class="upgrade-title">本日の無料回数に達しました</div>
         <div class="upgrade-desc">語彙空間を気に入っていただけましたか？<br>プレミアムプランで無制限に探索できます。</div>
         <div class="upgrade-plans">
-          <div class="upgrade-plan">
+          <div class="upgrade-plan" id="planMonthly">
             <div><div class="upgrade-plan-name">月額プラン</div><div class="upgrade-plan-detail">無制限探索・広告非表示・ヒント無制限</div></div>
             <div class="upgrade-plan-price">¥500/月</div>
           </div>
-          <div class="upgrade-plan">
+          <div class="upgrade-plan" id="planYearly">
             <div><div class="upgrade-plan-name">年額プラン</div><div class="upgrade-plan-detail">2ヶ月分お得！</div></div>
             <div class="upgrade-plan-price">¥5,000/年</div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">※ 決済機能は近日公開予定です</div>
+        <button class="upgrade-close" id="restoreBtn" style="color:var(--blue);margin-bottom:6px">購入済みの方はこちら（メールで復元）</button>
         <button class="upgrade-close" id="upgradeClose">明日また無料で遊ぶ</button>
       </div>
     </div>
@@ -520,15 +520,25 @@ function draw(){
 function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
 
 // ===== API (with client cache) =====
+// 課金者のメール（あれば全APIリクエストに付与して無制限化）
+let premiumEmail=localStorage_get('premiumEmail')||'';
+function apiHeaders(){
+  const h={'Content-Type':'application/json'};
+  if(premiumEmail)h['x-premium-email']=premiumEmail;
+  return h;
+}
+// localStorageは使えない環境用のフォールバック付き
+function localStorage_get(k){try{return localStorage.getItem(k)}catch{return null}}
+function localStorage_set(k,v){try{localStorage.setItem(k,v)}catch{}}
+
 async function fetchWords(word){
   if(vocabCache[word]){
-    // キャッシュヒットでもサーバーキャッシュを取得して残り回数を更新
-    const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word})});
+    const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
     const data=await resp.json();
     if(resp.status===429)return{_error:'daily_limit',_message:data.message};
     vocabCache[word]=data;return data;
   }
-  const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word})});
+  const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
   if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
   if(!resp.ok)throw new Error('API error '+resp.status);
   const data=await resp.json();vocabCache[word]=data;return data;
@@ -803,7 +813,7 @@ async function finishGolf(){
   // Distance measurement
   let distData=[];
   try{
-    const r=await fetch('/api/golf',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
       body:JSON.stringify({action:'distance',words:fullPath,goal:golf.goal})});
     const d=await r.json();distData=d.distances||[];
   }catch{}
@@ -860,7 +870,7 @@ GU.addEventListener('click',()=>{
 async function startGolf(){
   toast('お題を生成中…','info',1500);
   try{
-    const r=await fetch('/api/golf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pair'})});
+    const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),body:JSON.stringify({action:'pair'})});
     if(r.status===429){const d=await r.json();toast(d.message||'ゴルフ上限到達','error',3000);return}
     const d=await r.json();
     golf.active=true;golf.start=d.start;golf.goal=d.goal;golf.par=d.par||5;
@@ -874,7 +884,7 @@ async function startGolf(){
 
 GH.addEventListener('click',async()=>{
   if(!golf.active)return;toast('ヒント取得中…','info',1500);
-  try{const r=await fetch('/api/golf',{method:'POST',headers:{'Content-Type':'application/json'},
+  try{const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
     body:JSON.stringify({action:'hint',from:currentCenter(),goal:golf.goal})});
     if(r.status===429){const d=await r.json();toast(d.message||'ヒント上限到達','error',3000);return}
     const d=await r.json();toast('ヒント: '+(d.hints||[]).join(' / '),'info',5000);
@@ -1014,20 +1024,83 @@ TTP.addEventListener('click',e=>{
 
 // ===== USAGE & UPGRADE =====
 function updateUsage(remaining,limit){
+  if(premiumEmail){UB.innerHTML='<span class="count">プレミアム</span>';UB.classList.remove('low');return}
   UC.textContent=remaining;
   UB.classList.toggle('low',remaining<=5);
 }
 function showUpgrade(){
+  if(premiumEmail)return; // 課金者には出さない
   UO.classList.add('visible');
 }
 UCL.addEventListener('click',()=>UO.classList.remove('visible'));
 
+// ===== STRIPE CHECKOUT =====
+async function startCheckout(plan){
+  toast('決済ページへ移動します…','info',2000);
+  try{
+    const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plan})});
+    const d=await r.json();
+    if(d.url){location.href=d.url}
+    else{toast(d.error||'決済の開始に失敗しました','error',3000)}
+  }catch{toast('決済の開始に失敗しました','error',3000)}
+}
+document.getElementById('planMonthly').addEventListener('click',()=>startCheckout('monthly'));
+document.getElementById('planYearly').addEventListener('click',()=>startCheckout('yearly'));
+
+// 購入済み復元（メール入力）
+document.getElementById('restoreBtn').addEventListener('click',async()=>{
+  const email=prompt('購入時のメールアドレスを入力してください');
+  if(!email)return;
+  toast('確認中…','info',1500);
+  try{
+    const r=await fetch(`/api/subscription?email=${encodeURIComponent(email)}`);
+    const d=await r.json();
+    if(d.premium){
+      premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+      UO.classList.remove('visible');
+      toast('プレミアムを復元しました！','success',3000);
+      updateUsage(9999);
+    }else{
+      toast('そのメールでは課金が確認できませんでした','error',3000);
+    }
+  }catch{toast('確認に失敗しました','error',3000)}
+});
+
+// 決済完了後の戻り処理
+async function handleCheckoutReturn(){
+  const params=new URLSearchParams(location.search);
+  const checkout=params.get('checkout');
+  const sessionId=params.get('session_id');
+  if(checkout==='success'&&sessionId){
+    toast('決済を確認しています…','info',2000);
+    try{
+      const r=await fetch(`/api/subscription?session_id=${encodeURIComponent(sessionId)}`);
+      const d=await r.json();
+      if(d.premium&&d.email){
+        premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+        toast('プレミアム登録が完了しました！🎉','success',4000);
+        updateUsage(9999);
+      }else{
+        toast('決済の確認ができませんでした','error',3000);
+      }
+    }catch{}
+    // URLをクリーンにする
+    history.replaceState({},'',location.pathname);
+  }else if(checkout==='cancel'){
+    toast('決済はキャンセルされました','info',2500);
+    history.replaceState({},'',location.pathname);
+  }
+}
+
 // 起動時に残り回数を取得
 async function loadUsage(){
+  if(premiumEmail){updateUsage(9999);return}
   try{const r=await fetch('/api/usage');const d=await r.json();
     updateUsage(d.explore.remaining,d.explore.limit);
   }catch{}
 }
+handleCheckoutReturn();
 loadUsage();
 
 draw();

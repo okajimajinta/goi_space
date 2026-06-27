@@ -20,7 +20,25 @@ function todayKey() {
   return now.toISOString().slice(0, 10);
 }
 
+// 課金済みユーザーか確認（リクエストのpremium_emailヘッダー or bodyで判定）
+async function isPremium(req) {
+  // フロントが課金者のメールを送ってくる（x-premium-email ヘッダー）
+  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
+  if (!email) return false;
+  try {
+    const sub = await redis('GET', `premium:${email}`);
+    return !!sub;
+  } catch {
+    return false;
+  }
+}
+
 export async function checkLimit(req, action, limit) {
+  // 課金済みなら無制限
+  if (await isPremium(req)) {
+    return { ok: true, remaining: 9999, used: 0, premium: true };
+  }
+
   const ip = getIP(req);
   const key = `limit:${action}:${ip}:${todayKey()}`;
 
