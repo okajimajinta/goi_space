@@ -140,15 +140,6 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .toast.success{border-color:var(--green)}
 .toast.error{border-color:var(--rose)}
 
-/* === HISTORY === */
-.history{position:absolute;bottom:16px;right:12px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;opacity:0;transition:opacity .4s}
-.history.visible{opacity:1}
-.history-label{font-size:8px;color:#2E3A55;letter-spacing:.06em;text-transform:uppercase}
-.history-item{font-family:'Noto Serif JP',serif;font-size:11px;color:var(--muted);cursor:pointer;transition:color .15s}
-.history-item:hover{color:var(--text)}
-.history-item.current{color:var(--amber);cursor:default}
-.history-item.locked{opacity:.4;cursor:not-allowed}
-
 /* === DAILY PANEL === */
 .daily-panel{position:fixed;top:0;right:0;width:360px;max-width:90vw;height:100dvh;background:var(--surface);border-left:1px solid var(--border);z-index:250;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;overflow-y:auto}
 .daily-panel.visible{transform:translateX(0)}
@@ -230,7 +221,6 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   .golf-stat-num{font-size:16px}
   .legend{bottom:10px;left:8px}
   .legend-item{font-size:9px}
-  .history{bottom:10px;right:8px}
   .loading-ad{width:250px;height:200px}
   .daily-panel{width:100vw}
   .comp-title{font-size:18px}
@@ -311,9 +301,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>対義語</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--rose)"></div>感情</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>比喩</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--goal)"></div>ゴール</div>
     </div>
-    <div class="history" id="history"><div class="history-label">探索履歴</div><div id="historyItems"></div></div>
     <div class="loading-overlay" id="loadingOverlay">
       <div class="loading-spinner"></div>
       <div class="loading-text" id="loadingText">語彙空間を探索中…</div>
@@ -351,7 +339,6 @@ SE=document.getElementById('status'),LO=document.getElementById('loadingOverlay'
 LT=document.getElementById('loadingText'),
 LE=document.getElementById('legend'),TT=document.getElementById('tooltip'),
 TTW=document.getElementById('ttWord'),TTD=document.getElementById('ttDesc'),
-HI=document.getElementById('history'),HII=document.getElementById('historyItems'),
 GP=document.getElementById('golfPanel'),GT=document.getElementById('golfTrail'),
 GS=document.getElementById('golfStart'),GG=document.getElementById('golfGoal'),
 GM=document.getElementById('golfMoves'),GPR=document.getElementById('golfPar'),
@@ -607,9 +594,7 @@ async function explore(word,fromWord){
       vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
     });
 
-    if(!wHist.includes(word)){wHist.unshift(word);if(wHist.length>8)wHist.pop()}
-    renderHistory(word);
-    LE.classList.add('visible');HI.classList.add('visible');
+    LE.classList.add('visible');
     pan={x:0,y:0};
     initPhysics();
     if(animFrame)cancelAnimationFrame(animFrame);
@@ -624,20 +609,6 @@ async function explore(word,fromWord){
     toast('エラーが発生しました','error');
     console.error(err);
   }finally{EB.disabled=false}
-}
-
-// ===== HISTORY (with game protection) =====
-function renderHistory(cur){
-  HII.innerHTML=wHist.map(w=>{
-    const isCur=w===cur;
-    const locked=golf.active&&!isCur;
-    return `<div class="history-item ${isCur?'current':''} ${locked?'locked':''}" data-word="${w}">${w}</div>`;
-  }).join('');
-  HII.querySelectorAll('[data-word]').forEach(el=>{
-    if(!el.classList.contains('current')&&!el.classList.contains('locked')){
-      el.addEventListener('click',()=>{WI.value=el.dataset.word;explore(el.dataset.word,'__history__')});
-    }
-  });
 }
 
 // ===== INTERACTIONS =====

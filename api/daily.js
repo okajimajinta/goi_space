@@ -14,6 +14,7 @@
 // 同じ期間は全員同じお題になる（キャッシュで固定）。
 
 import { redis, setCors } from './_redis.js';
+import { randomPair, randomDistantPair, expandWord } from './_wordpool.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -23,56 +24,61 @@ function nowJST() {
 function dailyKey() { return nowJST().toISOString().slice(0, 10); }   // YYYY-MM-DD
 function monthlyKey() { return nowJST().toISOString().slice(0, 7); }  // YYYY-MM
 
-// お題生成。period に応じて距離感（難易度）を変える。
+// Haikuでパーを推定
+async function estimatePar(start, goal) {
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 20,
+        messages: [{ role: 'user', content: `日本語のワードゴルフで「${start}」から関連語をたどって「${goal}」に到達するのに必要な手数の目安を整数だけで答えてください。数字のみ。` }],
+      }),
+    });
+    const data = await resp.json();
+    const raw = data.content.map(c => c.text || '').join('');
+    const n = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+    if (n >= 3 && n <= 14) return n;
+  } catch {}
+  return null;
+}
+
+// お題生成。語プールからランダムに選ぶ（真のランダム性）。
 async function generatePuzzles(period, key) {
-  // キャッシュキーにシードを混ぜ、生成のたびにバリエーションを出す
-  const seed = Math.random().toString(36).slice(2, 8);
+  const puzzles = [];
+  const diffs = period === 'monthly' ? ['激難', '激難', '激難'] : ['易', '中', '難'];
+  const used = new Set();
 
-  const dailySpec = `
-各問は、スタートとゴールの単語ペア。条件：
-- 一般的で誰でも知っている名詞
-- 4〜6手で関連語をたどればつなげられる、ほどよい距離感
-- 3問それぞれ難易度を変える（易・中・難）`;
+  for (let i = 0; i < 3; i++) {
+    // マンスリーは距離の遠いペア、デイリーは通常ペア
+    let seed;
+    let tries = 0;
+    do {
+      seed = period === 'monthly' ? randomDistantPair() : randomPair();
+      tries++;
+    } while ((used.has(seed.start) || used.has(seed.goal)) && tries < 10);
+    used.add(seed.start);
+    used.add(seed.goal);
 
-  const monthlySpec = `
-各問は、スタートとゴールの単語ペア。条件：
-- 一般的で知られている名詞だが、2語は「分野・文脈が大きく離れている」こと
-  （例：りんご↔鍛造、風鈴↔為替、絵本↔溶鉱炉 のような距離感）
-- 6〜9手で関連語を辿らないとつながらない、挑戦しがいのある遠さ
-- 3問すべて最高難度（激難）で、それぞれ違う語彙分野から選ぶこと`;
+    // 種語をAIで関連語に展開
+    const [start, goal] = await Promise.all([
+      expandWord(seed.start, ANTHROPIC_KEY),
+      expandWord(seed.goal, ANTHROPIC_KEY),
+    ]);
 
-  const diffSet = period === 'monthly'
-    ? `"激難"`
-    : `"易"|"中"|"難"`;
+    // パー推定（失敗時はデフォルト）
+    const par = await estimatePar(start, goal)
+      || (period === 'monthly' ? 7 : 5);
 
-  const prompt = `
-日本語のワードゴルフの${period === 'monthly' ? 'マンスリー' : 'デイリー'}お題を3問、ランダムに作ってください。
-毎回違う語彙分野（自然・料理・工業・芸術・スポーツ・乗り物・感情・歴史など）から幅広く選び、ありきたりにならないようにしてください。
-ランダムシード: ${seed}（この値ごとに必ず異なる組み合わせにすること）
-${period === 'monthly' ? monthlySpec : dailySpec}
+    puzzles.push({ start, goal, par, difficulty: diffs[i] });
+  }
 
-JSON形式のみで返答：
-{"puzzles":[{"start":"語","goal":"語","par":整数,"difficulty":${diffSet}}]}
-`.trim();
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 400,
-      // 多様性を出すため温度を高めに
-      temperature: 1,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-  const data = await resp.json();
-  const raw = data.content.map(c => c.text || '').join('');
-  return JSON.parse(raw.replace(/```json|```/g, '').trim());
+  return { puzzles };
 }
 
 export default async function handler(req, res) {

@@ -1,6 +1,7 @@
 // api/golf.js — ワードゴルフAPI（レートリミット付き、軽量タスクはHaiku）
 
 import { checkLimit } from './_ratelimit.js';
+import { randomPair, expandWord } from './_wordpool.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
   const { action } = req.body || {};
 
   try {
-    // --- お題生成（レートリミット付き） ---
+    // --- お題生成（語プールからランダム選択） ---
     if (action === 'pair') {
       const rl = await checkLimit(req, 'golf', GOLF_LIMIT);
       if (!rl.ok) {
@@ -48,21 +49,23 @@ export default async function handler(req, res) {
         });
       }
 
-      const prompt = `
-日本語のワードゴルフ用に、スタートとゴールの単語ペアを1組作ってください。
-条件：
-- どちらも具体的で誰でも知っている一般的な名詞
-- 2つの語は意味的に「離れている」が、4〜6手で関連語をたどればつなげられる距離感
-- 抽象的すぎる語や固有名詞は避ける
+      // 語プールから種となる2語を選び、それぞれAIで関連語に展開
+      const seed = randomPair();
+      const [start, goal] = await Promise.all([
+        expandWord(seed.start, ANTHROPIC_KEY),
+        expandWord(seed.goal, ANTHROPIC_KEY),
+      ]);
 
-JSON形式のみで返答：
-{"start":"語","goal":"語","par":手数の目安(整数)}
-`.trim();
-      const out = await callClaude(prompt, 150, false); // Sonnet
-      const parsed = JSON.parse(out);
-      parsed._remaining = rl.remaining;
-      parsed._limit = GOLF_LIMIT;
-      return res.status(200).json(parsed);
+      // パー（手数の目安）だけHaikuで軽く推定
+      let par = 5;
+      try {
+        const parPrompt = `日本語のワードゴルフで「${start}」から関連語をたどって「${goal}」に到達するのに必要な手数の目安を整数だけで答えてください（4〜8程度）。数字のみ。`;
+        const out = await callClaude(parPrompt, 20, true); // Haiku
+        const n = parseInt(out.replace(/[^0-9]/g, ''), 10);
+        if (n >= 3 && n <= 12) par = n;
+      } catch {}
+
+      return res.status(200).json({ start, goal, par, _remaining: rl.remaining, _limit: GOLF_LIMIT });
     }
 
     // --- ヒント（Haikuで安く、レートリミット付き） ---
