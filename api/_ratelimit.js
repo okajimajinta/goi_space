@@ -48,6 +48,31 @@ export async function getPlan(req) {
   }
 }
 
+// クレジット残高を取得
+export async function getCredits(req) {
+  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
+  if (!email) return { email: '', credits: 0 };
+  try {
+    const c = parseInt(await redis('GET', `credits:${email}`), 10) || 0;
+    return { email, credits: c };
+  } catch {
+    return { email, credits: 0 };
+  }
+}
+
+// クレジットを消費（残高があれば true）
+export async function consumeCredits(email, amount) {
+  if (!email) return false;
+  try {
+    const c = parseInt(await redis('GET', `credits:${email}`), 10) || 0;
+    if (c < amount) return false;
+    await redis('DECRBY', `credits:${email}`, amount);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function checkLimit(req, action, limit) {
   // 課金済みなら無制限
   if (await isPremium(req)) {

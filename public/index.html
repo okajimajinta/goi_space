@@ -101,6 +101,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .upgrade-plans{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
 .upgrade-plan.plus{border-color:var(--amber);background:linear-gradient(135deg,rgba(245,166,35,0.08),rgba(255,140,66,0.08))}
 .upgrade-plan.plus .upgrade-plan-name{color:var(--amber)}
+.upgrade-divider{font-size:12px;color:var(--muted);text-align:center;margin:6px 0 2px;padding-top:8px;border-top:1px dashed var(--border)}
 .upgrade-plan{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
 .upgrade-plan:hover{border-color:var(--amber)}
 .upgrade-plan-name{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:600}
@@ -111,7 +112,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 
 /* === CANVAS === */
 .canvas-area{grid-column:1;grid-row:2;position:relative;overflow:hidden}
-#canvas{position:absolute;inset:0;cursor:grab}
+#canvas{position:absolute;inset:0;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
 #canvas:active{cursor:grabbing}
 
 /* === ADS === */
@@ -130,7 +131,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* === STATUS (initial) === */
-.status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s}
+.status.hidden{opacity:0!important;pointer-events:none!important;visibility:hidden}
 .status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
 .status-hint{margin-top:8px;font-size:14px;color:#2E3A55}
 .center-search{display:flex;gap:8px;justify-content:center;margin:18px 0;pointer-events:auto}
@@ -161,7 +163,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === GOLF TRAIL === */
 .golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
 .golf-trail.visible{display:flex}
-.trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px}
+.trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px;cursor:pointer;transition:all .15s}
+.trail-word[data-trail-word]:hover{border-color:var(--amber);color:var(--amber)}
 .trail-word.start{border-color:var(--blue);color:var(--blue)}
 .trail-word.goal{border-color:var(--goal);color:var(--goal)}
 .trail-sep{color:var(--muted);font-size:12px}
@@ -250,6 +253,21 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .pin-chip-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--amber)}
 .pin-chip-remove{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0}
 .pin-chip-remove:hover{color:var(--rose)}
+
+/* === ENCHANT === */
+.enchant-btn{position:absolute;bottom:16px;right:12px;z-index:46;background:linear-gradient(135deg,#9B72E8,#5B8FDE);color:#fff;border:none;padding:10px 16px;border-radius:22px;font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(155,114,232,0.4);transition:all .15s;display:none}
+.enchant-btn.visible{display:block}
+.enchant-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(155,114,232,0.55)}
+.enchant-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:90;backdrop-filter:blur(6px)}
+.enchant-overlay.visible{display:flex}
+.enchant-card{background:var(--surface);border:1px solid var(--violet);border-radius:14px;padding:28px 32px;text-align:center;max-width:440px;width:90%}
+.enchant-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--violet);margin-bottom:8px}
+.enchant-sub{font-size:14px;color:var(--muted);margin-bottom:20px}
+.enchant-choices{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.enchant-choice{padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-family:'Noto Serif JP',serif;font-size:18px;color:var(--text);cursor:pointer;transition:all .15s}
+.enchant-choice:hover{border-color:var(--violet);color:var(--violet);transform:scale(1.02)}
+.enchant-reroll{background:none;border:1px solid var(--border);color:var(--muted);font-size:14px;padding:10px;border-radius:8px;cursor:pointer;width:100%;margin-bottom:8px}
+.enchant-reroll:hover{border-color:var(--violet);color:var(--violet)}
 /* Tooltip pin button */
 .tt-pin{display:inline-block;margin-left:8px;cursor:pointer;font-size:15px;opacity:.6;transition:opacity .15s;user-select:none}
 .tt-pin:hover{opacity:1}
@@ -323,9 +341,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
     <!-- Upgrade prompt -->
     <div class="upgrade-overlay" id="upgradeOverlay">
       <div class="upgrade-card">
-        <div class="upgrade-icon">🚀</div>
-        <div class="upgrade-title">本日の無料回数に達しました</div>
-        <div class="upgrade-desc">語彙空間を気に入っていただけましたか？<br>プレミアムプランで無制限に探索できます。</div>
+        <div class="upgrade-icon" id="upgradeIcon">🚀</div>
+        <div class="upgrade-title" id="upgradeTitle">プレミアムプラン</div>
+        <div class="upgrade-desc" id="upgradeDesc">無制限の探索で、語彙の宇宙をもっと深く。</div>
         <div class="upgrade-plans">
           <div class="upgrade-plan" id="planMonthly">
             <div><div class="upgrade-plan-name">月額プラン</div><div class="upgrade-plan-detail">無制限探索・広告非表示・ヒント無制限</div></div>
@@ -335,13 +353,14 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <div><div class="upgrade-plan-name">年額プラン</div><div class="upgrade-plan-detail">2ヶ月分お得！</div></div>
             <div class="upgrade-plan-price">¥5,000/年</div>
           </div>
-          <div class="upgrade-plan plus" id="planPlusMonthly">
-            <div><div class="upgrade-plan-name">⚡ プレミアム+ 月額</div><div class="upgrade-plan-detail">高速モード・先読み・全特典</div></div>
-            <div class="upgrade-plan-price">¥1,200/月</div>
+          <div class="upgrade-divider">⚡ または、買い切りで高速モード</div>
+          <div class="upgrade-plan plus" id="planCreditsSmall">
+            <div><div class="upgrade-plan-name">⚡ クレジット 100</div><div class="upgrade-plan-detail">高速探索100回分・買い切り・期限なし</div></div>
+            <div class="upgrade-plan-price">¥500</div>
           </div>
-          <div class="upgrade-plan plus" id="planPlusYearly">
-            <div><div class="upgrade-plan-name">⚡ プレミアム+ 年額</div><div class="upgrade-plan-detail">高速モード・2ヶ月分お得</div></div>
-            <div class="upgrade-plan-price">¥12,000/年</div>
+          <div class="upgrade-plan plus" id="planCreditsLarge">
+            <div><div class="upgrade-plan-name">⚡ クレジット 300</div><div class="upgrade-plan-detail">高速探索300回分・お得・期限なし</div></div>
+            <div class="upgrade-plan-price">¥1,200</div>
           </div>
         </div>
         <button class="upgrade-close" id="restoreBtn" style="color:var(--blue);margin-bottom:6px">購入済みの方はこちら（メールで復元）</button>
@@ -404,6 +423,17 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
     </div>
     <div class="golf-trail" id="golfTrail"></div>
     <div class="pin-tray" id="pinTray"></div>
+    <button class="enchant-btn" id="enchantBtn" title="ランダムな語との意外な文脈を発見">✨ ランダムエンチャント</button>
+    <!-- エンチャント語選択モーダル -->
+    <div class="enchant-overlay" id="enchantOverlay">
+      <div class="enchant-card">
+        <div class="enchant-title">✨ ランダムエンチャント</div>
+        <div class="enchant-sub" id="enchantSub">中心語と組み合わせる言葉を1つ選んでください</div>
+        <div class="enchant-choices" id="enchantChoices"></div>
+        <button class="enchant-reroll" id="enchantReroll">🎲 引き直す</button>
+        <button class="account-close" id="enchantClose">閉じる</button>
+      </div>
+    </div>
     <div class="legend" id="legend">
       <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>中心語</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>類義語</div>
@@ -475,6 +505,7 @@ clickTimer=null,lastTap=0,pinchDist=0;
 
 // Client-side cache: word→API result
 const vocabCache={};
+let isSearching=false; // 検索中はモード切替を禁止
 // Vocabulary memory during play (all nodes ever seen)
 const vocabMem=new Map();
 // Live search words (other users)
@@ -708,10 +739,24 @@ function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
 // 課金者のメール（あれば全APIリクエストに付与して無制限化）
 let premiumEmail=localStorage_get('premiumEmail')||'';
 let userPlan=localStorage_get('userPlan')||'free'; // free | premium | premium_plus
-function isFastMode(){return userPlan==='premium_plus'}
+let userCredits=parseInt(localStorage_get('userCredits'),10)||0; // 高速クレジット残高
+function isFastMode(){return userPlan==='premium_plus'||userCredits>0}
 function setUserPlan(tier){
   userPlan=tier||'free';
   localStorage_set('userPlan',userPlan);
+}
+// クレジット残高をサーバーから取得
+async function refreshCredits(){
+  if(!premiumEmail)return;
+  try{
+    const r=await fetch(`/api/credits?email=${encodeURIComponent(premiumEmail)}`);
+    const d=await r.json();
+    userCredits=d.credits||0;localStorage_set('userCredits',String(userCredits));
+    updateCreditDisplay();
+  }catch{}
+}
+function updateCreditDisplay(){
+  if(typeof updateUsage==='function')updateUsage(userCredits);
 }
 function apiHeaders(){
   const h={'Content-Type':'application/json'};
@@ -729,12 +774,17 @@ async function fetchWords(word,context){
     const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
     const data=await resp.json();
     if(resp.status===429)return{_error:'daily_limit',_message:data.message};
+    if(resp.status===402)return{_error:'no_credits',_message:data.message};
     vocabCache[word]=data;return data;
   }
   const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
   if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
+  if(resp.status===402){const d=await resp.json();return{_error:'no_credits',_message:d.message}}
   if(!resp.ok)throw new Error('API error '+resp.status);
-  const data=await resp.json();if(!context)vocabCache[word]=data;return data;
+  const data=await resp.json();if(!context)vocabCache[word]=data;
+  // クレジットユーザーは消費後に残高を更新
+  if(userCredits>0&&userPlan!=='premium'&&userPlan!=='premium_plus'){refreshCredits()}
+  return data;
 }
 async function fetchGravity(word){
   try{const r=await fetch(`/api/transitions?word=${encodeURIComponent(word)}`);
@@ -755,7 +805,8 @@ async function explore(word,fromWord,opts){
   if(fromWord&&fromWord!=='__history__')logTransition(fromWord,word);
 
   EB.disabled=true;
-  SE.style.opacity='0';
+  isSearching=true; // 検索中フラグ（モード切替を抑止）
+  SE.classList.add('hidden');
   LO.classList.add('visible');
   LT.textContent=`「${word}」の語彙空間を探索中…`;
 
@@ -770,8 +821,16 @@ async function explore(word,fromWord,opts){
     // Check for rate limit error
     if(result._error==='daily_limit'){
       LO.classList.remove('visible');
-      showUpgrade(result._message);
-      EB.disabled=false;
+      showUpgrade(true);
+      EB.disabled=false;isSearching=false;
+      return;
+    }
+    if(result._error==='no_credits'){
+      LO.classList.remove('visible');
+      userCredits=0;localStorage_set('userCredits','0');updateUsage(0);
+      toast('クレジットが不足しています。追加購入できます。','info',3000);
+      showUpgrade(false);
+      EB.disabled=false;isSearching=false;
       return;
     }
 
@@ -790,7 +849,13 @@ async function explore(word,fromWord,opts){
 
     // Add new nodes with staggered appearance
     const maxC=Math.max(1,...Object.values(gravity));
-    const filtered=(result.words||[]).filter(w=>w.word!==word); // exclude same word
+    // 重複除外：同じ語・中心語を除き、語の重複も1つに
+    const seen=new Set([word]);
+    const filtered=(result.words||[]).filter(w=>{
+      if(!w||!w.word)return false;
+      if(seen.has(w.word))return false;
+      seen.add(w.word);return true;
+    });
     filtered.forEach((w,i)=>{
       const pull=gravity[w.word]||0;
       const ratio=pull/maxC;
@@ -818,6 +883,7 @@ async function explore(word,fromWord,opts){
     if(isFastMode()){
       prefetchNodes(result.words||[]);
     }
+    if(typeof updateEnchantBtn==='function')updateEnchantBtn();
 
     // Golf: goal check（再開時など抑制フラグがあればスキップ）
     if(golf.active&&!suppressGolfMove)handleGolfMove(word);
@@ -825,7 +891,7 @@ async function explore(word,fromWord,opts){
     LO.classList.remove('visible');
     toast('エラーが発生しました','error');
     console.error(err);
-  }finally{EB.disabled=false}
+  }finally{EB.disabled=false;isSearching=false}
 }
 
 // ===== PREFETCH（プレミアム+の先読み） =====
@@ -1075,8 +1141,7 @@ function randomHint(){
 }
 // プレースホルダーを定期的に変える
 function refreshHint(){centerInput.placeholder=randomHint()}
-refreshHint();
-setInterval(()=>{if(document.activeElement!==centerInput)refreshHint()},3500);
+refreshHint(); // 初回のみ表示（自動切替なし）
 
 function centerSearch(){
   const v=centerInput.value.trim();
@@ -1131,11 +1196,18 @@ function renderTrail(){
   GT.classList.add('visible');
   const parts=golf.path.map((w,i)=>{
     const cls=i===0?'trail-word start':'trail-word';
-    return `<span class="${cls}">${w}</span>`;
+    return `<span class="${cls}" data-trail-word="${w}" title="クリックで意味を検索">${w}</span>`;
   });
   parts.push('<span class="trail-sep">…→</span>');
-  parts.push(`<span class="trail-word goal">${golf.goal}</span>`);
+  parts.push(`<span class="trail-word goal" data-trail-word="${golf.goal}" title="クリックで意味を検索">${golf.goal}</span>`);
   GT.innerHTML=parts.join('<span class="trail-sep">→</span>');
+  // 各語クリックで意味をweb検索
+  GT.querySelectorAll('[data-trail-word]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const w=el.dataset.trailWord;
+      window.open(ES.value+encodeURIComponent(w),'_blank','noopener');
+    });
+  });
 }
 
 async function finishGolf(){
@@ -1370,7 +1442,7 @@ function restoreGolf(s){
   golf.prevState=s.prevState;golf.daily=s.daily;golf.dailyIdx=s.dailyIdx;golf.dailyPeriod=s.dailyPeriod;
   GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent=golf.moves;
   GU.disabled=golf.undoUsed;GP.classList.add('visible');renderTrail();
-  SE.style.opacity='0';// 再開時は初期ステータスを隠す
+  SE.classList.add('hidden');// 再開時は初期ステータスを隠す
   toast('続きから再開しました','info',1800);
 }
 
@@ -1388,6 +1460,10 @@ document.querySelectorAll('.mode-tab').forEach(tab=>{
     const m=tab.dataset.mode;
     if(m===currentMode){
       // 同じモードを再クリックした場合は何もしない（誤操作防止）
+      return;
+    }
+    if(isSearching){
+      toast('探索中はモードを切り替えられません','info',1800);
       return;
     }
     // 現在のモードの状態を保存
@@ -1415,12 +1491,13 @@ document.querySelectorAll('.mode-tab').forEach(tab=>{
       // 探索モード：保存済みの語彙空間があれば復元、なければ空＋中央検索バー表示
       restoreCanvas(savedCanvas.explore);
       if(!savedCanvas.explore||!savedCanvas.explore.nodes.length){
-        SE.style.opacity='1';
+        SE.classList.remove('hidden');
         if(centerInput)centerInput.value='';
       }else{
-        SE.style.opacity='0';
+        SE.classList.add('hidden');
       }
     }
+    if(typeof updateEnchantBtn==='function')updateEnchantBtn();
   });
 });
 
@@ -1448,11 +1525,18 @@ function renderPinTray(){
       <button class="pin-chip-remove" data-remove="${w}" title="ピンを外す">×</button>
     </div>`).join('');
 
-  // チップクリック → 探索
+  // チップクリック → 探索モードで探索（モード外なら切替）
   PT.querySelectorAll('.pin-chip').forEach(chip=>{
     chip.addEventListener('click',e=>{
       if(e.target.classList.contains('pin-chip-remove'))return;
+      if(isSearching){toast('探索中です','info',1500);return}
       const word=chip.dataset.word;
+      // 探索モード以外にいる場合は探索モードへ切替
+      if(currentMode!=='explore'){
+        const exploreTab=document.querySelector('.mode-tab[data-mode="explore"]');
+        if(exploreTab)exploreTab.click();
+      }
+      toast(`ピンの「${word}」を探索します`,'info',2000);
       WI.value=word;explore(word,currentCenter());
     });
   });
@@ -1471,16 +1555,103 @@ TTP.addEventListener('click',e=>{
   togglePin(TTP._word);
 });
 
+// ===== ENCHANT（探索モード限定） =====
+const ENCHANT_POOL=['海','森','星','猫','花火','迷路','灯台','珈琲','時計','旋律','化石','虹','砂漠','歯車','仮面','潮騒','銀河','陶器','稲妻','汽車','蝶','彫刻','琥珀','三日月','羅針盤','万華鏡','蜃気楼','水脈','残響','黄昏','古書','硝子','螺旋','標本','茶室','風鈴','潜水艦','天文台','地下水','蝋燭','鯨','砂時計','図書館','遺跡','宝石','楽器','霧','氷河','流星','望遠鏡','原稿','種子','鉱石','洞窟','焚火','足跡','地図'];
+const EB_enchant=document.getElementById('enchantBtn');
+const EO_enchant=document.getElementById('enchantOverlay');
+const enchantChoices=document.getElementById('enchantChoices');
+const enchantSub=document.getElementById('enchantSub');
+
+function updateEnchantBtn(){
+  // 探索モードかつ中心語がある時だけ表示
+  if(currentMode==='explore'&&currentCenter()){
+    EB_enchant.classList.add('visible');
+  }else{
+    EB_enchant.classList.remove('visible');
+  }
+}
+function rollEnchantChoices(){
+  const center=currentCenter();
+  enchantSub.textContent=`「${center}」と組み合わせる言葉を選んでください`;
+  // ランダムに3語選ぶ（中心語と重複しない、ASCII混入を除外）
+  const pool=ENCHANT_POOL.filter(w=>w!==center&&/^[\u3000-\u9fff\u30a0-\u30ff\u3040-\u309f]+$/.test(w));
+  const picks=[];
+  while(picks.length<3&&pool.length>0){
+    const i=Math.floor(Math.random()*pool.length);
+    picks.push(pool.splice(i,1)[0]);
+  }
+  enchantChoices.innerHTML=picks.map(w=>`<button class="enchant-choice" data-enchant="${w}">${w}</button>`).join('');
+  enchantChoices.querySelectorAll('[data-enchant]').forEach(btn=>{
+    btn.addEventListener('click',()=>runEnchant(btn.dataset.enchant));
+  });
+}
+EB_enchant.addEventListener('click',()=>{
+  if(!currentCenter()){toast('まず言葉を探索してください','info',1800);return}
+  rollEnchantChoices();
+  EO_enchant.classList.add('visible');
+});
+document.getElementById('enchantReroll').addEventListener('click',rollEnchantChoices);
+document.getElementById('enchantClose').addEventListener('click',()=>EO_enchant.classList.remove('visible'));
+
+async function runEnchant(randomWord){
+  const center=currentCenter();
+  if(!center)return;
+  EO_enchant.classList.remove('visible');
+  toast(`「${center}」×「${randomWord}」の文脈を発見中…`,'info',2500);
+  try{
+    const r=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({action:'enchant',word:center,randomWord})});
+    const d=await r.json();
+    if(!d.words||!d.words.length){toast('エンチャントに失敗しました','error',2500);return}
+    // 5つのコンテキストノードを現在の中心に追加
+    const cx=C.width/2,cy=C.height/2;
+    d.words.forEach((w,i)=>{
+      const base=150+Math.random()*60;
+      const nd={id:`e${gen}_${i}_${Date.now()}`,word:w.word,reading:w.reading,type:'context',
+        description:w.description,targetDist:base,pull:0,generation:gen,appearAt:Date.now()+i*120};
+      // 既存と重複しなければ追加
+      if(!nodes.some(n=>n.word===w.word)){
+        nodes.push(nd);
+        const center=nodes.find(n=>n.fixed&&n.generation===gen);
+        if(center)edges.push({source:center.id,target:nd.id});
+        vocabMem.set(w.word,{type:'context',reading:w.reading,desc:w.description});
+      }
+    });
+    initPhysics();if(animFrame)cancelAnimationFrame(animFrame);loop();
+    toast(`✨ ${d.words.length}個のコンテキストが出現！`,'success',2500);
+  }catch{toast('エンチャントに失敗しました','error',2500)}
+}
+
 // ===== USAGE & UPGRADE =====
 function updateUsage(remaining,limit){
   if(typeof updateAccountTab==='function')updateAccountTab();
-  if(premiumEmail){UB.innerHTML='<span class="count">✨ プレミアム</span>';UB.classList.remove('low');UB.classList.add('premium');return}
+  // クレジット残高がある場合は残高を表示（サブスクより優先）
+  if(userPlan!=='premium'&&userPlan!=='premium_plus'&&userCredits>0){
+    UB.innerHTML=`<span class="count">⚡ ${userCredits}</span>`;
+    UB.classList.add('premium');UB.classList.toggle('low',userCredits<=5);
+    return;
+  }
+  if(premiumEmail&&(userPlan==='premium'||userPlan==='premium_plus')){
+    UB.innerHTML='<span class="count">✨ プレミアム</span>';UB.classList.remove('low');UB.classList.add('premium');return;
+  }
   UB.classList.remove('premium');
   UC.textContent=remaining;
   UB.classList.toggle('low',remaining<=5);
 }
-function showUpgrade(){
+function showUpgrade(limitReached){
   if(premiumEmail)return; // 課金者には出さない
+  const t=document.getElementById('upgradeTitle');
+  const d=document.getElementById('upgradeDesc');
+  const ic=document.getElementById('upgradeIcon');
+  if(limitReached===true){
+    ic.textContent='🚀';
+    t.textContent='本日の無料回数に達しました';
+    d.textContent='プレミアムプランなら、待たずに無制限で探索できます。';
+  }else{
+    ic.textContent='✨';
+    t.textContent='プレミアムプラン';
+    d.textContent='無制限の探索で、語彙の宇宙をもっと深く。';
+  }
   UO.classList.add('visible');
 }
 UCL.addEventListener('click',()=>UO.classList.remove('visible'));
@@ -1572,8 +1743,8 @@ document.getElementById('managePlanBtn').addEventListener('click',async()=>{
 // ログアウト（この端末のプレミアム情報を消す）
 document.getElementById('accountLogout').addEventListener('click',()=>{
   if(!confirm('この端末からログアウトしますか？\n（課金は継続されます。再ログインはメール復元から可能です）'))return;
-  premiumEmail='';setUserPlan('free');
-  try{localStorage.removeItem('premiumEmail')}catch{}
+  premiumEmail='';setUserPlan('free');userCredits=0;
+  try{localStorage.removeItem('premiumEmail');localStorage.removeItem('userCredits')}catch{}
   AO.classList.remove('visible');
   toast('ログアウトしました','info',2500);
   loadUsage();
@@ -1592,8 +1763,8 @@ async function startCheckout(plan){
 }
 document.getElementById('planMonthly').addEventListener('click',()=>startCheckout('monthly'));
 document.getElementById('planYearly').addEventListener('click',()=>startCheckout('yearly'));
-document.getElementById('planPlusMonthly').addEventListener('click',()=>startCheckout('plus_monthly'));
-document.getElementById('planPlusYearly').addEventListener('click',()=>startCheckout('plus_yearly'));
+document.getElementById('planCreditsSmall').addEventListener('click',()=>startCheckout('credits_small'));
+document.getElementById('planCreditsLarge').addEventListener('click',()=>startCheckout('credits_large'));
 
 // 購入済み復元（メール入力）
 document.getElementById('restoreBtn').addEventListener('click',async()=>{
@@ -1610,8 +1781,20 @@ document.getElementById('restoreBtn').addEventListener('click',async()=>{
       toast('プレミアムを復元しました！','success',3000);
       updateUsage(9999);
       loadUserData();
+    }else if(d.verified&&d.email){
+      // サブスクは無いが、過去に支払い（クレジット購入）がある→クレジット残高を復元
+      premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+      setUserPlan('free');
+      await refreshCredits();
+      if(userCredits>0){
+        UO.classList.remove('visible');
+        toast(`⚡ クレジットを復元しました（残高: ${userCredits}）`,'success',3000);
+        loadUserData();
+      }else{
+        toast('このメールに有効なクレジット残高はありません','info',3000);
+      }
     }else{
-      toast('そのメールでは課金が確認できませんでした','error',3000);
+      toast('そのメールでは購入が確認できませんでした','error',3000);
     }
   }catch{toast('確認に失敗しました','error',3000)}
 });
@@ -1626,7 +1809,14 @@ async function handleCheckoutReturn(){
     try{
       const r=await fetch(`/api/subscription?session_id=${encodeURIComponent(sessionId)}`);
       const d=await r.json();
-      if(d.premium&&d.email){
+      if(d.creditPurchase&&d.email){
+        // クレジット購入完了
+        premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+        userCredits=d.credits||0;localStorage_set('userCredits',String(userCredits));
+        toast(`⚡ クレジットを購入しました！残高: ${userCredits}`,'success',4000);
+        UO.classList.remove('visible');
+        updateCreditDisplay();
+      }else if(d.premium&&d.email){
         premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
         toast('プレミアム登録が完了しました！🎉','success',4000);
         updateUsage(9999);
@@ -1654,6 +1844,8 @@ async function handleCheckoutReturn(){
 async function loadUsage(){
   // 課金情報があればサーバーで再検証（localStorageを盲信しない）
   if(premiumEmail){
+    // クレジット残高も取得
+    await refreshCredits();
     try{
       const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
       const d=await r.json();
@@ -1663,15 +1855,16 @@ async function loadUsage(){
         loadUserData(); // アカウント紐づけデータを読み込み
         return;
       }else{
-        // サーバーで課金が確認できない→ローカル情報をクリア
-        premiumEmail='';setUserPlan('free');
+        // サブスクではない。クレジット残高があればそれを表示
+        setUserPlan('free');
+        if(userCredits>0){updateUsage(userCredits);loadUserData();return}
+        // 課金もクレジットもない→ローカル情報をクリア
+        premiumEmail='';
         try{localStorage.removeItem('premiumEmail')}catch{}
       }
     }catch{
-      // 通信失敗時はローカル情報を信じて続行
-      updateUsage(9999);
-      loadUserData();
-      return;
+      // 通信失敗時：クレジットがあれば信じて続行、なければ無料扱い
+      if(userCredits>0){updateUsage(userCredits);return}
     }
   }
   try{const r=await fetch('/api/usage');const d=await r.json();

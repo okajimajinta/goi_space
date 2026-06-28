@@ -40,7 +40,28 @@ export default async function handler(req, res) {
       const email = normEmail(session.customer_details?.email || session.customer_email);
 
       if (paid && email) {
-        // 課金済みとして記録（35日TTL。サブスク継続中は再訪時に延長）
+        // クレジットパック購入の場合：残高に加算（重複加算防止つき）
+        const creditPlan = session.metadata?.credit_plan;
+        if (creditPlan) {
+          const CREDIT_AMOUNTS = { credits_small: 100, credits_large: 300 };
+          const add = CREDIT_AMOUNTS[creditPlan] || 0;
+          // 同一セッションの二重付与を防ぐ
+          const guardKey = `credited:${session.id}`;
+          let already = null;
+          try { already = await redis('GET', guardKey); } catch {}
+          if (!already && add > 0) {
+            try {
+              await redis('INCRBY', `credits:${email}`, add);
+              await redis('SET', guardKey, '1');
+              await redis('EXPIRE', guardKey, 7776000); // 90日
+            } catch {}
+          }
+          let bal = 0;
+          try { bal = parseInt(await redis('GET', `credits:${email}`), 10) || 0; } catch {}
+          return res.status(200).json({ credits: bal, email, creditPurchase: true });
+        }
+
+        // サブスク（プレミアム / プレミアム+）
         await redis('SET', `premium:${email}`, session.subscription || 'active');
         await redis('EXPIRE', `premium:${email}`, 3024000);
         return res.status(200).json({ premium: true, email });
@@ -51,58 +72,75 @@ export default async function handler(req, res) {
     // --- メールで課金状態を確認（プラン詳細つき） ---
     if (req.query.email) {
       const email = normEmail(req.query.email);
-      let sub = null;
-      try { sub = await redis('GET', `premium:${email}`); } catch {}
-      if (!sub) return res.status(200).json({ premium: false, email });
 
-      // Stripeから現在のプラン情報を取得（任意・失敗してもpremiumは返す）
-      let plan = null;
+      // セキュリティ強化：Redisキャッシュだけでなく、Stripeに実在の支払い顧客が
+      // いるかを必ず照合する（ランダムなメール入力での復元を防ぐ）。
+      let customer = null;
       try {
         const search = await fetch(
           `https://api.stripe.com/v1/customers/search?query=${encodeURIComponent(`email:'${email}'`)}`,
           { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
         ).then(r => r.json());
-        const customer = search.data && search.data[0];
-        if (customer) {
-          const subs = await fetch(
-            `https://api.stripe.com/v1/subscriptions?customer=${customer.id}&status=active&limit=1`,
-            { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
-          ).then(r => r.json());
-          const s = subs.data && subs.data[0];
-          if (s) {
-            const item = s.items.data[0];
-            const interval = item.price.recurring?.interval; // month | year
-            const amount = item.price.unit_amount; // 円
-            const priceId = item.price.id;
+        customer = search.data && search.data[0];
+      } catch {}
 
-            // プラン階層判定：premium_plus の価格IDと一致するか
-            const PLUS_PRICES = [
-              process.env.STRIPE_PRICE_PLUS_MONTHLY,
-              process.env.STRIPE_PRICE_PLUS_YEARLY,
-            ].filter(Boolean);
-            const tier = PLUS_PRICES.includes(priceId) ? 'premium_plus' : 'premium';
+      if (!customer) {
+        // Stripeに該当顧客が存在しない＝復元不可
+        return res.status(200).json({ premium: false, email, verified: false });
+      }
 
-            plan = {
-              interval,
-              amount,
-              tier,
-              label: (tier === 'premium_plus' ? 'プレミアム+ ' : '') + (interval === 'year' ? '年額プラン' : '月額プラン'),
-              startedAt: s.start_date || s.created,
-              renewsAt: s.current_period_end,
-              cancelAtEnd: s.cancel_at_period_end,
-            };
-            // アクティブなサブスクを確認できたのでTTLを延長（35日）＋階層を保存
-            try {
-              await redis('SET', `premium:${email}`, s.id);
-              await redis('EXPIRE', `premium:${email}`, 3024000);
-              await redis('SET', `plan:${email}`, tier);
-              await redis('EXPIRE', `plan:${email}`, 3024000);
-            } catch {}
-          }
+      // 顧客が支払い済みか（サブスク or 過去の支払い）を確認
+      let hasPayment = false;
+      let plan = null;
+      try {
+        const subs = await fetch(
+          `https://api.stripe.com/v1/subscriptions?customer=${customer.id}&status=active&limit=1`,
+          { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
+        ).then(r => r.json());
+        const s = subs.data && subs.data[0];
+        if (s) {
+          hasPayment = true;
+          const item = s.items.data[0];
+          const interval = item.price.recurring?.interval;
+          const amount = item.price.unit_amount;
+          const priceId = item.price.id;
+          const PLUS_PRICES = [
+            process.env.STRIPE_PRICE_PLUS_MONTHLY,
+            process.env.STRIPE_PRICE_PLUS_YEARLY,
+          ].filter(Boolean);
+          const tier = PLUS_PRICES.includes(priceId) ? 'premium_plus' : 'premium';
+          plan = {
+            interval, amount, tier,
+            label: (tier === 'premium_plus' ? 'プレミアム+ ' : '') + (interval === 'year' ? '年額プラン' : '月額プラン'),
+            startedAt: s.start_date || s.created,
+            renewsAt: s.current_period_end,
+            cancelAtEnd: s.cancel_at_period_end,
+          };
+          try {
+            await redis('SET', `premium:${email}`, s.id);
+            await redis('EXPIRE', `premium:${email}`, 3024000);
+            await redis('SET', `plan:${email}`, tier);
+            await redis('EXPIRE', `plan:${email}`, 3024000);
+          } catch {}
         }
       } catch {}
 
-      return res.status(200).json({ premium: true, email, plan });
+      // サブスクが無くても、過去にクレジット購入（支払い）があれば復元可
+      if (!hasPayment) {
+        try {
+          const pays = await fetch(
+            `https://api.stripe.com/v1/payment_intents?customer=${customer.id}&limit=1`,
+            { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
+          ).then(r => r.json());
+          if (pays.data && pays.data.some(p => p.status === 'succeeded')) hasPayment = true;
+        } catch {}
+      }
+
+      if (!hasPayment) {
+        return res.status(200).json({ premium: false, email, verified: true });
+      }
+
+      return res.status(200).json({ premium: !!plan, email, plan, verified: true });
     }
 
     return res.status(400).json({ error: 'session_id または email が必要です' });
