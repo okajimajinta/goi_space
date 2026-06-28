@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { word, context, action } = req.body;
+  const { word, context, action } = req.body || {};
 
   // --- エンチャント：中心語とランダム語の文脈から5つのコンテキスト語を生成 ---
   if (action === 'enchant') {
@@ -34,7 +34,10 @@ export default async function handler(req, res) {
         }),
       });
       const data = await resp.json();
-      const raw = data.content.map(c => c.text || '').join('');
+      if (!data.content || !Array.isArray(data.content)) return res.status(502).json({ error: 'enchant: bad response' });
+      let raw = data.content.map(c => c.text || '').join('');
+      const s = raw.indexOf('['); const e2 = raw.lastIndexOf(']');
+      if (s >= 0 && e2 > s) raw = raw.slice(s, e2 + 1);
       const arr = JSON.parse(raw.replace(/```json|```/g, '').trim());
       const words = (Array.isArray(arr) ? arr : [])
         .filter(w => w && w.word && w.word !== center && w.word !== rand)
@@ -49,50 +52,66 @@ export default async function handler(req, res) {
   if (!word || typeof word !== 'string' || word.length > 50)
     return res.status(400).json({ error: 'Invalid word' });
 
-  // プラン判定（キャッシュキーをモード別にするため先に取得）
-  const plan = await getPlan(req);
-  const { email: creditEmail, credits } = await getCredits(req);
-  // 高速モード: プレミアム+サブスク、またはクレジット残高あり
-  const hasCredits = credits > 0;
-  const fastMode = plan === 'premium_plus' || hasCredits;
+  // プラン判定（失敗しても続行）
+  let plan = 'free', creditEmail = '', credits = 0;
+  try { plan = await getPlan(req); } catch {}
+  try { const c = await getCredits(req); creditEmail = c.email; credits = c.credits; } catch {}
 
-  // キャッシュヒットならレートリミットを消費しない（高速モードは別キャッシュ）
+  const isSubscriber = plan === 'premium' || plan === 'premium_plus';
+  const hasCredits = credits > 0;
+  // 高速モード：永久プレミアム+、またはクレジット残高あり（月額会員でもクレジットがあれば高速）
+  const fastMode = plan === 'premium_plus' || hasCredits;
+  // クレジット消費対象：高速だが永久プレミアム+ではない（=クレジットで高速化している）
+  const usesCredit = hasCredits && plan !== 'premium_plus';
+
+  // キャッシュ（高速モードは別キャッシュ）
   const cacheKey = fastMode ? `vocabfast:${word}` : `vocab:${word}`;
   let cached = null;
   try { cached = await redis('GET', cacheKey); } catch {}
   if (cached) {
     logLive(word);
-    // 現在の残り回数を返す（参考情報）
     const { remaining } = await checkLimit(req, 'explore', FREE_LIMIT);
-    // INCRしてしまったので戻す（キャッシュヒットはカウントしない）
     const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
     const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
     try { await redis('DECR', `limit:explore:${ip}:${now}`); } catch {}
     const data = JSON.parse(cached);
-    // 文脈（前の語）があれば文脈語を追加生成
     if (context && typeof context === 'string') {
       const ctx = await generateContextWords(context, word);
       if (ctx.length) data.words = [...(data.words || []), ...ctx];
     }
-    data._remaining = remaining + 1; // 消費してないので+1
+    data._remaining = remaining + 1;
     data._limit = FREE_LIMIT;
+    data._credits = credits; // 現在のクレジット残高を返す
     return res.status(200).json(data);
   }
 
-  // クレジットユーザー（プレミアム+サブスクではない）は1クレジット消費
-  const isCreditUser = hasCredits && plan !== 'premium_plus';
+  // プリフェッチ（先読み）はクレジットを消費しない（キャッシュ温めのみ）
+  const isPrefetch = req.body?.prefetch === true;
+
+  // クレジットで高速化している場合は1クレジット消費（プリフェッチ・サブスク日次は除く）
   let rl = { remaining: 9999 };
-  if (isCreditUser) {
+  let creditsAfter = credits;
+  if (usesCredit && !isPrefetch) {
     const ok = await consumeCredits(creditEmail, 1);
     if (!ok) {
-      return res.status(402).json({
-        error: 'no_credits',
-        message: 'クレジットが不足しています',
-        credits: 0,
-      });
+      // クレジット切れ：サブスク会員なら標準速度で続行、無料なら停止
+      if (isSubscriber) {
+        creditsAfter = 0;
+        // 標準モードへフォールバック（このリクエストはSonnetで生成）
+      } else {
+        return res.status(402).json({
+          error: 'no_credits',
+          message: 'クレジットが不足しています',
+          credits: 0,
+        });
+      }
+    } else {
+      creditsAfter = credits - 1;
     }
-  } else {
-    // レートリミットチェック（無料ユーザー）。プレミアムは内部でバイパス
+  }
+
+  // 無料ユーザーのみ日次制限チェック（プリフェッチは消費しない）
+  if (!isSubscriber && !usesCredit && !isPrefetch) {
     rl = await checkLimit(req, 'explore', FREE_LIMIT);
     if (!rl.ok) {
       return res.status(429).json({
@@ -103,6 +122,8 @@ export default async function handler(req, res) {
       });
     }
   }
+  // クレジット切れでフォールバックした場合は標準キャッシュ/モデルに切替
+  const effectiveFast = fastMode && (creditsAfter > 0 || plan === 'premium_plus' || !usesCredit);
 
   // Claude API呼び出し
   const prompt = `
@@ -124,7 +145,7 @@ export default async function handler(req, res) {
 
   try {
     // 高速モードは Haiku で生成
-    const model = fastMode ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
+    const model = effectiveFast ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
 
     // 本体の語彙生成と、文脈語生成を並行実行（高速化）
     const mainPromise = fetch('https://api.anthropic.com/v1/messages', {
@@ -136,7 +157,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 900,
+        max_tokens: 1400,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -146,22 +167,57 @@ export default async function handler(req, res) {
 
     const [response, ctx] = await Promise.all([mainPromise, ctxPromise]);
 
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: data });
+    let data = await response.json();
+    // 高速(Haiku)で失敗した場合はSonnetでリトライ（検索を止めない）
+    if (effectiveFast && (!response.ok || !data.content || !Array.isArray(data.content))) {
+      console.error('Fast model failed, retrying with Sonnet');
+      const retry = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1400,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      data = await retry.json();
+    }
+
+    if (!data.content || !Array.isArray(data.content)) {
+      console.error('Unexpected API response:', JSON.stringify(data).slice(0, 500));
+      return res.status(502).json({ error: 'AI応答の形式が不正です', detail: data });
+    }
 
     const raw = data.content.map(c => c.text || '').join('');
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    let clean = raw.replace(/```json|```/g, '').trim();
+    // JSONオブジェクト部分だけを抽出（前後に説明文が付いても対応）
+    const objStart = clean.indexOf('{');
+    const objEnd = clean.lastIndexOf('}');
+    if (objStart >= 0 && objEnd > objStart) {
+      clean = clean.slice(objStart, objEnd + 1);
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (pe) {
+      console.error('JSON parse failed. raw:', raw.slice(0, 400));
+      return res.status(502).json({ error: 'AI応答の解析に失敗しました', raw: raw.slice(0, 200) });
+    }
 
     // 重複除外
     if (parsed.words) {
       parsed.words = parsed.words.filter(w => w.word !== word);
     }
 
-    // キャッシュ保存（24時間・文脈語は含めない）
+    // キャッシュ保存（実際に使ったモードのキーに保存）
+    const saveKey = effectiveFast ? `vocabfast:${word}` : `vocab:${word}`;
     try {
-      await redis('SET', cacheKey, JSON.stringify(parsed));
-      await redis('EXPIRE', cacheKey, 86400);
+      await redis('SET', saveKey, JSON.stringify(parsed));
+      await redis('EXPIRE', saveKey, 86400);
     } catch {}
 
     // 文脈語を追加（並行取得済み）
@@ -169,9 +225,11 @@ export default async function handler(req, res) {
 
     logLive(word);
 
-    // 残り回数を付与
+    // 残り回数・クレジット残高を付与
     parsed._remaining = rl.remaining;
     parsed._limit = FREE_LIMIT;
+    parsed._credits = creditsAfter;
+    parsed._fast = effectiveFast;
 
     return res.status(200).json(parsed);
   } catch (err) {
@@ -205,7 +263,10 @@ async function generateContextWords(prev, cur) {
       }),
     });
     const data = await resp.json();
-    const raw = data.content.map(c => c.text || '').join('');
+    if (!data.content || !Array.isArray(data.content)) return [];
+    let raw = data.content.map(c => c.text || '').join('');
+    const s = raw.indexOf('['); const e2 = raw.lastIndexOf(']');
+    if (s >= 0 && e2 > s) raw = raw.slice(s, e2 + 1);
     const arr = JSON.parse(raw.replace(/```json|```/g, '').trim());
     if (Array.isArray(arr)) {
       return arr

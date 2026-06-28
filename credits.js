@@ -68,6 +68,21 @@ export default async function handler(req, res) {
       return res.status(200).json({ start, goal, par, _remaining: rl.remaining, _limit: GOLF_LIMIT });
     }
 
+    // --- パー推定のみ（ユーザー定義ペア用） ---
+    if (action === 'par') {
+      const start = String(req.body.start || '').slice(0, 30);
+      const goal = String(req.body.goal || '').slice(0, 30);
+      if (!start || !goal) return res.status(400).json({ error: 'start/goal required' });
+      let par = 15;
+      try {
+        const parPrompt = `日本語のワードゴルフで「${start}」から関連語をたどって「${goal}」に到達するのに必要な手数の目安を整数だけで答えてください（4〜8程度）。数字のみ。`;
+        const out = await callClaude(parPrompt, 20, true); // Haiku
+        const n = parseInt(out.replace(/[^0-9]/g, ''), 10);
+        if (n >= 3 && n <= 12) par = n * 3;
+      } catch {}
+      return res.status(200).json({ start, goal, par });
+    }
+
     // --- ヒント（Haikuで安く、レートリミット付き） ---
     if (action === 'hint') {
       const rl = await checkLimit(req, 'hint', HINT_LIMIT);

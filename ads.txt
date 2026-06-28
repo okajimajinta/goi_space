@@ -85,6 +85,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .account-handle input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:9px 12px;border-radius:6px;outline:none}
 .account-handle input:focus{border-color:var(--amber)}
 .account-actions{display:flex;flex-direction:column;gap:10px}
+.account-credits{background:var(--bg);border:1px solid var(--amber);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.account-credits-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.account-credits-label{font-size:13px;color:var(--muted)}
+.account-credits-val{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber)}
 .account-btn{padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer;transition:all .15s}
 .account-btn:hover{border-color:var(--amber);color:var(--amber)}
 .account-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:500}
@@ -163,6 +167,23 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === GOLF TRAIL === */
 .golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
 .golf-trail.visible{display:flex}
+
+/* === GOLF SETUP === */
+.golf-setup-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px)}
+.golf-setup-overlay.visible{display:flex}
+.golf-setup-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px 34px;text-align:center;max-width:420px;width:90%}
+.golf-setup-title{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:600;color:var(--text);margin-bottom:8px}
+.golf-setup-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
+.golf-setup-modes{display:flex;gap:10px;margin-bottom:18px}
+.golf-setup-mode{flex:1;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--muted);font-family:'Noto Serif JP',serif;font-size:15px;cursor:pointer;transition:all .15s}
+.golf-setup-mode:hover{border-color:var(--blue)}
+.golf-setup-mode.active{border-color:var(--blue);color:var(--blue);background:rgba(91,143,222,0.1)}
+.golf-setup-custom{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.golf-setup-custom input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:11px 14px;border-radius:8px;outline:none;text-align:center}
+.golf-setup-custom input:focus{border-color:var(--blue)}
+.golf-setup-arrow{color:var(--muted);font-size:18px}
+.golf-setup-start{width:100%;padding:14px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:16px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.golf-setup-start:hover{opacity:.85}
 .trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px;cursor:pointer;transition:all .15s}
 .trail-word[data-trail-word]:hover{border-color:var(--amber);color:var(--amber)}
 .trail-word.start{border-color:var(--blue);color:var(--blue)}
@@ -378,6 +399,13 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           <div class="account-plan-name" id="accountPlanName">読み込み中…</div>
           <div class="account-plan-rows" id="accountPlanRows"></div>
         </div>
+        <div class="account-credits">
+          <div class="account-credits-row">
+            <span class="account-credits-label">⚡ 高速クレジット残高</span>
+            <span class="account-credits-val" id="accountCredits">—</span>
+          </div>
+          <button class="account-btn" id="buyCreditsBtn">⚡ クレジットを購入</button>
+        </div>
         <div class="account-actions">
           <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
           <button class="account-btn" id="accountLogout">この端末からログアウト</button>
@@ -422,6 +450,23 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       </div>
     </div>
     <div class="golf-trail" id="golfTrail"></div>
+    <!-- ゴルフ お題設定画面 -->
+    <div class="golf-setup-overlay" id="golfSetupOverlay">
+      <div class="golf-setup-card">
+        <div class="golf-setup-title">🏌️ ワードゴルフ</div>
+        <div class="golf-setup-sub">お題の決め方を選んでください</div>
+        <div class="golf-setup-modes">
+          <button class="golf-setup-mode active" id="golfModeRandom" data-mode="random">🎲 ランダム</button>
+          <button class="golf-setup-mode" id="golfModeCustom" data-mode="custom">✏️ 自分で設定</button>
+        </div>
+        <div class="golf-setup-custom" id="golfCustomFields" style="display:none">
+          <input id="golfStartInput" type="text" maxlength="20" placeholder="スタートの言葉" autocomplete="off"/>
+          <div class="golf-setup-arrow">↓</div>
+          <input id="golfGoalInput" type="text" maxlength="20" placeholder="ゴールの言葉" autocomplete="off"/>
+        </div>
+        <button class="golf-setup-start" id="golfSetupStart">この設定で始める</button>
+      </div>
+    </div>
     <div class="pin-tray" id="pinTray"></div>
     <button class="enchant-btn" id="enchantBtn" title="ランダムな語との意外な文脈を発見">✨ ランダムエンチャント</button>
     <!-- エンチャント語選択モーダル -->
@@ -756,7 +801,10 @@ async function refreshCredits(){
   }catch{}
 }
 function updateCreditDisplay(){
-  if(typeof updateUsage==='function')updateUsage(userCredits);
+  if(typeof updateUsage==='function')updateUsage(0);
+  // 会員画面が開いていればクレジット欄も更新
+  const ce=document.getElementById('accountCredits');
+  if(ce)ce.textContent=userCredits;
 }
 function apiHeaders(){
   const h={'Content-Type':'application/json'};
@@ -770,20 +818,20 @@ function localStorage_set(k,v){try{localStorage.setItem(k,v)}catch{}}
 async function fetchWords(word,context){
   // 文脈つきの探索はキャッシュを使わない（毎回文脈語が変わるため）
   const body=context?{word,context}:{word};
+  // クライアントキャッシュがあれば即返す（ネットワーク呼び出しなし・消費なし）
   if(!context&&vocabCache[word]){
-    const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
-    const data=await resp.json();
-    if(resp.status===429)return{_error:'daily_limit',_message:data.message};
-    if(resp.status===402)return{_error:'no_credits',_message:data.message};
-    vocabCache[word]=data;return data;
+    return vocabCache[word];
   }
   const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
   if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
   if(resp.status===402){const d=await resp.json();return{_error:'no_credits',_message:d.message}}
   if(!resp.ok)throw new Error('API error '+resp.status);
   const data=await resp.json();if(!context)vocabCache[word]=data;
-  // クレジットユーザーは消費後に残高を更新
-  if(userCredits>0&&userPlan!=='premium'&&userPlan!=='premium_plus'){refreshCredits()}
+  // APIが返したクレジット残高を反映（高速消費後の最新値）
+  if(typeof data._credits==='number'){
+    userCredits=data._credits;localStorage_set('userCredits',String(userCredits));
+    updateCreditDisplay();
+  }
   return data;
 }
 async function fetchGravity(word){
@@ -909,15 +957,19 @@ function prefetchNodes(words){
 async function runPrefetch(){
   if(prefetching)return;
   prefetching=true;
-  // サーバー負荷を抑えるため1件ずつ・間隔を空けて先読み
+  // 表示された全ノードを先読み。レート制限回避のため6並列で流す
+  const CONCURRENCY=6;
   while(prefetchQueue.length>0){
-    const word=prefetchQueue.shift();
-    if(vocabCache[word])continue;
-    try{
-      const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
-      if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
-    }catch{}
-    await new Promise(r=>setTimeout(r,250)); // 250ms間隔
+    const batch=prefetchQueue.splice(0,CONCURRENCY);
+    await Promise.all(batch.map(async word=>{
+      if(!word||vocabCache[word])return;
+      try{
+        const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word,prefetch:true})});
+        if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
+      }catch{}
+    }));
+    // 連続バッチ間にごく短い間隔（レート制限のスパイク緩和）
+    if(prefetchQueue.length>0)await new Promise(r=>setTimeout(r,80));
   }
   prefetching=false;
 }
@@ -1294,7 +1346,53 @@ GU.addEventListener('click',()=>{
   toast('手戻りしました（残り0回）','info');
 });
 
-async function startGolf(){
+// ===== GOLF SETUP =====
+const golfSetupOverlay=document.getElementById('golfSetupOverlay');
+let golfSetupMode='random';
+function showGolfSetup(){
+  golfSetupOverlay.classList.add('visible');
+}
+document.querySelectorAll('.golf-setup-mode').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.golf-setup-mode').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    golfSetupMode=btn.dataset.mode;
+    document.getElementById('golfCustomFields').style.display=golfSetupMode==='custom'?'flex':'none';
+  });
+});
+document.getElementById('golfSetupStart').addEventListener('click',()=>{
+  if(golfSetupMode==='custom'){
+    const s=document.getElementById('golfStartInput').value.trim();
+    const g=document.getElementById('golfGoalInput').value.trim();
+    if(!s||!g){toast('スタートとゴールの両方を入力してください','info',2500);return}
+    if(s===g){toast('スタートとゴールは別の言葉にしてください','info',2500);return}
+    golfSetupOverlay.classList.remove('visible');
+    startGolf({start:s,goal:g});
+  }else{
+    golfSetupOverlay.classList.remove('visible');
+    startGolf();
+  }
+});
+
+async function startGolf(custom){
+  // カスタム指定がある場合はパーだけ取得して即開始
+  if(custom&&custom.start&&custom.goal){
+    toast('お題を準備中…','info',1200);
+    let par=15;
+    try{
+      const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({action:'par',start:custom.start,goal:custom.goal})});
+      if(r.ok){const d=await r.json();if(d.par)par=d.par}
+    }catch{}
+    golf.active=true;golf.start=custom.start;golf.goal=custom.goal;golf.par=par;
+    golf.moves=0;golf.path=[custom.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;
+    GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+    GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');renderTrail();
+    WI.value=golf.start;explore(golf.start);
+    toast(`「${golf.start}」→「${golf.goal}」`,'success');
+    return;
+  }
+  // ランダム生成
   toast('お題を生成中…','info',1500);
   try{
     const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),body:JSON.stringify({action:'pair'})});
@@ -1303,7 +1401,7 @@ async function startGolf(){
     golf.active=true;golf.start=d.start;golf.goal=d.goal;golf.par=d.par||5;
     golf.moves=0;golf.path=[d.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;
     GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
-    GU.disabled=false;GP.classList.add('visible');renderTrail();
+    GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');renderTrail();
     WI.value=golf.start;explore(golf.start);
     toast(`「${golf.start}」→「${golf.goal}」`,  'success');
   }catch{toast('お題の生成に失敗しました','error')}
@@ -1317,7 +1415,7 @@ GH.addEventListener('click',async()=>{
     const d=await r.json();toast('ヒント: '+(d.hints||[]).join(' / '),'info',5000);
   }catch{toast('ヒント取得失敗','error')}
 });
-GN.addEventListener('click',()=>{savedSessions.golf=null;startGolf()});
+GN.addEventListener('click',()=>{savedSessions.golf=null;showGolfSetup()});
 
 // ===== DAILY/MONTHLY =====
 function resultKey(p,i){return p+':'+daily.date+':'+i}
@@ -1474,13 +1572,14 @@ document.querySelectorAll('.mode-tab').forEach(tab=>{
 
     golf.active=false;GP.classList.remove('visible');GT.classList.remove('visible');
     DP.classList.remove('visible');CO.classList.remove('visible');
+    golfSetupOverlay.classList.remove('visible');
     // 前モードのノードを必ずクリア（混在を防ぐ）
     clearCanvas();
     currentMode=m;
 
     if(m==='golf'){
       if(savedSessions.golf){restoreGolf(savedSessions.golf);restoreCanvas(savedCanvas.golf)}
-      else startGolf();
+      else showGolfSetup();
     }else if(m==='daily'){
       if(savedSessions.daily){daily.period='daily';restoreGolf(savedSessions.daily);restoreCanvas(savedCanvas.daily)}
       else openChallenge('daily');
@@ -1625,14 +1724,19 @@ async function runEnchant(randomWord){
 // ===== USAGE & UPGRADE =====
 function updateUsage(remaining,limit){
   if(typeof updateAccountTab==='function')updateAccountTab();
-  // クレジット残高がある場合は残高を表示（サブスクより優先）
-  if(userPlan!=='premium'&&userPlan!=='premium_plus'&&userCredits>0){
+  const isSub=(userPlan==='premium'||userPlan==='premium_plus');
+  if(isSub){
+    // サブスク会員：プレミアム表示。クレジットがあれば⚡も併記
+    UB.innerHTML=userCredits>0
+      ?`<span class="count">✨ ＋⚡${userCredits}</span>`
+      :'<span class="count">✨ プレミアム</span>';
+    UB.classList.remove('low');UB.classList.add('premium');return;
+  }
+  if(userCredits>0){
+    // クレジットのみ（非サブスク）：残高表示
     UB.innerHTML=`<span class="count">⚡ ${userCredits}</span>`;
     UB.classList.add('premium');UB.classList.toggle('low',userCredits<=5);
     return;
-  }
-  if(premiumEmail&&(userPlan==='premium'||userPlan==='premium_plus')){
-    UB.innerHTML='<span class="count">✨ プレミアム</span>';UB.classList.remove('low');UB.classList.add('premium');return;
   }
   UB.classList.remove('premium');
   UC.textContent=remaining;
@@ -1640,6 +1744,8 @@ function updateUsage(remaining,limit){
 }
 function showUpgrade(limitReached){
   if(premiumEmail)return; // 課金者には出さない
+  // 月額カードを再表示（クレジット専用表示から戻す）
+  document.querySelectorAll('#planMonthly,#planYearly,.upgrade-divider').forEach(el=>{if(el)el.style.display=''});
   const t=document.getElementById('upgradeTitle');
   const d=document.getElementById('upgradeDesc');
   const ic=document.getElementById('upgradeIcon');
@@ -1702,6 +1808,10 @@ async function openAccount(){
   accPlanName.textContent='読み込み中…';
   const rows=document.getElementById('accountPlanRows');
   rows.innerHTML='';
+  // クレジット残高を表示＆最新化
+  const ce=document.getElementById('accountCredits');
+  if(ce)ce.textContent=userCredits;
+  refreshCredits();
   try{
     const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
     const d=await r.json();
@@ -1729,6 +1839,19 @@ async function openAccount(){
 document.getElementById('accountClose').addEventListener('click',()=>AO.classList.remove('visible'));
 
 // プラン管理（Stripe Customer Portal）へ
+document.getElementById('buyCreditsBtn').addEventListener('click',()=>{
+  // クレジット購入：会員でもアップグレード画面を開いてクレジットパックを選べるように
+  AO.classList.remove('visible');
+  const t=document.getElementById('upgradeTitle');
+  const d=document.getElementById('upgradeDesc');
+  const ic=document.getElementById('upgradeIcon');
+  if(t)t.textContent='⚡ 高速クレジット';
+  if(d)d.textContent='クレジットを購入すると、探索が高速になります。';
+  if(ic)ic.textContent='⚡';
+  // 月額プランカードは隠し、クレジットパックだけ見せる
+  document.querySelectorAll('#planMonthly,#planYearly,.upgrade-divider').forEach(el=>{if(el)el.style.display='none'});
+  UO.classList.add('visible');
+});
 document.getElementById('managePlanBtn').addEventListener('click',async()=>{
   toast('管理画面へ移動します…','info',2000);
   try{
