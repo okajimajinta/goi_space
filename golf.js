@@ -1,7 +1,7 @@
 // api/claude.js — 語彙生成API（キャッシュ＋レートリミット付き）
 
 import { redis, setCors } from './_redis.js';
-import { checkLimit, getPlan } from './_ratelimit.js';
+import { checkLimit, getPlan, getCredits, consumeCredits } from './_ratelimit.js';
 
 const FREE_LIMIT = 20; // 1日あたりの無料探索回数
 
@@ -10,13 +10,51 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { word, context } = req.body;
+  const { word, context, action } = req.body;
+
+  // --- エンチャント：中心語とランダム語の文脈から5つのコンテキスト語を生成 ---
+  if (action === 'enchant') {
+    const center = String(word || '').slice(0, 50);
+    const rand = String(req.body.randomWord || '').slice(0, 50);
+    if (!center || !rand) return res.status(400).json({ error: 'words required' });
+    try {
+      const prompt = `日本語の語彙探索です。「${center}」と「${rand}」という一見無関係な2語を結びつける、意外で詩的な文脈を考え、その文脈から連想される語をちょうど5語挙げてください。各語に読み仮名と、なぜこの2語の間に現れるかの一言説明（20字以内）を添えてください。JSON配列のみ：[{"word":"語","reading":"よみ","description":"説明"}]`;
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 400,
+          temperature: 1,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      const data = await resp.json();
+      const raw = data.content.map(c => c.text || '').join('');
+      const arr = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      const words = (Array.isArray(arr) ? arr : [])
+        .filter(w => w && w.word && w.word !== center && w.word !== rand)
+        .slice(0, 5)
+        .map(w => ({ word: w.word, reading: w.reading || '', type: 'context', description: w.description || '' }));
+      return res.status(200).json({ words });
+    } catch (e) {
+      return res.status(500).json({ error: 'enchant failed' });
+    }
+  }
+
   if (!word || typeof word !== 'string' || word.length > 50)
     return res.status(400).json({ error: 'Invalid word' });
 
   // プラン判定（キャッシュキーをモード別にするため先に取得）
   const plan = await getPlan(req);
-  const fastMode = plan === 'premium_plus';
+  const { email: creditEmail, credits } = await getCredits(req);
+  // 高速モード: プレミアム+サブスク、またはクレジット残高あり
+  const hasCredits = credits > 0;
+  const fastMode = plan === 'premium_plus' || hasCredits;
 
   // キャッシュヒットならレートリミットを消費しない（高速モードは別キャッシュ）
   const cacheKey = fastMode ? `vocabfast:${word}` : `vocab:${word}`;
@@ -41,15 +79,29 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   }
 
-  // レートリミットチェック
-  const rl = await checkLimit(req, 'explore', FREE_LIMIT);
-  if (!rl.ok) {
-    return res.status(429).json({
-      error: 'daily_limit',
-      message: `本日の無料探索回数（${FREE_LIMIT}回）に達しました`,
-      remaining: 0,
-      limit: FREE_LIMIT,
-    });
+  // クレジットユーザー（プレミアム+サブスクではない）は1クレジット消費
+  const isCreditUser = hasCredits && plan !== 'premium_plus';
+  let rl = { remaining: 9999 };
+  if (isCreditUser) {
+    const ok = await consumeCredits(creditEmail, 1);
+    if (!ok) {
+      return res.status(402).json({
+        error: 'no_credits',
+        message: 'クレジットが不足しています',
+        credits: 0,
+      });
+    }
+  } else {
+    // レートリミットチェック（無料ユーザー）。プレミアムは内部でバイパス
+    rl = await checkLimit(req, 'explore', FREE_LIMIT);
+    if (!rl.ok) {
+      return res.status(429).json({
+        error: 'daily_limit',
+        message: `本日の無料探索回数（${FREE_LIMIT}回）に達しました`,
+        remaining: 0,
+        limit: FREE_LIMIT,
+      });
+    }
   }
 
   // Claude API呼び出し

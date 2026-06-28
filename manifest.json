@@ -1,24 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- 背景：深夜の紺（アプリ背景と同じ） -->
   <rect width="64" height="64" rx="14" fill="#080C18"/>
-
-  <!-- 接続線（ノードをつなぐエッジ） -->
   <g stroke-linecap="round" fill="none">
-    <line x1="32" y1="32" x2="32" y2="13" stroke="#5B8FDE" stroke-width="2.4" opacity="0.55"/>
-    <line x1="32" y1="32" x2="49" y2="24" stroke="#4ECBA8" stroke-width="2.4" opacity="0.55"/>
-    <line x1="32" y1="32" x2="48" y2="46" stroke="#E06B8B" stroke-width="2.4" opacity="0.55"/>
-    <line x1="32" y1="32" x2="16" y2="46" stroke="#9B72E8" stroke-width="2.4" opacity="0.55"/>
-    <line x1="32" y1="32" x2="15" y2="24" stroke="#FF6B6B" stroke-width="2.4" opacity="0.55"/>
+    <line x1="32" y1="32" x2="32.0" y2="13.0" stroke="#5B8FDE" stroke-width="2.4" opacity="0.55"/>
+    <line x1="32" y1="32" x2="50.1" y2="26.1" stroke="#4ECBA8" stroke-width="2.4" opacity="0.55"/>
+    <line x1="32" y1="32" x2="43.2" y2="47.4" stroke="#E06B8B" stroke-width="2.4" opacity="0.55"/>
+    <line x1="32" y1="32" x2="20.8" y2="47.4" stroke="#9B72E8" stroke-width="2.4" opacity="0.55"/>
+    <line x1="32" y1="32" x2="13.9" y2="26.1" stroke="#FF6B6B" stroke-width="2.4" opacity="0.55"/>
   </g>
-
-  <!-- 周辺ノード（色違い） -->
-  <circle cx="32" cy="13" r="5.5" fill="#5B8FDE"/>
-  <circle cx="49" cy="24" r="5.5" fill="#4ECBA8"/>
-  <circle cx="48" cy="46" r="5.5" fill="#E06B8B"/>
-  <circle cx="16" cy="46" r="5.5" fill="#9B72E8"/>
-  <circle cx="15" cy="24" r="5.5" fill="#FF6B6B"/>
-
-  <!-- 中心ノード（琥珀色・アプリの中心語と同じ） -->
+  <circle cx="32.0" cy="13.0" r="5.5" fill="#5B8FDE"/>
+  <circle cx="50.1" cy="26.1" r="5.5" fill="#4ECBA8"/>
+  <circle cx="43.2" cy="47.4" r="5.5" fill="#E06B8B"/>
+  <circle cx="20.8" cy="47.4" r="5.5" fill="#9B72E8"/>
+  <circle cx="13.9" cy="26.1" r="5.5" fill="#FF6B6B"/>
   <circle cx="32" cy="32" r="8" fill="#F5A623"/>
   <circle cx="32" cy="32" r="8" fill="none" stroke="#F5A623" stroke-width="3" opacity="0.35"/>
 </svg>
