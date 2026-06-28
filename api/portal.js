@@ -36,15 +36,15 @@ export default async function handler(req, res) {
   if (!email) return res.status(400).json({ error: 'メールが必要です' });
 
   try {
-    // メールからStripeの顧客を検索
-    const search = await stripeRequest(
-      `customers/search?query=${encodeURIComponent(`email:'${email}'`)}`,
+    // メールからStripeの顧客を取得（list は search と違い即時反映される）
+    const list = await stripeRequest(
+      `customers?email=${encodeURIComponent(email)}&limit=1`,
       null, 'GET'
     );
 
-    const customer = search.data && search.data[0];
+    const customer = list.data && list.data[0];
     if (!customer) {
-      return res.status(404).json({ error: 'この メールの顧客が見つかりません' });
+      return res.status(404).json({ error: 'このメールの購入記録が見つかりません' });
     }
 
     // Customer Portal セッション作成

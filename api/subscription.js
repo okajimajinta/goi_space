@@ -78,7 +78,7 @@ export default async function handler(req, res) {
       let customer = null;
       try {
         const search = await fetch(
-          `https://api.stripe.com/v1/customers/search?query=${encodeURIComponent(`email:'${email}'`)}`,
+          `https://api.stripe.com/v1/customers?email=${encodeURIComponent(email)}&limit=1`,
           { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
         ).then(r => r.json());
         customer = search.data && search.data[0];

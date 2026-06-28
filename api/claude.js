@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { word, context, action } = req.body;
+  const { word, context, action } = req.body || {};
 
   // --- エンチャント：中心語とランダム語の文脈から5つのコンテキスト語を生成 ---
   if (action === 'enchant') {
@@ -49,9 +49,10 @@ export default async function handler(req, res) {
   if (!word || typeof word !== 'string' || word.length > 50)
     return res.status(400).json({ error: 'Invalid word' });
 
-  // プラン判定（キャッシュキーをモード別にするため先に取得）
-  const plan = await getPlan(req);
-  const { email: creditEmail, credits } = await getCredits(req);
+  // プラン判定（キャッシュキーをモード別にするため先に取得・失敗しても続行）
+  let plan = 'free', creditEmail = '', credits = 0;
+  try { plan = await getPlan(req); } catch {}
+  try { const c = await getCredits(req); creditEmail = c.email; credits = c.credits; } catch {}
   // 高速モード: プレミアム+サブスク、またはクレジット残高あり
   const hasCredits = credits > 0;
   const fastMode = plan === 'premium_plus' || hasCredits;
@@ -148,10 +149,20 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: data });
+    if (!data.content || !Array.isArray(data.content)) {
+      console.error('Unexpected API response:', JSON.stringify(data).slice(0, 500));
+      return res.status(502).json({ error: 'AI応答の形式が不正です', detail: data });
+    }
 
     const raw = data.content.map(c => c.text || '').join('');
     const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (pe) {
+      console.error('JSON parse failed:', clean.slice(0, 300));
+      return res.status(502).json({ error: 'AI応答の解析に失敗しました' });
+    }
 
     // 重複除外
     if (parsed.words) {
