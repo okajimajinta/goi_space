@@ -923,9 +923,10 @@ function prefetchNodes(words){
 async function runPrefetch(){
   if(prefetching)return;
   prefetching=true;
-  // 2件ずつ並行で先読み（高速モードの体感を上げる）
+  // 表示された全ノードを先読み。レート制限回避のため6並列で流す
+  const CONCURRENCY=6;
   while(prefetchQueue.length>0){
-    const batch=[prefetchQueue.shift(),prefetchQueue.shift()].filter(Boolean);
+    const batch=prefetchQueue.splice(0,CONCURRENCY);
     await Promise.all(batch.map(async word=>{
       if(!word||vocabCache[word])return;
       try{
@@ -933,7 +934,8 @@ async function runPrefetch(){
         if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
       }catch{}
     }));
-    await new Promise(r=>setTimeout(r,120));
+    // 連続バッチ間にごく短い間隔（レート制限のスパイク緩和）
+    if(prefetchQueue.length>0)await new Promise(r=>setTimeout(r,80));
   }
   prefetching=false;
 }
