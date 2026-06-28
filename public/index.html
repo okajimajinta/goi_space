@@ -85,6 +85,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .account-handle input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:9px 12px;border-radius:6px;outline:none}
 .account-handle input:focus{border-color:var(--amber)}
 .account-actions{display:flex;flex-direction:column;gap:10px}
+.account-credits{background:var(--bg);border:1px solid var(--amber);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.account-credits-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.account-credits-label{font-size:13px;color:var(--muted)}
+.account-credits-val{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber)}
 .account-btn{padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer;transition:all .15s}
 .account-btn:hover{border-color:var(--amber);color:var(--amber)}
 .account-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:500}
@@ -377,6 +381,13 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           <div class="account-plan-label">現在のプラン</div>
           <div class="account-plan-name" id="accountPlanName">読み込み中…</div>
           <div class="account-plan-rows" id="accountPlanRows"></div>
+        </div>
+        <div class="account-credits">
+          <div class="account-credits-row">
+            <span class="account-credits-label">⚡ 高速クレジット残高</span>
+            <span class="account-credits-val" id="accountCredits">—</span>
+          </div>
+          <button class="account-btn" id="buyCreditsBtn">⚡ クレジットを購入</button>
         </div>
         <div class="account-actions">
           <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
@@ -756,7 +767,10 @@ async function refreshCredits(){
   }catch{}
 }
 function updateCreditDisplay(){
-  if(typeof updateUsage==='function')updateUsage(userCredits);
+  if(typeof updateUsage==='function')updateUsage(0);
+  // 会員画面が開いていればクレジット欄も更新
+  const ce=document.getElementById('accountCredits');
+  if(ce)ce.textContent=userCredits;
 }
 function apiHeaders(){
   const h={'Content-Type':'application/json'};
@@ -782,8 +796,11 @@ async function fetchWords(word,context){
   if(resp.status===402){const d=await resp.json();return{_error:'no_credits',_message:d.message}}
   if(!resp.ok)throw new Error('API error '+resp.status);
   const data=await resp.json();if(!context)vocabCache[word]=data;
-  // クレジットユーザーは消費後に残高を更新
-  if(userCredits>0&&userPlan!=='premium'&&userPlan!=='premium_plus'){refreshCredits()}
+  // APIが返したクレジット残高を反映（高速消費後の最新値）
+  if(typeof data._credits==='number'){
+    userCredits=data._credits;localStorage_set('userCredits',String(userCredits));
+    updateCreditDisplay();
+  }
   return data;
 }
 async function fetchGravity(word){
@@ -1625,14 +1642,19 @@ async function runEnchant(randomWord){
 // ===== USAGE & UPGRADE =====
 function updateUsage(remaining,limit){
   if(typeof updateAccountTab==='function')updateAccountTab();
-  // クレジット残高がある場合は残高を表示（サブスクより優先）
-  if(userPlan!=='premium'&&userPlan!=='premium_plus'&&userCredits>0){
+  const isSub=(userPlan==='premium'||userPlan==='premium_plus');
+  if(isSub){
+    // サブスク会員：プレミアム表示。クレジットがあれば⚡も併記
+    UB.innerHTML=userCredits>0
+      ?`<span class="count">✨ ＋⚡${userCredits}</span>`
+      :'<span class="count">✨ プレミアム</span>';
+    UB.classList.remove('low');UB.classList.add('premium');return;
+  }
+  if(userCredits>0){
+    // クレジットのみ（非サブスク）：残高表示
     UB.innerHTML=`<span class="count">⚡ ${userCredits}</span>`;
     UB.classList.add('premium');UB.classList.toggle('low',userCredits<=5);
     return;
-  }
-  if(premiumEmail&&(userPlan==='premium'||userPlan==='premium_plus')){
-    UB.innerHTML='<span class="count">✨ プレミアム</span>';UB.classList.remove('low');UB.classList.add('premium');return;
   }
   UB.classList.remove('premium');
   UC.textContent=remaining;
@@ -1640,6 +1662,8 @@ function updateUsage(remaining,limit){
 }
 function showUpgrade(limitReached){
   if(premiumEmail)return; // 課金者には出さない
+  // 月額カードを再表示（クレジット専用表示から戻す）
+  document.querySelectorAll('#planMonthly,#planYearly,.upgrade-divider').forEach(el=>{if(el)el.style.display=''});
   const t=document.getElementById('upgradeTitle');
   const d=document.getElementById('upgradeDesc');
   const ic=document.getElementById('upgradeIcon');
@@ -1702,6 +1726,10 @@ async function openAccount(){
   accPlanName.textContent='読み込み中…';
   const rows=document.getElementById('accountPlanRows');
   rows.innerHTML='';
+  // クレジット残高を表示＆最新化
+  const ce=document.getElementById('accountCredits');
+  if(ce)ce.textContent=userCredits;
+  refreshCredits();
   try{
     const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
     const d=await r.json();
@@ -1729,6 +1757,19 @@ async function openAccount(){
 document.getElementById('accountClose').addEventListener('click',()=>AO.classList.remove('visible'));
 
 // プラン管理（Stripe Customer Portal）へ
+document.getElementById('buyCreditsBtn').addEventListener('click',()=>{
+  // クレジット購入：会員でもアップグレード画面を開いてクレジットパックを選べるように
+  AO.classList.remove('visible');
+  const t=document.getElementById('upgradeTitle');
+  const d=document.getElementById('upgradeDesc');
+  const ic=document.getElementById('upgradeIcon');
+  if(t)t.textContent='⚡ 高速クレジット';
+  if(d)d.textContent='クレジットを購入すると、探索が高速になります。';
+  if(ic)ic.textContent='⚡';
+  // 月額プランカードは隠し、クレジットパックだけ見せる
+  document.querySelectorAll('#planMonthly,#planYearly,.upgrade-divider').forEach(el=>{if(el)el.style.display='none'});
+  UO.classList.add('visible');
+});
 document.getElementById('managePlanBtn').addEventListener('click',async()=>{
   toast('管理画面へ移動します…','info',2000);
   try{
