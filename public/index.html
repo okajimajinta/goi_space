@@ -167,6 +167,23 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === GOLF TRAIL === */
 .golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
 .golf-trail.visible{display:flex}
+
+/* === GOLF SETUP === */
+.golf-setup-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px)}
+.golf-setup-overlay.visible{display:flex}
+.golf-setup-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px 34px;text-align:center;max-width:420px;width:90%}
+.golf-setup-title{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:600;color:var(--text);margin-bottom:8px}
+.golf-setup-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
+.golf-setup-modes{display:flex;gap:10px;margin-bottom:18px}
+.golf-setup-mode{flex:1;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--muted);font-family:'Noto Serif JP',serif;font-size:15px;cursor:pointer;transition:all .15s}
+.golf-setup-mode:hover{border-color:var(--blue)}
+.golf-setup-mode.active{border-color:var(--blue);color:var(--blue);background:rgba(91,143,222,0.1)}
+.golf-setup-custom{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.golf-setup-custom input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:11px 14px;border-radius:8px;outline:none;text-align:center}
+.golf-setup-custom input:focus{border-color:var(--blue)}
+.golf-setup-arrow{color:var(--muted);font-size:18px}
+.golf-setup-start{width:100%;padding:14px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:16px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.golf-setup-start:hover{opacity:.85}
 .trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px;cursor:pointer;transition:all .15s}
 .trail-word[data-trail-word]:hover{border-color:var(--amber);color:var(--amber)}
 .trail-word.start{border-color:var(--blue);color:var(--blue)}
@@ -433,6 +450,23 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       </div>
     </div>
     <div class="golf-trail" id="golfTrail"></div>
+    <!-- ゴルフ お題設定画面 -->
+    <div class="golf-setup-overlay" id="golfSetupOverlay">
+      <div class="golf-setup-card">
+        <div class="golf-setup-title">🏌️ ワードゴルフ</div>
+        <div class="golf-setup-sub">お題の決め方を選んでください</div>
+        <div class="golf-setup-modes">
+          <button class="golf-setup-mode active" id="golfModeRandom" data-mode="random">🎲 ランダム</button>
+          <button class="golf-setup-mode" id="golfModeCustom" data-mode="custom">✏️ 自分で設定</button>
+        </div>
+        <div class="golf-setup-custom" id="golfCustomFields" style="display:none">
+          <input id="golfStartInput" type="text" maxlength="20" placeholder="スタートの言葉" autocomplete="off"/>
+          <div class="golf-setup-arrow">↓</div>
+          <input id="golfGoalInput" type="text" maxlength="20" placeholder="ゴールの言葉" autocomplete="off"/>
+        </div>
+        <button class="golf-setup-start" id="golfSetupStart">この設定で始める</button>
+      </div>
+    </div>
     <div class="pin-tray" id="pinTray"></div>
     <button class="enchant-btn" id="enchantBtn" title="ランダムな語との意外な文脈を発見">✨ ランダムエンチャント</button>
     <!-- エンチャント語選択モーダル -->
@@ -1312,7 +1346,53 @@ GU.addEventListener('click',()=>{
   toast('手戻りしました（残り0回）','info');
 });
 
-async function startGolf(){
+// ===== GOLF SETUP =====
+const golfSetupOverlay=document.getElementById('golfSetupOverlay');
+let golfSetupMode='random';
+function showGolfSetup(){
+  golfSetupOverlay.classList.add('visible');
+}
+document.querySelectorAll('.golf-setup-mode').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.golf-setup-mode').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    golfSetupMode=btn.dataset.mode;
+    document.getElementById('golfCustomFields').style.display=golfSetupMode==='custom'?'flex':'none';
+  });
+});
+document.getElementById('golfSetupStart').addEventListener('click',()=>{
+  if(golfSetupMode==='custom'){
+    const s=document.getElementById('golfStartInput').value.trim();
+    const g=document.getElementById('golfGoalInput').value.trim();
+    if(!s||!g){toast('スタートとゴールの両方を入力してください','info',2500);return}
+    if(s===g){toast('スタートとゴールは別の言葉にしてください','info',2500);return}
+    golfSetupOverlay.classList.remove('visible');
+    startGolf({start:s,goal:g});
+  }else{
+    golfSetupOverlay.classList.remove('visible');
+    startGolf();
+  }
+});
+
+async function startGolf(custom){
+  // カスタム指定がある場合はパーだけ取得して即開始
+  if(custom&&custom.start&&custom.goal){
+    toast('お題を準備中…','info',1200);
+    let par=15;
+    try{
+      const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({action:'par',start:custom.start,goal:custom.goal})});
+      if(r.ok){const d=await r.json();if(d.par)par=d.par}
+    }catch{}
+    golf.active=true;golf.start=custom.start;golf.goal=custom.goal;golf.par=par;
+    golf.moves=0;golf.path=[custom.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;
+    GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+    GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');renderTrail();
+    WI.value=golf.start;explore(golf.start);
+    toast(`「${golf.start}」→「${golf.goal}」`,'success');
+    return;
+  }
+  // ランダム生成
   toast('お題を生成中…','info',1500);
   try{
     const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),body:JSON.stringify({action:'pair'})});
@@ -1321,7 +1401,7 @@ async function startGolf(){
     golf.active=true;golf.start=d.start;golf.goal=d.goal;golf.par=d.par||5;
     golf.moves=0;golf.path=[d.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;
     GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
-    GU.disabled=false;GP.classList.add('visible');renderTrail();
+    GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');renderTrail();
     WI.value=golf.start;explore(golf.start);
     toast(`「${golf.start}」→「${golf.goal}」`,  'success');
   }catch{toast('お題の生成に失敗しました','error')}
@@ -1335,7 +1415,7 @@ GH.addEventListener('click',async()=>{
     const d=await r.json();toast('ヒント: '+(d.hints||[]).join(' / '),'info',5000);
   }catch{toast('ヒント取得失敗','error')}
 });
-GN.addEventListener('click',()=>{savedSessions.golf=null;startGolf()});
+GN.addEventListener('click',()=>{savedSessions.golf=null;showGolfSetup()});
 
 // ===== DAILY/MONTHLY =====
 function resultKey(p,i){return p+':'+daily.date+':'+i}
@@ -1492,13 +1572,14 @@ document.querySelectorAll('.mode-tab').forEach(tab=>{
 
     golf.active=false;GP.classList.remove('visible');GT.classList.remove('visible');
     DP.classList.remove('visible');CO.classList.remove('visible');
+    golfSetupOverlay.classList.remove('visible');
     // 前モードのノードを必ずクリア（混在を防ぐ）
     clearCanvas();
     currentMode=m;
 
     if(m==='golf'){
       if(savedSessions.golf){restoreGolf(savedSessions.golf);restoreCanvas(savedCanvas.golf)}
-      else startGolf();
+      else showGolfSetup();
     }else if(m==='daily'){
       if(savedSessions.daily){daily.period='daily';restoreGolf(savedSessions.daily);restoreCanvas(savedCanvas.daily)}
       else openChallenge('daily');
