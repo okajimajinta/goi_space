@@ -33,6 +33,21 @@ async function isPremium(req) {
   }
 }
 
+// プラン階層を取得: 'free' | 'premium' | 'premium_plus'
+export async function getPlan(req) {
+  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
+  if (!email) return 'free';
+  try {
+    // "plan:{email}" に階層を保存（premium / premium_plus）。なければ premium:{email} の有無で判定。
+    const tier = await redis('GET', `plan:${email}`);
+    if (tier === 'premium_plus' || tier === 'premium') return tier;
+    const sub = await redis('GET', `premium:${email}`);
+    return sub ? 'premium' : 'free';
+  } catch {
+    return 'free';
+  }
+}
+
 export async function checkLimit(req, action, limit) {
   // 課金済みなら無制限
   if (await isPremium(req)) {

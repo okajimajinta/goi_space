@@ -73,18 +73,30 @@ export default async function handler(req, res) {
             const item = s.items.data[0];
             const interval = item.price.recurring?.interval; // month | year
             const amount = item.price.unit_amount; // 円
+            const priceId = item.price.id;
+
+            // プラン階層判定：premium_plus の価格IDと一致するか
+            const PLUS_PRICES = [
+              process.env.STRIPE_PRICE_PLUS_MONTHLY,
+              process.env.STRIPE_PRICE_PLUS_YEARLY,
+            ].filter(Boolean);
+            const tier = PLUS_PRICES.includes(priceId) ? 'premium_plus' : 'premium';
+
             plan = {
               interval,
               amount,
-              label: interval === 'year' ? '年額プラン' : '月額プラン',
+              tier,
+              label: (tier === 'premium_plus' ? 'プレミアム+ ' : '') + (interval === 'year' ? '年額プラン' : '月額プラン'),
               startedAt: s.start_date || s.created,
               renewsAt: s.current_period_end,
               cancelAtEnd: s.cancel_at_period_end,
             };
-            // アクティブなサブスクを確認できたのでTTLを延長（35日）
+            // アクティブなサブスクを確認できたのでTTLを延長（35日）＋階層を保存
             try {
               await redis('SET', `premium:${email}`, s.id);
               await redis('EXPIRE', `premium:${email}`, 3024000);
+              await redis('SET', `plan:${email}`, tier);
+              await redis('EXPIRE', `plan:${email}`, 3024000);
             } catch {}
           }
         }

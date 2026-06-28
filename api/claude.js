@@ -1,7 +1,7 @@
 // api/claude.js — 語彙生成API（キャッシュ＋レートリミット付き）
 
 import { redis, setCors } from './_redis.js';
-import { checkLimit } from './_ratelimit.js';
+import { checkLimit, getPlan } from './_ratelimit.js';
 
 const FREE_LIMIT = 20; // 1日あたりの無料探索回数
 
@@ -14,8 +14,12 @@ export default async function handler(req, res) {
   if (!word || typeof word !== 'string' || word.length > 50)
     return res.status(400).json({ error: 'Invalid word' });
 
-  // キャッシュヒットならレートリミットを消費しない
-  const cacheKey = `vocab:${word}`;
+  // プラン判定（キャッシュキーをモード別にするため先に取得）
+  const plan = await getPlan(req);
+  const fastMode = plan === 'premium_plus';
+
+  // キャッシュヒットならレートリミットを消費しない（高速モードは別キャッシュ）
+  const cacheKey = fastMode ? `vocabfast:${word}` : `vocab:${word}`;
   let cached = null;
   try { cached = await redis('GET', cacheKey); } catch {}
   if (cached) {
@@ -67,7 +71,11 @@ export default async function handler(req, res) {
 `.trim();
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // 高速モードは Haiku で生成
+    const model = fastMode ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
+
+    // 本体の語彙生成と、文脈語生成を並行実行（高速化）
+    const mainPromise = fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -75,11 +83,16 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        model,
+        max_tokens: 900,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
+    const ctxPromise = (context && typeof context === 'string')
+      ? generateContextWords(context, word)
+      : Promise.resolve([]);
+
+    const [response, ctx] = await Promise.all([mainPromise, ctxPromise]);
 
     const data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: data });
@@ -99,11 +112,8 @@ export default async function handler(req, res) {
       await redis('EXPIRE', cacheKey, 86400);
     } catch {}
 
-    // 文脈（前の語）があれば文脈語を追加（キャッシュ後なので基本キャッシュは汚さない）
-    if (context && typeof context === 'string') {
-      const ctx = await generateContextWords(context, word);
-      if (ctx.length) parsed.words = [...(parsed.words || []), ...ctx];
-    }
+    // 文脈語を追加（並行取得済み）
+    if (ctx && ctx.length) parsed.words = [...(parsed.words || []), ...ctx];
 
     logLive(word);
 

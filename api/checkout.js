@@ -15,6 +15,8 @@ import { setCors } from './_redis.js';
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 const PRICE_MONTHLY = process.env.STRIPE_PRICE_MONTHLY;
 const PRICE_YEARLY = process.env.STRIPE_PRICE_YEARLY;
+const PRICE_PLUS_MONTHLY = process.env.STRIPE_PRICE_PLUS_MONTHLY;
+const PRICE_PLUS_YEARLY = process.env.STRIPE_PRICE_PLUS_YEARLY;
 const SITE_URL = process.env.SITE_URL || 'https://goispace.app';
 
 // Stripe APIをfetchで直接叩く（SDK不要・軽量）
@@ -41,7 +43,13 @@ export default async function handler(req, res) {
   }
 
   const { plan, email } = req.body || {};
-  const priceId = plan === 'yearly' ? PRICE_YEARLY : PRICE_MONTHLY;
+  const priceMap = {
+    monthly: PRICE_MONTHLY,
+    yearly: PRICE_YEARLY,
+    plus_monthly: PRICE_PLUS_MONTHLY,
+    plus_yearly: PRICE_PLUS_YEARLY,
+  };
+  const priceId = priceMap[plan] || PRICE_MONTHLY;
   if (!priceId) return res.status(400).json({ error: 'プランが無効です' });
 
   try {

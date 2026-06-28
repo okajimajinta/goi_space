@@ -28,10 +28,10 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#080C18;--surface:#111726;--border:#1E2840;--text:#D4DCF0;--muted:#5B6A8A;--amber:#F5A623;--blue:#5B8FDE;--green:#4ECBA8;--rose:#E06B8B;--violet:#9B72E8;--goal:#FF6B6B}
-html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Inter','Noto Serif JP',sans-serif;overflow:hidden;touch-action:none}
+html,body{width:100%;max-width:100vw;height:100%;background:var(--bg);color:var(--text);font-family:'Inter','Noto Serif JP',sans-serif;overflow:hidden;touch-action:none}
 
 /* === LAYOUT === */
-.layout{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr 160px;height:100dvh}
+.layout{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr 160px;height:100dvh;width:100%;max-width:100vw}
 
 /* === HEADER === */
 header{grid-column:1/-1;padding:10px 20px;display:flex;align-items:center;gap:10px;background:rgba(8,12,24,0.98);border-bottom:1px solid var(--border);flex-wrap:wrap;z-index:100}
@@ -61,6 +61,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .account-tab{background:var(--surface);border:1px solid var(--amber);color:var(--amber);font-family:'Noto Serif JP',serif;font-size:13px;padding:6px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
 .account-tab:hover{background:var(--amber);color:#080C18}
 .account-tab.premium{background:linear-gradient(135deg,#F5A623,#FF8C42);color:#080C18;border-color:#F5A623;font-weight:600}
+.name-tab{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:13px;padding:6px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.name-tab:hover{border-color:var(--amber);color:var(--amber)}
 
 /* === ACCOUNT PANEL === */
 .account-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
@@ -97,6 +99,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .upgrade-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber);margin-bottom:8px}
 .upgrade-desc{font-size:16px;color:var(--muted);line-height:1.7;margin-bottom:20px}
 .upgrade-plans{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.upgrade-plan.plus{border-color:var(--amber);background:linear-gradient(135deg,rgba(245,166,35,0.08),rgba(255,140,66,0.08))}
+.upgrade-plan.plus .upgrade-plan-name{color:var(--amber)}
 .upgrade-plan{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
 .upgrade-plan:hover{border-color:var(--amber)}
 .upgrade-plan-name{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:600}
@@ -256,27 +260,31 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   .pin-tray{top:8px;right:8px}
   .pin-chip{padding:5px 10px 5px 12px}
   .pin-chip-word{font-size:14px}
-  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;max-width:100vw;overflow-x:hidden}
   .ad-sidebar{display:none}
-  .ad-slot-bottom{height:50px}
-  header{gap:6px;padding:8px 12px}
+  .ad-slot-bottom{height:50px;max-width:100vw}
+  header{gap:6px;padding:8px 10px;flex-wrap:wrap;max-width:100vw}
   .logo{font-size:15px}
   .logo span{display:none}
-  .mode-tab{font-size:14px;padding:5px 10px}
-  .account-tab{font-size:13px;padding:5px 10px}
-  .search-wrap{min-width:140px;gap:4px}
-  input#wordInput{font-size:16px;padding:9px 12px}
+  .mode-tabs{flex-wrap:wrap}
+  .mode-tab{font-size:13px;padding:5px 9px}
+  .account-tab{font-size:12px;padding:5px 9px}
+  .name-tab{font-size:12px;padding:5px 9px}
+  .search-wrap{flex-basis:100%;min-width:0;order:5;gap:4px}
+  input#wordInput{font-size:16px;padding:9px 12px;min-width:0}
   button#exploreBtn{padding:9px 12px;font-size:14px}
   #engineSelect{display:none}
   .header-links{display:none}
-  .golf-panel{padding:10px 12px;gap:10px}
-  .golf-leg-word{font-size:16px}
-  .golf-stat-num{font-size:20px}
+  .canvas-area{max-width:100vw;overflow:hidden}
+  .golf-panel{padding:8px 10px;gap:8px;max-width:96vw}
+  .golf-leg-word{font-size:15px}
+  .golf-stat-num{font-size:19px}
   .legend{bottom:10px;left:8px}
-  .legend-item{font-size:11px}
-  .loading-ad{width:250px;height:200px}
+  .legend-item{font-size:12px}
+  .loading-ad{width:min(250px,80vw);height:200px}
   .daily-panel{width:100vw}
   .comp-title{font-size:22px}
+  .center-search input{width:min(280px,70vw)}
 }
 @media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}
 </style>
@@ -291,6 +299,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <button class="mode-tab" data-mode="daily">デイリー</button>
       <button class="mode-tab" data-mode="monthly">マンスリー</button>
     </div>
+    <button class="name-tab" id="nameTab">名前</button>
     <button class="account-tab" id="accountTab">プラン</button>
     <div class="search-wrap">
       <input id="wordInput" type="text" placeholder="言葉を入力…" autocomplete="off"/>
@@ -326,6 +335,14 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <div><div class="upgrade-plan-name">年額プラン</div><div class="upgrade-plan-detail">2ヶ月分お得！</div></div>
             <div class="upgrade-plan-price">¥5,000/年</div>
           </div>
+          <div class="upgrade-plan plus" id="planPlusMonthly">
+            <div><div class="upgrade-plan-name">⚡ プレミアム+ 月額</div><div class="upgrade-plan-detail">高速モード・先読み・全特典</div></div>
+            <div class="upgrade-plan-price">¥1,200/月</div>
+          </div>
+          <div class="upgrade-plan plus" id="planPlusYearly">
+            <div><div class="upgrade-plan-name">⚡ プレミアム+ 年額</div><div class="upgrade-plan-detail">高速モード・2ヶ月分お得</div></div>
+            <div class="upgrade-plan-price">¥12,000/年</div>
+          </div>
         </div>
         <button class="upgrade-close" id="restoreBtn" style="color:var(--blue);margin-bottom:6px">購入済みの方はこちら（メールで復元）</button>
         <button class="upgrade-close" id="upgradeClose">明日また無料で遊ぶ</button>
@@ -342,15 +359,27 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           <div class="account-plan-name" id="accountPlanName">読み込み中…</div>
           <div class="account-plan-rows" id="accountPlanRows"></div>
         </div>
-        <div class="account-handle">
-          <label for="accountHandleInput">ハンドルネーム</label>
-          <input id="accountHandleInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/>
-        </div>
         <div class="account-actions">
           <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
           <button class="account-btn" id="accountLogout">この端末からログアウト</button>
         </div>
         <button class="account-close" id="accountClose">閉じる</button>
+      </div>
+    </div>
+    <!-- ハンドルネーム編集パネル（独立画面） -->
+    <div class="account-overlay" id="handleOverlay">
+      <div class="account-card">
+        <div class="account-icon">🏷️</div>
+        <div class="account-title">ハンドルネーム</div>
+        <div class="account-email">ランキングや共有に表示される名前です</div>
+        <div class="account-handle" style="margin-top:18px">
+          <label for="handlePanelInput">ハンドルネーム（16文字まで）</label>
+          <input id="handlePanelInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/>
+        </div>
+        <div class="account-actions">
+          <button class="account-btn primary" id="handleSaveBtn">保存する</button>
+        </div>
+        <button class="account-close" id="handleClose">閉じる</button>
       </div>
     </div>
     <div class="status" id="status">
@@ -473,6 +502,7 @@ function saveResults(){
     keys.slice(0,keys.length-60).forEach(k=>delete daily.results[k]);
   }
   localStorage_set('dailyResults',JSON.stringify(daily.results));
+  syncUserData(); // メールがあればサーバーにも保存
 }
 
 let handleName=localStorage_get('handleName')||'';
@@ -482,15 +512,73 @@ function setHandleName(v){
   handleName=String(v||'').trim();
   localStorage_set('handleName',handleName);
   if(HN.value!==handleName)HN.value=handleName;
-  const ah=document.getElementById('accountHandleInput');
-  if(ah&&ah.value!==handleName)ah.value=handleName;
+  const hp=document.getElementById('handlePanelInput');
+  if(hp&&hp.value!==handleName)hp.value=handleName;
+  syncUserDataDebounced(); // メールがあればサーバーにも保存
 }
 HN.addEventListener('input',()=>setHandleName(HN.value));
+
+// ===== アカウント紐づけデータ同期 =====
+// メール（premiumEmail）があれば、ハンドルネーム・記録をサーバーに保存
+function syncUserData(){
+  if(!premiumEmail)return;
+  fetch('/api/userdata',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:premiumEmail,handle:handleName,results:daily.results})}).catch(()=>{});
+}
+let syncTimer=null;
+function syncUserDataDebounced(){
+  if(syncTimer)clearTimeout(syncTimer);
+  syncTimer=setTimeout(syncUserData,1200);
+}
+// サーバーからユーザーデータを読み込んで反映
+async function loadUserData(){
+  if(!premiumEmail)return;
+  try{
+    const r=await fetch(`/api/userdata?email=${encodeURIComponent(premiumEmail)}`);
+    const d=await r.json();
+    // ハンドルネーム：サーバー優先（端末未設定 or サーバーに値があれば）
+    if(d.handle&&d.handle!==handleName){
+      handleName=d.handle;localStorage_set('handleName',handleName);
+      HN.value=handleName;
+      const hp=document.getElementById('handlePanelInput');if(hp)hp.value=handleName;
+    }
+    // 記録：サーバーとローカルをマージ
+    if(d.results&&typeof d.results==='object'){
+      daily.results={...daily.results,...d.results};
+      localStorage_set('dailyResults',JSON.stringify(daily.results));
+    }
+  }catch{}
+}
+
+// ===== ハンドルネーム編集パネル（独立画面） =====
+const HO=document.getElementById('handleOverlay');
+const handlePanelInput=document.getElementById('handlePanelInput');
+const nameTab=document.getElementById('nameTab');
+function openHandlePanel(){
+  // 他のオーバーレイは閉じる
+  AO.classList.remove('visible');
+  UO.classList.remove('visible');
+  handlePanelInput.value=handleName;
+  HO.classList.add('visible');
+  setTimeout(()=>handlePanelInput.focus(),50);
+}
+nameTab.addEventListener('click',()=>{
+  if(HO.classList.contains('visible'))HO.classList.remove('visible');
+  else openHandlePanel();
+});
+handlePanelInput.addEventListener('input',()=>setHandleName(handlePanelInput.value));
+document.getElementById('handleSaveBtn').addEventListener('click',()=>{
+  setHandleName(handlePanelInput.value);
+  HO.classList.remove('visible');
+  toast(handleName?`ハンドルネームを「${handleName}」に設定しました`:'ハンドルネームを空にしました','success',2500);
+});
+document.getElementById('handleClose').addEventListener('click',()=>HO.classList.remove('visible'));
 
 // ===== RESIZE =====
 function resize(){C.width=CA.clientWidth;C.height=CA.clientHeight}
 resize();
 window.addEventListener('resize',()=>{resize();draw()});
+window.addEventListener('orientationchange',()=>{setTimeout(()=>{resize();draw()},200)});
 
 // ===== PHYSICS =====
 function initPhysics(){
@@ -619,6 +707,12 @@ function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
 // ===== API (with client cache) =====
 // 課金者のメール（あれば全APIリクエストに付与して無制限化）
 let premiumEmail=localStorage_get('premiumEmail')||'';
+let userPlan=localStorage_get('userPlan')||'free'; // free | premium | premium_plus
+function isFastMode(){return userPlan==='premium_plus'}
+function setUserPlan(tier){
+  userPlan=tier||'free';
+  localStorage_set('userPlan',userPlan);
+}
 function apiHeaders(){
   const h={'Content-Type':'application/json'};
   if(premiumEmail)h['x-premium-email']=premiumEmail;
@@ -720,6 +814,11 @@ async function explore(word,fromWord,opts){
 
     LO.classList.remove('visible');
 
+    // ★プレミアム+：表示中ノードを先読みキャッシュ（クリックを即時化）
+    if(isFastMode()){
+      prefetchNodes(result.words||[]);
+    }
+
     // Golf: goal check（再開時など抑制フラグがあればスキップ）
     if(golf.active&&!suppressGolfMove)handleGolfMove(word);
   }catch(err){
@@ -727,6 +826,34 @@ async function explore(word,fromWord,opts){
     toast('エラーが発生しました','error');
     console.error(err);
   }finally{EB.disabled=false}
+}
+
+// ===== PREFETCH（プレミアム+の先読み） =====
+const prefetchQueue=[];
+let prefetching=false;
+function prefetchNodes(words){
+  // まだキャッシュにない語をキューに追加
+  words.forEach(w=>{
+    if(w&&w.word&&!vocabCache[w.word]&&!prefetchQueue.includes(w.word)){
+      prefetchQueue.push(w.word);
+    }
+  });
+  runPrefetch();
+}
+async function runPrefetch(){
+  if(prefetching)return;
+  prefetching=true;
+  // サーバー負荷を抑えるため1件ずつ・間隔を空けて先読み
+  while(prefetchQueue.length>0){
+    const word=prefetchQueue.shift();
+    if(vocabCache[word])continue;
+    try{
+      const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
+      if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
+    }catch{}
+    await new Promise(r=>setTimeout(r,250)); // 250ms間隔
+  }
+  prefetching=false;
 }
 
 // ===== INTERACTIONS =====
@@ -936,6 +1063,21 @@ WI.addEventListener('keydown',e=>{if(e.key==='Enter')explore(WI.value,currentCen
 // 中央の検索バー（初回アクセス時）
 const centerInput=document.getElementById('centerInput');
 const centerBtn=document.getElementById('centerBtn');
+
+// ヒント用の語リスト（多様な分野）
+const HINT_WORDS=['海','森','星','猫','花火','迷路','灯台','珈琲','時計','旋律','化石','虹','砂漠','歯車','仮面','潮騒','銀河','陶器','稲妻','汽車','蝶','彫刻','琥珀','三日月','羅針盤','万華鏡','蜃気楼','水脈','残響','黄昏','古書','硝子','螺旋','標本','茶室','風鈴','潜水艦','天文台','地下水','蝋燭'];
+function randomHint(){
+  let a=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  let b=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  while(b===a)b=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  // ランダムな2語を組み合わせた言葉をヒントに
+  return `${a}${b}`;
+}
+// プレースホルダーを定期的に変える
+function refreshHint(){centerInput.placeholder=randomHint()}
+refreshHint();
+setInterval(()=>{if(document.activeElement!==centerInput)refreshHint()},3500);
+
 function centerSearch(){
   const v=centerInput.value.trim();
   if(!v)return;
@@ -1002,40 +1144,56 @@ async function finishGolf(){
   golf.active=false;
   const fullPath=[...golf.path];
 
-  // Distance measurement
-  let distData=[];
-  try{
-    const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
-      body:JSON.stringify({action:'distance',words:fullPath,goal:golf.goal})});
-    const d=await r.json();distData=d.distances||[];
-  }catch{}
-
-  // Build completion overlay
-  const pathHTML=fullPath.map((w,i)=>{
-    const dist=distData.find(d=>d.word===w);
-    const dNum=dist?dist.distance:'?';
-    const dReason=dist?dist.reason:'';
-    const col=dNum<=3?'var(--green)':dNum<=6?'var(--amber)':'var(--rose)';
-    const isGoal=w===golf.goal;
-    return `<div class="comp-node" style="border-color:${isGoal?'var(--goal)':col}">
-      <div class="comp-node-word" style="color:${isGoal?'var(--goal)':'var(--text)'}">${w}</div>
-      ${!isGoal?`<div class="comp-node-dist" style="color:${col}">距離: ${dNum}</div><div class="comp-node-reason">${dReason}</div>`:'<div class="comp-node-dist" style="color:var(--goal)">GOAL!</div>'}
-    </div>${i<fullPath.length-1?'<div class="comp-arrow">→</div>':''}`;
-  }).join('');
-
   const periodLabel=golf.daily?(golf.dailyPeriod==='monthly'?'マンスリー':'デイリー'):'';
   const who=handleName?`${handleName} さんの記録\n`:'';
   const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${who}${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
 
+  // ★まず経路を即座に表示（距離は「測定中」プレースホルダー）
+  const buildPathHTML=(distData)=>fullPath.map((w,i)=>{
+    const isGoal=w===golf.goal;
+    let inner;
+    if(isGoal){
+      inner='<div class="comp-node-dist" style="color:var(--goal)">GOAL!</div>';
+    }else if(distData){
+      const dist=distData.find(d=>d.word===w);
+      const dNum=dist?dist.distance:'?';
+      const dReason=dist?dist.reason:'';
+      const col=dNum<=3?'var(--green)':dNum<=6?'var(--amber)':'var(--rose)';
+      inner=`<div class="comp-node-dist" style="color:${col}">距離: ${dNum}</div><div class="comp-node-reason">${dReason}</div>`;
+    }else{
+      inner='<div class="comp-node-dist" style="color:var(--muted);font-size:9px">測定中…</div>';
+    }
+    const col=isGoal?'var(--goal)':'var(--border)';
+    return `<div class="comp-node" style="border-color:${col}">
+      <div class="comp-node-word" style="color:${isGoal?'var(--goal)':'var(--text)'}">${w}</div>${inner}
+    </div>${i<fullPath.length-1?'<div class="comp-arrow">→</div>':''}`;
+  }).join('');
+
   CO.innerHTML=`
     <div class="comp-title">ゴール！🎉</div>
     <div class="comp-grade">${golf.moves}手（パー${par}）— ${grade}</div>
-    <div class="comp-path">${pathHTML}</div>
+    <div class="comp-path" id="compPath">${buildPathHTML(null)}</div>
     <div class="comp-actions">
       <button class="comp-btn twitter" onclick="shareOnX(\`${shareText.replace(/`/g,"'")}\`)">Xで共有</button>
       <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
     </div>`;
   CO.classList.add('visible');
+
+  // ★距離測定は裏で実行し、完了したら逐次反映（タイムアウトしても経路は表示済み）
+  (async()=>{
+    try{
+      const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({action:'distance',words:fullPath,goal:golf.goal})});
+      const d=await r.json();
+      const distData=d.distances||[];
+      const el=document.getElementById('compPath');
+      if(el&&CO.classList.contains('visible'))el.innerHTML=buildPathHTML(distData);
+    }catch{
+      // 失敗時は「測定中」を消してそのまま
+      const el=document.getElementById('compPath');
+      if(el)el.innerHTML=buildPathHTML([]);
+    }
+  })();
 
   // Daily/Monthly: submit score
   if(golf.daily){
@@ -1348,7 +1506,7 @@ const accountTab=document.getElementById('accountTab');
 function updateAccountTab(){
   if(!accountTab)return;
   if(premiumEmail){
-    accountTab.textContent='✨ 会員';
+    accountTab.textContent=isFastMode()?'⚡ 会員+':'✨ 会員';
     accountTab.classList.add('premium');
   }else{
     accountTab.textContent='プラン';
@@ -1371,12 +1529,6 @@ async function openAccount(){
   AO.classList.add('visible');
   accEmail.textContent=premiumEmail;
   accPlanName.textContent='読み込み中…';
-  // ハンドルネーム欄に現在値を反映＋編集リスナー（初回のみ登録）
-  const ah=document.getElementById('accountHandleInput');
-  if(ah){
-    ah.value=handleName;
-    if(!ah._wired){ah._wired=true;ah.addEventListener('input',()=>setHandleName(ah.value))}
-  }
   const rows=document.getElementById('accountPlanRows');
   rows.innerHTML='';
   try{
@@ -1420,7 +1572,7 @@ document.getElementById('managePlanBtn').addEventListener('click',async()=>{
 // ログアウト（この端末のプレミアム情報を消す）
 document.getElementById('accountLogout').addEventListener('click',()=>{
   if(!confirm('この端末からログアウトしますか？\n（課金は継続されます。再ログインはメール復元から可能です）'))return;
-  premiumEmail='';
+  premiumEmail='';setUserPlan('free');
   try{localStorage.removeItem('premiumEmail')}catch{}
   AO.classList.remove('visible');
   toast('ログアウトしました','info',2500);
@@ -1440,6 +1592,8 @@ async function startCheckout(plan){
 }
 document.getElementById('planMonthly').addEventListener('click',()=>startCheckout('monthly'));
 document.getElementById('planYearly').addEventListener('click',()=>startCheckout('yearly'));
+document.getElementById('planPlusMonthly').addEventListener('click',()=>startCheckout('plus_monthly'));
+document.getElementById('planPlusYearly').addEventListener('click',()=>startCheckout('plus_yearly'));
 
 // 購入済み復元（メール入力）
 document.getElementById('restoreBtn').addEventListener('click',async()=>{
@@ -1451,9 +1605,11 @@ document.getElementById('restoreBtn').addEventListener('click',async()=>{
     const d=await r.json();
     if(d.premium){
       premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+      setUserPlan(d.plan&&d.plan.tier?d.plan.tier:'premium');
       UO.classList.remove('visible');
       toast('プレミアムを復元しました！','success',3000);
       updateUsage(9999);
+      loadUserData();
     }else{
       toast('そのメールでは課金が確認できませんでした','error',3000);
     }
@@ -1474,6 +1630,14 @@ async function handleCheckoutReturn(){
         premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
         toast('プレミアム登録が完了しました！🎉','success',4000);
         updateUsage(9999);
+        loadUserData();
+        // プラン階層（premium / premium_plus）を確定させる
+        try{
+          const sr=await fetch(`/api/subscription?email=${encodeURIComponent(d.email)}`);
+          const sd=await sr.json();
+          setUserPlan(sd.plan&&sd.plan.tier?sd.plan.tier:'premium');
+          updateUsage(9999);
+        }catch{setUserPlan('premium')}
       }else{
         toast('決済の確認ができませんでした','error',3000);
       }
@@ -1494,16 +1658,19 @@ async function loadUsage(){
       const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
       const d=await r.json();
       if(d.premium){
+        setUserPlan(d.plan&&d.plan.tier?d.plan.tier:'premium');
         updateUsage(9999);
+        loadUserData(); // アカウント紐づけデータを読み込み
         return;
       }else{
         // サーバーで課金が確認できない→ローカル情報をクリア
-        premiumEmail='';
+        premiumEmail='';setUserPlan('free');
         try{localStorage.removeItem('premiumEmail')}catch{}
       }
     }catch{
       // 通信失敗時はローカル情報を信じて続行
       updateUsage(9999);
+      loadUserData();
       return;
     }
   }
