@@ -784,12 +784,9 @@ function localStorage_set(k,v){try{localStorage.setItem(k,v)}catch{}}
 async function fetchWords(word,context){
   // 文脈つきの探索はキャッシュを使わない（毎回文脈語が変わるため）
   const body=context?{word,context}:{word};
+  // クライアントキャッシュがあれば即返す（ネットワーク呼び出しなし・消費なし）
   if(!context&&vocabCache[word]){
-    const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
-    const data=await resp.json();
-    if(resp.status===429)return{_error:'daily_limit',_message:data.message};
-    if(resp.status===402)return{_error:'no_credits',_message:data.message};
-    vocabCache[word]=data;return data;
+    return vocabCache[word];
   }
   const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
   if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
@@ -926,15 +923,17 @@ function prefetchNodes(words){
 async function runPrefetch(){
   if(prefetching)return;
   prefetching=true;
-  // サーバー負荷を抑えるため1件ずつ・間隔を空けて先読み
+  // 2件ずつ並行で先読み（高速モードの体感を上げる）
   while(prefetchQueue.length>0){
-    const word=prefetchQueue.shift();
-    if(vocabCache[word])continue;
-    try{
-      const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
-      if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
-    }catch{}
-    await new Promise(r=>setTimeout(r,250)); // 250ms間隔
+    const batch=[prefetchQueue.shift(),prefetchQueue.shift()].filter(Boolean);
+    await Promise.all(batch.map(async word=>{
+      if(!word||vocabCache[word])return;
+      try{
+        const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word,prefetch:true})});
+        if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
+      }catch{}
+    }));
+    await new Promise(r=>setTimeout(r,120));
   }
   prefetching=false;
 }

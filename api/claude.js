@@ -85,10 +85,13 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   }
 
-  // クレジットで高速化している場合は1クレジット消費（サブスク有無に関わらず）
+  // プリフェッチ（先読み）はクレジットを消費しない（キャッシュ温めのみ）
+  const isPrefetch = req.body?.prefetch === true;
+
+  // クレジットで高速化している場合は1クレジット消費（プリフェッチ・サブスク日次は除く）
   let rl = { remaining: 9999 };
   let creditsAfter = credits;
-  if (usesCredit) {
+  if (usesCredit && !isPrefetch) {
     const ok = await consumeCredits(creditEmail, 1);
     if (!ok) {
       // クレジット切れ：サブスク会員なら標準速度で続行、無料なら停止
@@ -107,8 +110,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // 無料ユーザーのみ日次制限チェック（サブスク・クレジットユーザーはバイパス）
-  if (!isSubscriber && !usesCredit) {
+  // 無料ユーザーのみ日次制限チェック（プリフェッチは消費しない）
+  if (!isSubscriber && !usesCredit && !isPrefetch) {
     rl = await checkLimit(req, 'explore', FREE_LIMIT);
     if (!rl.ok) {
       return res.status(429).json({
