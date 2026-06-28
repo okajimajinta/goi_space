@@ -34,7 +34,10 @@ export default async function handler(req, res) {
         }),
       });
       const data = await resp.json();
-      const raw = data.content.map(c => c.text || '').join('');
+      if (!data.content || !Array.isArray(data.content)) return res.status(502).json({ error: 'enchant: bad response' });
+      let raw = data.content.map(c => c.text || '').join('');
+      const s = raw.indexOf('['); const e2 = raw.lastIndexOf(']');
+      if (s >= 0 && e2 > s) raw = raw.slice(s, e2 + 1);
       const arr = JSON.parse(raw.replace(/```json|```/g, '').trim());
       const words = (Array.isArray(arr) ? arr : [])
         .filter(w => w && w.word && w.word !== center && w.word !== rand)
@@ -151,7 +154,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 900,
+        max_tokens: 1400,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -161,21 +164,45 @@ export default async function handler(req, res) {
 
     const [response, ctx] = await Promise.all([mainPromise, ctxPromise]);
 
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: data });
+    let data = await response.json();
+    // 高速(Haiku)で失敗した場合はSonnetでリトライ（検索を止めない）
+    if (effectiveFast && (!response.ok || !data.content || !Array.isArray(data.content))) {
+      console.error('Fast model failed, retrying with Sonnet');
+      const retry = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1400,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      data = await retry.json();
+    }
+
     if (!data.content || !Array.isArray(data.content)) {
       console.error('Unexpected API response:', JSON.stringify(data).slice(0, 500));
       return res.status(502).json({ error: 'AI応答の形式が不正です', detail: data });
     }
 
     const raw = data.content.map(c => c.text || '').join('');
-    const clean = raw.replace(/```json|```/g, '').trim();
+    let clean = raw.replace(/```json|```/g, '').trim();
+    // JSONオブジェクト部分だけを抽出（前後に説明文が付いても対応）
+    const objStart = clean.indexOf('{');
+    const objEnd = clean.lastIndexOf('}');
+    if (objStart >= 0 && objEnd > objStart) {
+      clean = clean.slice(objStart, objEnd + 1);
+    }
     let parsed;
     try {
       parsed = JSON.parse(clean);
     } catch (pe) {
-      console.error('JSON parse failed:', clean.slice(0, 300));
-      return res.status(502).json({ error: 'AI応答の解析に失敗しました' });
+      console.error('JSON parse failed. raw:', raw.slice(0, 400));
+      return res.status(502).json({ error: 'AI応答の解析に失敗しました', raw: raw.slice(0, 200) });
     }
 
     // 重複除外
@@ -233,7 +260,10 @@ async function generateContextWords(prev, cur) {
       }),
     });
     const data = await resp.json();
-    const raw = data.content.map(c => c.text || '').join('');
+    if (!data.content || !Array.isArray(data.content)) return [];
+    let raw = data.content.map(c => c.text || '').join('');
+    const s = raw.indexOf('['); const e2 = raw.lastIndexOf(']');
+    if (s >= 0 && e2 > s) raw = raw.slice(s, e2 + 1);
     const arr = JSON.parse(raw.replace(/```json|```/g, '').trim());
     if (Array.isArray(arr)) {
       return arr
