@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="description" content="語彙空間 — 言葉を入力すると、類義語・対義語・感情・比喩が星雲のように広がる語彙探索ツール">
+<title>語彙空間 — 言葉の宇宙を探索する</title>
+<meta property="og:title" content="語彙空間 — 言葉の宇宙を探索する">
+<meta property="og:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://goispace.app">
+<meta property="og:image" content="https://goispace.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="語彙空間 — 言葉の宇宙を探索する">
+<meta name="twitter:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
+<meta name="twitter:image" content="https://goispace.app/og-image.png">
+<!-- アイコン -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#080C18">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056" crossorigin="anonymous"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080C18;--surface:#111726;--border:#1E2840;--text:#D4DCF0;--muted:#5B6A8A;--amber:#F5A623;--blue:#5B8FDE;--green:#4ECBA8;--rose:#E06B8B;--violet:#9B72E8;--goal:#FF6B6B}
+html,body{width:100%;max-width:100vw;height:100%;background:var(--bg);color:var(--text);font-family:'Inter','Noto Serif JP',sans-serif;overflow:hidden;touch-action:none}
+
+/* === LAYOUT === */
+.layout{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr 160px;height:100dvh;width:100%;max-width:100vw}
+
+/* === HEADER === */
+header{grid-column:1/-1;padding:10px 20px;display:flex;align-items:center;gap:10px;background:rgba(8,12,24,0.98);border-bottom:1px solid var(--border);flex-wrap:wrap;z-index:100}
+.logo{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--amber);white-space:nowrap;flex-shrink:0}
+.logo span{color:var(--muted);font-weight:300;font-size:12px;margin-left:4px}
+.mode-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px;flex-shrink:0}
+.mode-tab{background:transparent;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:15px;padding:6px 12px;border-radius:3px;cursor:pointer;transition:all .15s}
+.mode-tab.active{background:var(--amber);color:#080C18}
+.mode-tab:not(.active):hover{color:var(--text)}
+.search-wrap{flex:1;min-width:180px;display:flex;gap:6px}
+input#wordInput{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:18px;padding:10px 15px;border-radius:4px;outline:none;transition:border-color .2s}
+input#wordInput::placeholder{color:var(--muted)}
+input#wordInput:focus{border-color:var(--amber)}
+button#exploreBtn{background:var(--amber);color:#080C18;border:none;padding:10px 18px;border-radius:4px;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}
+button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
+#engineSelect{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:8px;border-radius:4px;cursor:pointer;outline:none;flex-shrink:0;max-width:90px}
+.header-links{display:flex;gap:10px;flex-shrink:0}
+.header-links a{font-size:12px;color:var(--muted);text-decoration:none}
+
+/* === USAGE COUNTER === */
+.usage-badge{font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 10px;border-radius:10px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.usage-badge.premium{border-color:var(--amber);color:var(--amber)}
+.usage-badge .count{color:var(--amber);font-weight:500}
+.usage-badge.low .count{color:var(--rose)}
+
+/* === ACCOUNT TAB (always visible) === */
+.account-tab{background:var(--surface);border:1px solid var(--amber);color:var(--amber);font-family:'Noto Serif JP',serif;font-size:13px;padding:6px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.account-tab:hover{background:var(--amber);color:#080C18}
+.account-tab.premium{background:linear-gradient(135deg,#F5A623,#FF8C42);color:#080C18;border-color:#F5A623;font-weight:600}
+.name-tab{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:13px;padding:6px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.name-tab:hover{border-color:var(--amber);color:var(--amber)}
+
+/* === ACCOUNT PANEL === */
+.account-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
+.account-overlay.visible{display:flex}
+.account-card{background:var(--surface);border:1px solid var(--amber);border-radius:14px;padding:30px 34px;text-align:center;max-width:400px;width:90%}
+.account-icon{font-size:40px;margin-bottom:10px}
+.account-title{font-family:'Noto Serif JP',serif;font-size:20px;font-weight:600;color:var(--amber);margin-bottom:6px}
+.account-email{font-size:13px;color:var(--muted);margin-bottom:20px;word-break:break-all}
+.account-plan{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px}
+.account-plan-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.account-plan-name{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
+.account-plan-detail{font-size:12px;color:var(--muted);margin-top:6px}
+.account-plan-rows{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.account-plan-row{display:flex;justify-content:space-between;font-size:13px}
+.account-plan-row .k{color:var(--muted)}
+.account-plan-row .v{color:var(--text);font-weight:500}
+.account-plan-row .v.warn{color:var(--rose)}
+.account-handle{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;text-align:left}
+.account-handle label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.account-handle input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:9px 12px;border-radius:6px;outline:none}
+.account-handle input:focus{border-color:var(--amber)}
+.account-actions{display:flex;flex-direction:column;gap:10px}
+.account-btn{padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer;transition:all .15s}
+.account-btn:hover{border-color:var(--amber);color:var(--amber)}
+.account-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:500}
+.account-btn.primary:hover{opacity:.85;color:#080C18}
+.account-close{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-top:8px}
+
+/* === UPGRADE PROMPT === */
+.upgrade-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
+.upgrade-overlay.visible{display:flex}
+.upgrade-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:35px 40px;text-align:center;max-width:380px;width:90%}
+.upgrade-icon{font-size:45px;margin-bottom:12px}
+.upgrade-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber);margin-bottom:8px}
+.upgrade-desc{font-size:16px;color:var(--muted);line-height:1.7;margin-bottom:20px}
+.upgrade-plans{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.upgrade-plan.plus{border-color:var(--amber);background:linear-gradient(135deg,rgba(245,166,35,0.08),rgba(255,140,66,0.08))}
+.upgrade-plan.plus .upgrade-plan-name{color:var(--amber)}
+.upgrade-plan{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
+.upgrade-plan:hover{border-color:var(--amber)}
+.upgrade-plan-name{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:600}
+.upgrade-plan-price{font-size:15px;color:var(--amber);font-weight:500}
+.upgrade-plan-detail{font-size:12px;color:var(--muted)}
+.upgrade-close{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;margin-top:4px}
+.upgrade-close:hover{color:var(--text)}
+
+/* === CANVAS === */
+.canvas-area{grid-column:1;grid-row:2;position:relative;overflow:hidden}
+#canvas{position:absolute;inset:0;cursor:grab}
+#canvas:active{cursor:grabbing}
+
+/* === ADS === */
+.ad-sidebar{grid-column:2;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px}
+.ad-label{font-size:10px;color:#2E3A55;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.ad-slot-side{width:136px;min-height:600px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px}
+.ad-bottom{grid-column:1/-1;grid-row:3;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:8px}
+.ad-slot-bottom{width:728px;max-width:100%;height:90px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px}
+
+/* === LOADING OVERLAY (with ad) === */
+.loading-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(8,12,24,0.85);z-index:60;backdrop-filter:blur(4px)}
+.loading-overlay.visible{display:flex}
+.loading-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite}
+.loading-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
+.loading-ad{width:300px;height:250px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px;margin-top:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* === STATUS (initial) === */
+.status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
+.status-hint{margin-top:8px;font-size:14px;color:#2E3A55}
+.center-search{display:flex;gap:8px;justify-content:center;margin:18px 0;pointer-events:auto}
+.center-search input{width:min(340px,60vw);background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:12px 18px;border-radius:8px;outline:none;transition:border-color .2s}
+.center-search input::placeholder{color:var(--muted)}
+.center-search input:focus{border-color:var(--amber)}
+.center-search button{background:var(--amber);color:#080C18;border:none;padding:12px 22px;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}
+.center-search button:hover{opacity:.85}
+
+/* === GOLF PANEL === */
+.golf-panel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:none;align-items:center;gap:14px;z-index:50;backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw}
+.golf-panel.visible{display:flex}
+.golf-leg{text-align:center}
+.golf-leg-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.golf-leg-word{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600}
+.golf-start .golf-leg-word{color:var(--blue)}
+.golf-goal .golf-leg-word{color:var(--goal)}
+.golf-arrow{color:var(--muted);font-size:15px}
+.golf-stat{text-align:center}
+.golf-stat-num{font-family:'Inter',sans-serif;font-size:22px;font-weight:500;color:var(--amber)}
+.golf-stat-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.golf-actions{display:flex;gap:6px;flex-wrap:wrap}
+.golf-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:14px;padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.golf-btn:hover{border-color:var(--amber);color:var(--amber)}
+.golf-btn:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);color:var(--muted)}
+.golf-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber)}
+
+/* === GOLF TRAIL === */
+.golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
+.golf-trail.visible{display:flex}
+.trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px}
+.trail-word.start{border-color:var(--blue);color:var(--blue)}
+.trail-word.goal{border-color:var(--goal);color:var(--goal)}
+.trail-sep{color:var(--muted);font-size:12px}
+
+/* === COMPLETION OVERLAY === */
+.completion{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px);padding:25px;overflow-y:auto}
+.completion.visible{display:flex}
+.comp-title{font-family:'Noto Serif JP',serif;font-size:28px;font-weight:600;color:var(--amber);margin-bottom:4px}
+.comp-grade{font-size:18px;color:var(--green);margin-bottom:16px}
+.comp-path{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin-bottom:20px}
+.comp-node{text-align:center;padding:10px 15px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:60px}
+.comp-node-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
+.comp-node-dist{font-size:12px;margin-top:2px}
+.comp-node-reason{font-size:11px;color:var(--muted)}
+.comp-arrow{color:var(--muted);font-size:18px}
+.comp-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.comp-btn{padding:12px 22px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .15s}
+.comp-btn:hover{border-color:var(--amber);color:var(--amber)}
+.comp-btn.twitter{background:#1DA1F2;border-color:#1DA1F2;color:#fff}
+.comp-btn.twitter:hover{opacity:.85}
+
+/* === OVERLAY UI === */
+.legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:8px;opacity:0;transition:opacity .4s;pointer-events:none;background:rgba(17,23,38,0.7);padding:12px 14px;border-radius:8px;border:1px solid var(--border)}
+.legend.visible{opacity:1}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text)}
+.legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 15px;font-size:15px;max-width:200px;opacity:0;transition:opacity .15s;z-index:200;line-height:1.5}
+.tooltip.visible{opacity:1}
+.tooltip-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;margin-bottom:3px}
+.tooltip-desc{color:var(--muted);font-size:14px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 22px;font-size:15px;opacity:0;transition:all .3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center}
+.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--green)}
+.toast.error{border-color:var(--rose)}
+
+/* === DAILY PANEL === */
+.daily-panel{position:fixed;top:0;right:0;width:360px;max-width:90vw;height:100dvh;background:var(--surface);border-left:1px solid var(--border);z-index:250;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;overflow-y:auto}
+.daily-panel.visible{transform:translateX(0)}
+.daily-header{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.daily-title{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600;color:var(--amber)}
+.daily-date{font-size:12px;color:var(--muted);margin-top:2px}
+.daily-close{background:none;border:none;color:var(--muted);font-size:25px;cursor:pointer}
+.daily-body{padding:18px 20px}
+.puzzle-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.puzzle-card:hover{border-color:var(--amber)}
+.puzzle-card.cleared{border-color:var(--green)}
+.puzzle-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.puzzle-diff{font-size:11px;padding:2px 8px;border-radius:8px}
+.diff-易{background:rgba(78,203,168,.18);color:var(--green)}
+.diff-中{background:rgba(91,143,222,.18);color:var(--blue)}
+.diff-難{background:rgba(224,107,139,.18);color:var(--rose)}
+.diff-激難{background:rgba(155,114,232,.22);color:var(--violet)}
+.puzzle-par{font-size:12px;color:var(--muted)}
+.puzzle-route{display:flex;align-items:center;gap:8px}
+.puzzle-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600}
+.puzzle-word.s{color:var(--blue)}
+.puzzle-word.g{color:var(--goal)}
+.puzzle-route .arrow{color:var(--muted)}
+.puzzle-result{font-size:12px;color:var(--green);margin-top:6px}
+.board-section{margin-top:8px}
+.board-tabs{display:flex;gap:4px;margin-bottom:10px}
+.board-tab{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:8px;border-radius:4px;cursor:pointer}
+.board-tab.active{background:var(--amber);color:#080C18;border-color:var(--amber)}
+.board-list{display:flex;flex-direction:column;gap:2px}
+.board-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:9px 10px;border-radius:4px;font-size:15px}
+.board-row:nth-child(odd){background:var(--bg)}
+.board-row.me{background:rgba(245,166,35,.12);border:1px solid var(--amber)}
+.board-rank{font-family:'Inter',sans-serif;font-weight:500;color:var(--muted);text-align:center}
+.board-rank.top{color:var(--amber)}
+.board-name{font-family:'Noto Serif JP',serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-moves{font-family:'Inter',sans-serif;font-weight:500;color:var(--amber)}
+.board-moves small{color:var(--muted);font-weight:400}
+.board-path{font-size:11px;color:var(--muted);grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-empty{text-align:center;color:var(--muted);font-size:14px;padding:25px 0}
+.name-row{display:flex;gap:6px;margin:4px 0 12px}
+.name-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:9px 12px;border-radius:4px;outline:none}
+.name-row label{font-size:12px;color:var(--muted);align-self:center;white-space:nowrap}
+.share-btn{width:100%;background:#1DA1F2;border:none;color:#fff;font-size:15px;padding:11px;border-radius:4px;cursor:pointer;margin-top:8px}
+.share-btn:hover{opacity:.85}
+
+/* === PIN TRAY === */
+.pin-tray{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:45;max-height:calc(100% - 80px);overflow-y:auto;pointer-events:none}
+.pin-tray:empty{display:none}
+.pin-chip{display:flex;align-items:center;gap:6px;background:rgba(17,23,38,0.92);border:1px solid var(--amber);border-radius:20px;padding:6px 12px 6px 15px;cursor:pointer;pointer-events:all;transition:all .15s;backdrop-filter:blur(6px);white-space:nowrap}
+.pin-chip:hover{background:rgba(245,166,35,0.15);transform:translateX(-2px)}
+.pin-chip-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--amber)}
+.pin-chip-remove{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0}
+.pin-chip-remove:hover{color:var(--rose)}
+/* Tooltip pin button */
+.tt-pin{display:inline-block;margin-left:8px;cursor:pointer;font-size:15px;opacity:.6;transition:opacity .15s;user-select:none}
+.tt-pin:hover{opacity:1}
+.tt-pin.pinned{opacity:1;filter:saturate(2)}
+
+/* === MOBILE === */
+@media(max-width:768px){
+  .pin-tray{top:8px;right:8px}
+  .pin-chip{padding:5px 10px 5px 12px}
+  .pin-chip-word{font-size:14px}
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;max-width:100vw;overflow-x:hidden}
+  .ad-sidebar{display:none}
+  .ad-slot-bottom{height:50px;max-width:100vw}
+  header{gap:6px;padding:8px 10px;flex-wrap:wrap;max-width:100vw}
+  .logo{font-size:15px}
+  .logo span{display:none}
+  .mode-tabs{flex-wrap:wrap}
+  .mode-tab{font-size:13px;padding:5px 9px}
+  .account-tab{font-size:12px;padding:5px 9px}
+  .name-tab{font-size:12px;padding:5px 9px}
+  .search-wrap{flex-basis:100%;min-width:0;order:5;gap:4px}
+  input#wordInput{font-size:16px;padding:9px 12px;min-width:0}
+  button#exploreBtn{padding:9px 12px;font-size:14px}
+  #engineSelect{display:none}
+  .header-links{display:none}
+  .canvas-area{max-width:100vw;overflow:hidden}
+  .golf-panel{padding:8px 10px;gap:8px;max-width:96vw}
+  .golf-leg-word{font-size:15px}
+  .golf-stat-num{font-size:19px}
+  .legend{bottom:10px;left:8px}
+  .legend-item{font-size:12px}
+  .loading-ad{width:min(250px,80vw);height:200px}
+  .daily-panel{width:100vw}
+  .comp-title{font-size:22px}
+  .center-search input{width:min(280px,70vw)}
+}
+@media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <header>
+    <div class="logo">語彙空間<span>GOI-Space</span></div>
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="explore">探索</button>
+      <button class="mode-tab" data-mode="golf">ゴルフ</button>
+      <button class="mode-tab" data-mode="daily">デイリー</button>
+      <button class="mode-tab" data-mode="monthly">マンスリー</button>
+    </div>
+    <button class="name-tab" id="nameTab">名前</button>
+    <button class="account-tab" id="accountTab">プラン</button>
+    <div class="search-wrap">
+      <input id="wordInput" type="text" placeholder="言葉を入力…" autocomplete="off"/>
+      <button id="exploreBtn">探索</button>
+    </div>
+    <select id="engineSelect" title="ダブルクリック時の検索エンジン">
+      <option value="https://www.google.com/search?q=">Google</option>
+      <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+      <option value="https://ja.wikipedia.org/wiki/">Wikipedia</option>
+      <option value="https://www.weblio.jp/content/">Weblio</option>
+    </select>
+    <div class="header-links">
+      <div class="usage-badge" id="usageBadge">残り <span class="count" id="usageCount">—</span>回</div>
+      <a href="/privacy.html">プライバシー</a>
+      <a href="mailto:girlsvibesproject@gmail.com">お問い合わせ</a>
+    </div>
+  </header>
+
+  <div class="canvas-area">
+    <canvas id="canvas"></canvas>
+    <!-- Upgrade prompt -->
+    <div class="upgrade-overlay" id="upgradeOverlay">
+      <div class="upgrade-card">
+        <div class="upgrade-icon">🚀</div>
+        <div class="upgrade-title">本日の無料回数に達しました</div>
+        <div class="upgrade-desc">語彙空間を気に入っていただけましたか？<br>プレミアムプランで無制限に探索できます。</div>
+        <div class="upgrade-plans">
+          <div class="upgrade-plan" id="planMonthly">
+            <div><div class="upgrade-plan-name">月額プラン</div><div class="upgrade-plan-detail">無制限探索・広告非表示・ヒント無制限</div></div>
+            <div class="upgrade-plan-price">¥500/月</div>
+          </div>
+          <div class="upgrade-plan" id="planYearly">
+            <div><div class="upgrade-plan-name">年額プラン</div><div class="upgrade-plan-detail">2ヶ月分お得！</div></div>
+            <div class="upgrade-plan-price">¥5,000/年</div>
+          </div>
+          <div class="upgrade-plan plus" id="planPlusMonthly">
+            <div><div class="upgrade-plan-name">⚡ プレミアム+ 月額</div><div class="upgrade-plan-detail">高速モード・先読み・全特典</div></div>
+            <div class="upgrade-plan-price">¥1,200/月</div>
+          </div>
+          <div class="upgrade-plan plus" id="planPlusYearly">
+            <div><div class="upgrade-plan-name">⚡ プレミアム+ 年額</div><div class="upgrade-plan-detail">高速モード・2ヶ月分お得</div></div>
+            <div class="upgrade-plan-price">¥12,000/年</div>
+          </div>
+        </div>
+        <button class="upgrade-close" id="restoreBtn" style="color:var(--blue);margin-bottom:6px">購入済みの方はこちら（メールで復元）</button>
+        <button class="upgrade-close" id="upgradeClose">明日また無料で遊ぶ</button>
+      </div>
+    </div>
+    <!-- アカウント／プラン管理パネル -->
+    <div class="account-overlay" id="accountOverlay">
+      <div class="account-card">
+        <div class="account-icon">✨</div>
+        <div class="account-title">プレミアム会員</div>
+        <div class="account-email" id="accountEmail">—</div>
+        <div class="account-plan">
+          <div class="account-plan-label">現在のプラン</div>
+          <div class="account-plan-name" id="accountPlanName">読み込み中…</div>
+          <div class="account-plan-rows" id="accountPlanRows"></div>
+        </div>
+        <div class="account-actions">
+          <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
+          <button class="account-btn" id="accountLogout">この端末からログアウト</button>
+        </div>
+        <button class="account-close" id="accountClose">閉じる</button>
+      </div>
+    </div>
+    <!-- ハンドルネーム編集パネル（独立画面） -->
+    <div class="account-overlay" id="handleOverlay">
+      <div class="account-card">
+        <div class="account-icon">🏷️</div>
+        <div class="account-title">ハンドルネーム</div>
+        <div class="account-email">ランキングや共有に表示される名前です</div>
+        <div class="account-handle" style="margin-top:18px">
+          <label for="handlePanelInput">ハンドルネーム（16文字まで）</label>
+          <input id="handlePanelInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/>
+        </div>
+        <div class="account-actions">
+          <button class="account-btn primary" id="handleSaveBtn">保存する</button>
+        </div>
+        <button class="account-close" id="handleClose">閉じる</button>
+      </div>
+    </div>
+    <div class="status" id="status">
+      <div class="status-text">言葉を入力して、語彙の宇宙を探索する</div>
+      <div class="center-search" id="centerSearch">
+        <input id="centerInput" type="text" placeholder="探索する言葉を入力…" autocomplete="off"/>
+        <button id="centerBtn">探索</button>
+      </div>
+      <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
+    </div>
+    <div class="golf-panel" id="golfPanel">
+      <div class="golf-leg golf-start"><div class="golf-leg-label">START</div><div class="golf-leg-word" id="golfStart">—</div></div>
+      <div class="golf-arrow">→</div>
+      <div class="golf-leg golf-goal"><div class="golf-leg-label">GOAL</div><div class="golf-leg-word" id="golfGoal">—</div></div>
+      <div class="golf-stat"><div class="golf-stat-num" id="golfMoves">0</div><div class="golf-stat-label">手数</div></div>
+      <div class="golf-stat"><div class="golf-stat-num" id="golfPar">—</div><div class="golf-stat-label">パー</div></div>
+      <div class="golf-actions">
+        <button class="golf-btn" id="golfUndoBtn" disabled>↩ 戻る</button>
+        <button class="golf-btn" id="golfHintBtn">ヒント</button>
+        <button class="golf-btn" id="golfNewBtn">新しいお題</button>
+      </div>
+    </div>
+    <div class="golf-trail" id="golfTrail"></div>
+    <div class="pin-tray" id="pinTray"></div>
+    <div class="legend" id="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>中心語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>類義語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>対義語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--rose)"></div>感情</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>比喩</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E8C547"></div>コンテキスト</div>
+    </div>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loadingText">語彙空間を探索中…</div>
+      <div class="loading-ad">広告スペース（300×250）</div>
+    </div>
+    <div class="completion" id="completion"></div>
+  </div>
+
+  <div class="ad-sidebar"><div class="ad-label">広告</div><div class="ad-slot-side">広告スペース</div></div>
+  <div class="ad-bottom"><div class="ad-slot-bottom">広告スペース</div></div>
+</div>
+
+<div class="tooltip" id="tooltip"><div class="tooltip-word" id="ttWord"></div><div class="tooltip-desc" id="ttDesc"></div><span class="tt-pin" id="ttPin">📌</span></div>
+<div class="toast" id="toast"></div>
+
+<div class="daily-panel" id="dailyPanel">
+  <div class="daily-header"><div><div class="daily-title" id="dailyTitle">デイリーチャレンジ</div><div class="daily-date" id="dailyDate">—</div></div><button class="daily-close" id="dailyClose">×</button></div>
+  <div class="daily-body">
+    <div class="name-row"><label>ハンドルネーム</label><input id="handleInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/></div>
+    <div id="puzzleList"></div>
+    <div class="board-section">
+      <div class="board-tabs" id="boardTabs"><button class="board-tab active" data-puzzle="0">第1問</button><button class="board-tab" data-puzzle="1">第2問</button><button class="board-tab" data-puzzle="2">第3問</button></div>
+      <div class="board-list" id="boardList"><div class="board-empty">読み込み中…</div></div>
+      <button class="share-btn" id="shareBoardBtn">Xで共有する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DOM =====
+const C=document.getElementById('canvas'),X=C.getContext('2d'),
+CA=document.querySelector('.canvas-area'),
+WI=document.getElementById('wordInput'),EB=document.getElementById('exploreBtn'),
+SE=document.getElementById('status'),LO=document.getElementById('loadingOverlay'),
+LT=document.getElementById('loadingText'),
+LE=document.getElementById('legend'),TT=document.getElementById('tooltip'),
+TTW=document.getElementById('ttWord'),TTD=document.getElementById('ttDesc'),
+GP=document.getElementById('golfPanel'),GT=document.getElementById('golfTrail'),
+GS=document.getElementById('golfStart'),GG=document.getElementById('golfGoal'),
+GM=document.getElementById('golfMoves'),GPR=document.getElementById('golfPar'),
+GU=document.getElementById('golfUndoBtn'),GH=document.getElementById('golfHintBtn'),
+GN=document.getElementById('golfNewBtn'),CO=document.getElementById('completion'),
+DP=document.getElementById('dailyPanel'),DT=document.getElementById('dailyTitle'),
+DD=document.getElementById('dailyDate'),DC=document.getElementById('dailyClose'),
+HN=document.getElementById('handleInput'),PL=document.getElementById('puzzleList'),
+BT=document.getElementById('boardTabs'),BL=document.getElementById('boardList'),
+SB=document.getElementById('shareBoardBtn'),ES=document.getElementById('engineSelect'),
+TE=document.getElementById('toast'),
+UB=document.getElementById('usageBadge'),UC=document.getElementById('usageCount'),
+UO=document.getElementById('upgradeOverlay'),UCL=document.getElementById('upgradeClose'),
+PT=document.getElementById('pinTray'),TTP=document.getElementById('ttPin');
+
+// ===== COLORS =====
+const COL={center:'#F5A623',synonym:'#5B8FDE',antonym:'#4ECBA8',emotion:'#E06B8B',metaphor:'#9B72E8',context:'#E8C547',goal:'#FF6B6B'};
+
+// ===== STATE =====
+let nodes=[],edges=[],gen=0,pan={x:0,y:0},zoom=1,
+drag=false,moved=false,dStart={x:0,y:0},pStart={x:0,y:0},dLast={x:0,y:0},
+wHist=[],hoverN=null,simTick=0,animFrame=null,time=0,
+clickTimer=null,lastTap=0,pinchDist=0;
+
+// Client-side cache: word→API result
+const vocabCache={};
+// Vocabulary memory during play (all nodes ever seen)
+const vocabMem=new Map();
+// Live search words (other users)
+let liveWords=[];
+
+// Stars (animated background)
+const stars=Array.from({length:200},()=>({
+  x:Math.random(),y:Math.random(),r:Math.random()*1.3,
+  a:Math.random()*0.4+0.05,dx:(Math.random()-0.5)*0.00003,dy:Math.random()*0.00008+0.00002
+}));
+
+// Golf state
+const golf={active:false,start:'',goal:'',par:0,moves:0,path:[],
+  daily:false,dailyIdx:0,dailyPeriod:'daily',
+  undoUsed:false,prevState:null};
+
+// Daily/Monthly state
+const daily={period:'daily',date:'',puzzles:[],current:0,results:{}};
+// 達成記録を復元（localStorage）
+try{const saved=localStorage_get('dailyResults');if(saved)daily.results=JSON.parse(saved)}catch{}
+function saveResults(){
+  // 古い記録を整理（最新60件まで保持）
+  const keys=Object.keys(daily.results);
+  if(keys.length>60){
+    keys.slice(0,keys.length-60).forEach(k=>delete daily.results[k]);
+  }
+  localStorage_set('dailyResults',JSON.stringify(daily.results));
+  syncUserData(); // メールがあればサーバーにも保存
+}
+
+let handleName=localStorage_get('handleName')||'';
+HN.value=handleName;
+// ハンドルネームを一元管理（複数の入力欄を同期）
+function setHandleName(v){
+  handleName=String(v||'').trim();
+  localStorage_set('handleName',handleName);
+  if(HN.value!==handleName)HN.value=handleName;
+  const hp=document.getElementById('handlePanelInput');
+  if(hp&&hp.value!==handleName)hp.value=handleName;
+  syncUserDataDebounced(); // メールがあればサーバーにも保存
+}
+HN.addEventListener('input',()=>setHandleName(HN.value));
+
+// ===== アカウント紐づけデータ同期 =====
+// メール（premiumEmail）があれば、ハンドルネーム・記録をサーバーに保存
+function syncUserData(){
+  if(!premiumEmail)return;
+  fetch('/api/userdata',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:premiumEmail,handle:handleName,results:daily.results})}).catch(()=>{});
+}
+let syncTimer=null;
+function syncUserDataDebounced(){
+  if(syncTimer)clearTimeout(syncTimer);
+  syncTimer=setTimeout(syncUserData,1200);
+}
+// サーバーからユーザーデータを読み込んで反映
+async function loadUserData(){
+  if(!premiumEmail)return;
+  try{
+    const r=await fetch(`/api/userdata?email=${encodeURIComponent(premiumEmail)}`);
+    const d=await r.json();
+    // ハンドルネーム：サーバー優先（端末未設定 or サーバーに値があれば）
+    if(d.handle&&d.handle!==handleName){
+      handleName=d.handle;localStorage_set('handleName',handleName);
+      HN.value=handleName;
+      const hp=document.getElementById('handlePanelInput');if(hp)hp.value=handleName;
+    }
+    // 記録：サーバーとローカルをマージ
+    if(d.results&&typeof d.results==='object'){
+      daily.results={...daily.results,...d.results};
+      localStorage_set('dailyResults',JSON.stringify(daily.results));
+    }
+  }catch{}
+}
+
+// ===== ハンドルネーム編集パネル（独立画面） =====
+const HO=document.getElementById('handleOverlay');
+const handlePanelInput=document.getElementById('handlePanelInput');
+const nameTab=document.getElementById('nameTab');
+function openHandlePanel(){
+  // 他のオーバーレイは閉じる
+  AO.classList.remove('visible');
+  UO.classList.remove('visible');
+  handlePanelInput.value=handleName;
+  HO.classList.add('visible');
+  setTimeout(()=>handlePanelInput.focus(),50);
+}
+nameTab.addEventListener('click',()=>{
+  if(HO.classList.contains('visible'))HO.classList.remove('visible');
+  else openHandlePanel();
+});
+handlePanelInput.addEventListener('input',()=>setHandleName(handlePanelInput.value));
+document.getElementById('handleSaveBtn').addEventListener('click',()=>{
+  setHandleName(handlePanelInput.value);
+  HO.classList.remove('visible');
+  toast(handleName?`ハンドルネームを「${handleName}」に設定しました`:'ハンドルネームを空にしました','success',2500);
+});
+document.getElementById('handleClose').addEventListener('click',()=>HO.classList.remove('visible'));
+
+// ===== RESIZE =====
+function resize(){C.width=CA.clientWidth;C.height=CA.clientHeight}
+resize();
+window.addEventListener('resize',()=>{resize();draw()});
+window.addEventListener('orientationchange',()=>{setTimeout(()=>{resize();draw()},200)});
+
+// ===== PHYSICS =====
+function initPhysics(){
+  const cx=C.width/2,cy=C.height/2;
+  nodes.forEach(n=>{n.vx=0;n.vy=0;
+    if(n.fixed){n.x=cx;n.y=cy}
+    else if(!n.x||n.generation===gen){
+      const a=Math.random()*Math.PI*2,d=120+Math.random()*80;
+      n.x=cx+Math.cos(a)*d;n.y=cy+Math.sin(a)*d;
+    }
+  });simTick=0;
+}
+function tick(){
+  if(simTick>300)return;simTick++;
+  const center=nodes.find(n=>n.fixed&&n.generation===gen);
+  if(!center)return;
+  nodes.forEach(n=>{
+    if(n.fixed)return;
+    if(n.generation<gen-3)return; // skip very old
+    nodes.forEach(m=>{
+      if(m===n||m.generation<gen-3)return;
+      const dx=n.x-m.x,dy=n.y-m.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+      const f=3000/(d*d);n.vx+=(dx/d)*f;n.vy+=(dy/d)*f;
+    });
+    if(center){
+      const dx=center.x-n.x,dy=center.y-n.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+      const target=n.generation===gen?(n.targetDist||170):d+20; // old nodes drift out
+      const f=(d-target)*(n.generation===gen?0.004:0.001);
+      n.vx+=(dx/d)*f;n.vy+=(dy/d)*f;
+    }
+    n.vx*=0.82;n.vy*=0.82;n.x+=n.vx;n.y+=n.vy;
+  });
+}
+
+// ===== NODE OPACITY (generation-based fading) =====
+function nodeOpacity(n){
+  const age=gen-n.generation;
+  if(age<0)return 0;
+  if(age>=4)return 0;
+  // Sequential appear
+  if(n.appearAt&&Date.now()<n.appearAt)return 0;
+  if(n.appearAt&&Date.now()<n.appearAt+300)return(Date.now()-n.appearAt)/300*(1-age*0.25);
+  return Math.max(0,1-age*0.25);
+}
+
+// ===== DRAW =====
+function draw(){
+  X.clearRect(0,0,C.width,C.height);time++;
+  // Animated starfield
+  stars.forEach(s=>{
+    s.x=(s.x+s.dx+1)%1;s.y=(s.y+s.dy+1)%1;
+    const twinkle=0.7+0.3*Math.sin(time*0.02+s.x*50);
+    X.beginPath();X.arc(s.x*C.width,s.y*C.height,s.r,0,Math.PI*2);
+    X.fillStyle=`rgba(212,220,240,${s.a*twinkle})`;X.fill();
+  });
+
+  // Apply zoom (scale around canvas center)
+  X.save();
+  const ccx=C.width/2,ccy=C.height/2;
+  X.translate(ccx,ccy);X.scale(zoom,zoom);X.translate(-ccx,-ccy);
+
+  // Draw edges
+  edges.forEach(e=>{
+    const a=nodes.find(n=>n.id===e.source),b=nodes.find(n=>n.id===e.target);
+    if(!a||!b)return;
+    const oA=nodeOpacity(a),oB=nodeOpacity(b);
+    if(oA<=0||oB<=0)return;
+    const o=Math.min(oA,oB);
+    const pull=b.pull||0,str=Math.min(1,pull/10);
+    X.globalAlpha=o*(0.25+str*0.5);
+    X.beginPath();X.moveTo(a.x,a.y);X.lineTo(b.x,b.y);
+    X.strokeStyle=COL[b.type]||'#3D4560';
+    X.lineWidth=1+str*2;X.stroke();
+  });
+  X.globalAlpha=1;
+
+  // Clean up very old nodes
+  nodes=nodes.filter(n=>gen-n.generation<4);
+  edges=edges.filter(e=>nodes.some(n=>n.id===e.source)&&nodes.some(n=>n.id===e.target));
+
+  // Draw nodes
+  nodes.forEach(n=>{
+    const o=nodeOpacity(n);if(o<=0)return;
+    const isHov=n===hoverN;
+    const isGoal=golf.active&&n.word===golf.goal;
+    const col=isGoal?COL.goal:(COL[n.type]||'#5B6A8A');
+    const r=n.fixed&&n.generation===gen?24:(isHov?18:14);
+
+    // Live blink: if other user searched this word
+    const blink=liveWords.includes(n.word);
+    const blinkAlpha=blink?(0.55+0.45*Math.sin(time*0.04)):1;
+
+    X.globalAlpha=o*blinkAlpha;
+
+    // Glow
+    const grd=X.createRadialGradient(n.x,n.y,0,n.x,n.y,r*2.5);
+    grd.addColorStop(0,col+(n.fixed&&n.generation===gen?'AA':'55'));
+    grd.addColorStop(1,col+'00');
+    X.beginPath();X.arc(n.x,n.y,r*2.5,0,Math.PI*2);X.fillStyle=grd;X.fill();
+
+    // Circle
+    X.beginPath();X.arc(n.x,n.y,r,0,Math.PI*2);
+    X.fillStyle=(n.fixed&&n.generation===gen)?col:(isGoal?'#1a0a0a':'#111726');
+    X.strokeStyle=col;X.lineWidth=isGoal?2.5:(n.fixed?0:(isHov?2:1.5));
+    X.fill();if(!n.fixed||n.generation!==gen)X.stroke();
+
+    // Label
+    const isCur=n.fixed&&n.generation===gen;
+    X.font=isCur?`600 13px 'Noto Serif JP',serif`:`400 11px 'Noto Serif JP',serif`;
+    X.fillStyle=isCur?'#080C18':col;
+    X.textAlign='center';X.textBaseline='middle';
+    X.fillText(n.word,n.x,n.y);
+    if(!isCur&&n.reading){
+      X.font=`300 8px 'Inter',sans-serif`;X.fillStyle=col+'88';
+      X.fillText(n.reading,n.x,n.y+r+9);
+    }
+  });
+  X.globalAlpha=1;
+  X.restore();
+  // 光の波紋（スクリーン座標で描画）
+  drawBursts();
+}
+
+function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
+
+// ===== API (with client cache) =====
+// 課金者のメール（あれば全APIリクエストに付与して無制限化）
+let premiumEmail=localStorage_get('premiumEmail')||'';
+let userPlan=localStorage_get('userPlan')||'free'; // free | premium | premium_plus
+function isFastMode(){return userPlan==='premium_plus'}
+function setUserPlan(tier){
+  userPlan=tier||'free';
+  localStorage_set('userPlan',userPlan);
+}
+function apiHeaders(){
+  const h={'Content-Type':'application/json'};
+  if(premiumEmail)h['x-premium-email']=premiumEmail;
+  return h;
+}
+// localStorageは使えない環境用のフォールバック付き
+function localStorage_get(k){try{return localStorage.getItem(k)}catch{return null}}
+function localStorage_set(k,v){try{localStorage.setItem(k,v)}catch{}}
+
+async function fetchWords(word,context){
+  // 文脈つきの探索はキャッシュを使わない（毎回文脈語が変わるため）
+  const body=context?{word,context}:{word};
+  if(!context&&vocabCache[word]){
+    const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
+    const data=await resp.json();
+    if(resp.status===429)return{_error:'daily_limit',_message:data.message};
+    vocabCache[word]=data;return data;
+  }
+  const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
+  if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
+  if(!resp.ok)throw new Error('API error '+resp.status);
+  const data=await resp.json();if(!context)vocabCache[word]=data;return data;
+}
+async function fetchGravity(word){
+  try{const r=await fetch(`/api/transitions?word=${encodeURIComponent(word)}`);
+    if(!r.ok)return{};const d=await r.json();const m={};(d.neighbors||[]).forEach(n=>{m[n.word]=n.count});return m;
+  }catch{return{}}
+}
+function logTransition(from,to){
+  if(!from||!to||from===to)return;
+  fetch('/api/transitions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}).catch(()=>{});
+}
+
+// ===== EXPLORE (gradual transition + sequential appearance) =====
+async function explore(word,fromWord,opts){
+  if(!word.trim())return;
+  const suppressGolfMove=opts&&opts.suppressGolfMove;
+  // Game protection: block explore from history during golf
+  if(golf.active&&fromWord==='__history__')return;
+  if(fromWord&&fromWord!=='__history__')logTransition(fromWord,word);
+
+  EB.disabled=true;
+  SE.style.opacity='0';
+  LO.classList.add('visible');
+  LT.textContent=`「${word}」の語彙空間を探索中…`;
+
+  // Refresh ad during loading (placeholder)
+  refreshAd();
+
+  try{
+    // 前の語があれば文脈として渡す（A→Bの流れからコンテキスト語を追加生成）
+    const context=(fromWord&&fromWord!=='__history__')?fromWord:null;
+    const[result,gravity]=await Promise.all([fetchWords(word,context),fetchGravity(word)]);
+
+    // Check for rate limit error
+    if(result._error==='daily_limit'){
+      LO.classList.remove('visible');
+      showUpgrade(result._message);
+      EB.disabled=false;
+      return;
+    }
+
+    // Update usage badge
+    if(result._remaining!=null)updateUsage(result._remaining,result._limit);
+
+    gen++;
+    const cx=C.width/2,cy=C.height/2;
+
+    // Old center: unfix
+    nodes.forEach(n=>{if(n.fixed&&n.generation<gen)n.fixed=false});
+
+    // New center
+    const centerNode={id:`c${gen}`,word,type:'center',fixed:true,x:cx,y:cy,generation:gen};
+    nodes.push(centerNode);
+
+    // Add new nodes with staggered appearance
+    const maxC=Math.max(1,...Object.values(gravity));
+    const filtered=(result.words||[]).filter(w=>w.word!==word); // exclude same word
+    filtered.forEach((w,i)=>{
+      const pull=gravity[w.word]||0;
+      const ratio=pull/maxC;
+      const base=140+Math.random()*70;
+      const td=base-ratio*60;
+      const nd={
+        id:`n${gen}_${i}`,word:w.word,reading:w.reading,type:w.type,
+        description:w.description,targetDist:td,pull,generation:gen,
+        appearAt:Date.now()+i*120 // staggered: 120ms apart
+      };
+      nodes.push(nd);edges.push({source:`c${gen}`,target:nd.id});
+      // Store in vocab memory
+      vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
+    });
+
+    LE.classList.add('visible');
+    pan={x:0,y:0};
+    initPhysics();
+    if(animFrame)cancelAnimationFrame(animFrame);
+    loop();
+
+    LO.classList.remove('visible');
+
+    // ★プレミアム+：表示中ノードを先読みキャッシュ（クリックを即時化）
+    if(isFastMode()){
+      prefetchNodes(result.words||[]);
+    }
+
+    // Golf: goal check（再開時など抑制フラグがあればスキップ）
+    if(golf.active&&!suppressGolfMove)handleGolfMove(word);
+  }catch(err){
+    LO.classList.remove('visible');
+    toast('エラーが発生しました','error');
+    console.error(err);
+  }finally{EB.disabled=false}
+}
+
+// ===== PREFETCH（プレミアム+の先読み） =====
+const prefetchQueue=[];
+let prefetching=false;
+function prefetchNodes(words){
+  // まだキャッシュにない語をキューに追加
+  words.forEach(w=>{
+    if(w&&w.word&&!vocabCache[w.word]&&!prefetchQueue.includes(w.word)){
+      prefetchQueue.push(w.word);
+    }
+  });
+  runPrefetch();
+}
+async function runPrefetch(){
+  if(prefetching)return;
+  prefetching=true;
+  // サーバー負荷を抑えるため1件ずつ・間隔を空けて先読み
+  while(prefetchQueue.length>0){
+    const word=prefetchQueue.shift();
+    if(vocabCache[word])continue;
+    try{
+      const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word})});
+      if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
+    }catch{}
+    await new Promise(r=>setTimeout(r,250)); // 250ms間隔
+  }
+  prefetching=false;
+}
+
+// ===== INTERACTIONS =====
+function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);return c?c.word:null}
+
+// 光の波紋エフェクト（ゴール到達時）
+let bursts=[];
+function triggerBurst(x,y){
+  bursts.push({x,y,r:0,max:Math.hypot(C.width,C.height),start:Date.now()});
+}
+function drawBursts(){
+  const now=Date.now();
+  bursts=bursts.filter(b=>now-b.start<900);
+  bursts.forEach(b=>{
+    const t=(now-b.start)/900; // 0→1
+    const r=b.max*t;
+    const alpha=(1-t)*0.9;
+    // 広がる光の輪
+    const grd=X.createRadialGradient(b.x,b.y,Math.max(0,r-60),b.x,b.y,r);
+    grd.addColorStop(0,`rgba(255,107,107,0)`);
+    grd.addColorStop(0.7,`rgba(255,180,120,${alpha*0.5})`);
+    grd.addColorStop(0.9,`rgba(245,166,35,${alpha})`);
+    grd.addColorStop(1,`rgba(255,255,255,0)`);
+    X.globalAlpha=1;
+    X.beginPath();X.arc(b.x,b.y,r,0,Math.PI*2);
+    X.lineWidth=8*(1-t)+2;X.strokeStyle=grd;X.stroke();
+    // 中心のフラッシュ
+    if(t<0.3){
+      const fa=(0.3-t)/0.3;
+      X.beginPath();X.arc(b.x,b.y,40*(1-fa),0,Math.PI*2);
+      X.fillStyle=`rgba(255,255,255,${fa*0.8})`;X.fill();
+    }
+  });
+  X.globalAlpha=1;
+}
+
+// ノード選択（ゴール判定を先に、検索はバックグラウンド）
+function selectNode(n,screenX,screenY){
+  if(!n||(n.fixed&&n.generation===gen))return;
+  const from=currentCenter();
+  WI.value=n.word;
+
+  // ★ゴール判定を最優先（検索より先に）
+  if(golf.active&&n.word===golf.goal){
+    // クリックしたノードの画面座標から光を放つ
+    const ccx=C.width/2,ccy=C.height/2;
+    const bx=(n.x-ccx)*zoom+ccx, by=(n.y-ccy)*zoom+ccy;
+    triggerBurst(bx,by);
+    // 手数・経路を記録
+    golf.moves++;golf.path.push(n.word);
+    GM.textContent=golf.moves;renderTrail();
+    // 少し余韻を持たせてから完了画面（光の演出を見せる）
+    setTimeout(()=>finishGolf(),800);
+    // 検索はバックグラウンドで（語彙空間も更新しておくが、ゴール判定はしない）
+    exploreBackground(n.word,from);
+    return;
+  }
+
+  // 通常の探索
+  if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
+  explore(n.word,from);
+}
+
+// ゴール後のバックグラウンド探索（ゴール判定なし・ローディング非表示）
+async function exploreBackground(word,fromWord){
+  if(fromWord)logTransition(fromWord,word);
+  try{
+    const[result,gravity]=await Promise.all([fetchWords(word),fetchGravity(word)]);
+    if(result._error)return;
+    gen++;
+    const cx=C.width/2,cy=C.height/2;
+    nodes.forEach(nd=>{if(nd.fixed&&nd.generation<gen)nd.fixed=false});
+    nodes.push({id:`c${gen}`,word,type:'center',fixed:true,x:cx,y:cy,generation:gen});
+    const maxC=Math.max(1,...Object.values(gravity));
+    (result.words||[]).filter(w=>w.word!==word).forEach((w,i)=>{
+      const pull=gravity[w.word]||0,ratio=pull/maxC,base=140+Math.random()*70;
+      nodes.push({id:`n${gen}_${i}`,word:w.word,reading:w.reading,type:w.type,
+        description:w.description,targetDist:base-ratio*60,pull,generation:gen,appearAt:Date.now()+i*120});
+      edges.push({source:`c${gen}`,target:`n${gen}_${i}`});
+      vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
+    });
+    initPhysics();if(animFrame)cancelAnimationFrame(animFrame);loop();
+  }catch{}
+}
+
+function getNodeAt(mx,my){
+  const r=C.getBoundingClientRect();
+  // スクリーン座標→ワールド座標（ズーム逆変換）
+  const ccx=C.width/2,ccy=C.height/2;
+  const x=(mx-r.left-ccx)/zoom+ccx,y=(my-r.top-ccy)/zoom+ccy;
+  // Prioritize current gen, then older
+  const sorted=[...nodes].sort((a,b)=>(b.generation-a.generation));
+  return sorted.find(n=>{
+    if(nodeOpacity(n)<=0.1)return false;
+    const nr=n.fixed&&n.generation===gen?24:14;
+    return(n.x-x)**2+(n.y-y)**2<(nr+6)**2;
+  });
+}
+
+// Double-click → external search
+C.addEventListener('dblclick',e=>{
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(!n)return;e.preventDefault();
+  window.open(ES.value+encodeURIComponent(n.word),'_blank','noopener');
+});
+
+// Mouse
+C.addEventListener('mousedown',e=>{if(e.button!==0)return;drag=true;moved=false;dStart={x:e.clientX,y:e.clientY};dLast={x:e.clientX,y:e.clientY}});
+C.addEventListener('mousemove',e=>{
+  if(drag){
+    if(Math.abs(e.clientX-dStart.x)>4||Math.abs(e.clientY-dStart.y)>4)moved=true;
+    // 全ノードを差分だけ移動（画面全体のパン、ズーム考慮）
+    const ddx=(e.clientX-dLast.x)/zoom,ddy=(e.clientY-dLast.y)/zoom;
+    nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
+    dLast={x:e.clientX,y:e.clientY};
+    return;
+  }
+  const n=getNodeAt(e.clientX,e.clientY);hoverN=n||null;
+  C.style.cursor=n?'pointer':'grab';
+  if(n){
+    TTW.textContent=n.word;
+    TTD.textContent=(n.description||'')+(n.fixed?'':'  ·  Wクリック→検索 / 右クリック→ピン');
+    TTP.classList.toggle('pinned',pins.has(n.word));
+    TTP.title=pins.has(n.word)?'ピンを外す':'ピン留め';
+    TTP._word=n.word;
+    TT.classList.add('visible');TT.style.left=(e.clientX+14)+'px';TT.style.top=(e.clientY-36)+'px';
+  }else TT.classList.remove('visible');
+});
+C.addEventListener('mouseup',e=>{
+  if(e.button!==0){drag=false;return}
+  drag=false;if(moved)return;
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(n&&!(n.fixed&&n.generation===gen)){
+    if(clickTimer)clearTimeout(clickTimer);
+    clickTimer=setTimeout(()=>{selectNode(n,e.clientX,e.clientY)},220);
+  }
+});
+C.addEventListener('dblclick',()=>{if(clickTimer)clearTimeout(clickTimer)});
+C.addEventListener('mouseleave',()=>{drag=false;TT.classList.remove('visible')});
+
+// Touch
+C.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    // ピンチ開始
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    pinchDist=Math.sqrt(dx*dx+dy*dy);
+    drag=false;
+    return;
+  }
+  const t=e.touches[0];dStart={x:t.clientX,y:t.clientY};dLast={x:t.clientX,y:t.clientY};drag=true;moved=false;
+},{passive:true});
+C.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===2){
+    // ピンチズーム
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(pinchDist>0){
+      zoom*=d/pinchDist;
+      zoom=Math.max(0.4,Math.min(3,zoom));
+    }
+    pinchDist=d;moved=true;
+    return;
+  }
+  const t=e.touches[0];
+  if(Math.abs(t.clientX-dStart.x)>4||Math.abs(t.clientY-dStart.y)>4)moved=true;
+  const ddx=(t.clientX-dLast.x)/zoom,ddy=(t.clientY-dLast.y)/zoom;
+  nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
+  dLast={x:t.clientX,y:t.clientY};
+},{passive:false});
+C.addEventListener('touchend',e=>{
+  if(e.touches.length>0){pinchDist=0;return}
+  drag=false;pinchDist=0;if(moved)return;
+  const t=e.changedTouches[0],n=getNodeAt(t.clientX,t.clientY);
+  if(!n||n.fixed&&n.generation===gen)return;
+  const now=Date.now();
+  if(now-lastTap<300){
+    window.open(ES.value+encodeURIComponent(n.word),'_blank','noopener');lastTap=0;
+  }else{
+    lastTap=now;
+    setTimeout(()=>{if(lastTap===now){selectNode(n,t.clientX,t.clientY)}},310);
+  }
+});
+
+// ===== ZOOM (wheel) =====
+C.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const factor=e.deltaY<0?1.1:0.9;
+  zoom*=factor;
+  zoom=Math.max(0.4,Math.min(3,zoom));
+},{passive:false});
+
+// ===== RIGHT-CLICK → PIN =====
+C.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(n&&!(n.fixed&&n.generation===gen)){
+    togglePin(n.word);
+  }
+});
+
+EB.addEventListener('click',()=>explore(WI.value,currentCenter()));
+WI.addEventListener('keydown',e=>{if(e.key==='Enter')explore(WI.value,currentCenter())});
+
+// 中央の検索バー（初回アクセス時）
+const centerInput=document.getElementById('centerInput');
+const centerBtn=document.getElementById('centerBtn');
+
+// ヒント用の語リスト（多様な分野）
+const HINT_WORDS=['海','森','星','猫','花火','迷路','灯台','珈琲','時計','旋律','化石','虹','砂漠','歯車','仮面','潮騒','銀河','陶器','稲妻','汽車','蝶','彫刻','琥珀','三日月','羅針盤','万華鏡','蜃気楼','水脈','残響','黄昏','古書','硝子','螺旋','標本','茶室','風鈴','潜水艦','天文台','地下水','蝋燭'];
+function randomHint(){
+  let a=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  let b=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  while(b===a)b=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  // ランダムな2語を組み合わせた言葉をヒントに
+  return `${a}${b}`;
+}
+// プレースホルダーを定期的に変える
+function refreshHint(){centerInput.placeholder=randomHint()}
+refreshHint();
+setInterval(()=>{if(document.activeElement!==centerInput)refreshHint()},3500);
+
+function centerSearch(){
+  const v=centerInput.value.trim();
+  if(!v)return;
+  WI.value=v;
+  explore(v,currentCenter());
+}
+centerBtn.addEventListener('click',centerSearch);
+centerInput.addEventListener('keydown',e=>{if(e.key==='Enter')centerSearch()});
+
+// ===== TOAST =====
+let toastT=null;
+function toast(msg,type='info',ms=2600){
+  TE.textContent=msg;TE.className='toast visible '+type;
+  if(toastT)clearTimeout(toastT);toastT=setTimeout(()=>TE.classList.remove('visible'),ms);
+}
+
+// ===== X (TWITTER) SHARE =====
+const SITE_URL='https://goispace.app';
+function shareOnX(text,opts={}){
+  // text・url・hashtagsを正しいパラメータで渡す（Xがリンクカードを生成）
+  const params=new URLSearchParams();
+  params.set('text',text);
+  params.set('url',opts.url||SITE_URL);
+  params.set('hashtags',opts.hashtags||'語彙空間,ワードゴルフ');
+  const url='https://twitter.com/intent/tweet?'+params.toString();
+  window.open(url,'_blank','noopener,width=550,height=480');
+}
+
+// ===== AD REFRESH =====
+function refreshAd(){
+  try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch{}
+}
+// Periodic refresh every 60s during play
+setInterval(refreshAd,60000);
+
+// ===== LIVE SEARCH POLLING =====
+async function pollLive(){
+  try{const r=await fetch('/api/live');const d=await r.json();liveWords=d.words||[]}catch{liveWords=[]}
+}
+setInterval(pollLive,5000);
+pollLive();
+
+// ===== GOLF =====
+function handleGolfMove(word){
+  if(word===golf.start&&golf.path.length===1)return;
+  if(word===golf.goal)return; // ゴールはselectNodeで処理済み
+  golf.moves++;golf.path.push(word);
+  GM.textContent=golf.moves;renderTrail();
+}
+function renderTrail(){
+  GT.classList.add('visible');
+  const parts=golf.path.map((w,i)=>{
+    const cls=i===0?'trail-word start':'trail-word';
+    return `<span class="${cls}">${w}</span>`;
+  });
+  parts.push('<span class="trail-sep">…→</span>');
+  parts.push(`<span class="trail-word goal">${golf.goal}</span>`);
+  GT.innerHTML=parts.join('<span class="trail-sep">→</span>');
+}
+
+async function finishGolf(){
+  const par=golf.par,diff=golf.moves-par;
+  const grade=diff<=-2?'イーグル！':diff===-1?'バーディー！':diff===0?'パー':diff===1?'ボギー':`+${diff}`;
+  golf.active=false;
+  const fullPath=[...golf.path];
+
+  const periodLabel=golf.daily?(golf.dailyPeriod==='monthly'?'マンスリー':'デイリー'):'';
+  const who=handleName?`${handleName} さんの記録\n`:'';
+  const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${who}${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
+
+  // ★まず経路を即座に表示（距離は「測定中」プレースホルダー）
+  const buildPathHTML=(distData)=>fullPath.map((w,i)=>{
+    const isGoal=w===golf.goal;
+    let inner;
+    if(isGoal){
+      inner='<div class="comp-node-dist" style="color:var(--goal)">GOAL!</div>';
+    }else if(distData){
+      const dist=distData.find(d=>d.word===w);
+      const dNum=dist?dist.distance:'?';
+      const dReason=dist?dist.reason:'';
+      const col=dNum<=3?'var(--green)':dNum<=6?'var(--amber)':'var(--rose)';
+      inner=`<div class="comp-node-dist" style="color:${col}">距離: ${dNum}</div><div class="comp-node-reason">${dReason}</div>`;
+    }else{
+      inner='<div class="comp-node-dist" style="color:var(--muted);font-size:9px">測定中…</div>';
+    }
+    const col=isGoal?'var(--goal)':'var(--border)';
+    return `<div class="comp-node" style="border-color:${col}">
+      <div class="comp-node-word" style="color:${isGoal?'var(--goal)':'var(--text)'}">${w}</div>${inner}
+    </div>${i<fullPath.length-1?'<div class="comp-arrow">→</div>':''}`;
+  }).join('');
+
+  CO.innerHTML=`
+    <div class="comp-title">ゴール！🎉</div>
+    <div class="comp-grade">${golf.moves}手（パー${par}）— ${grade}</div>
+    <div class="comp-path" id="compPath">${buildPathHTML(null)}</div>
+    <div class="comp-actions">
+      <button class="comp-btn twitter" onclick="shareOnX(\`${shareText.replace(/`/g,"'")}\`)">Xで共有</button>
+      <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
+    </div>`;
+  CO.classList.add('visible');
+
+  // ★距離測定は裏で実行し、完了したら逐次反映（タイムアウトしても経路は表示済み）
+  (async()=>{
+    try{
+      const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({action:'distance',words:fullPath,goal:golf.goal})});
+      const d=await r.json();
+      const distData=d.distances||[];
+      const el=document.getElementById('compPath');
+      if(el&&CO.classList.contains('visible'))el.innerHTML=buildPathHTML(distData);
+    }catch{
+      // 失敗時は「測定中」を消してそのまま
+      const el=document.getElementById('compPath');
+      if(el)el.innerHTML=buildPathHTML([]);
+    }
+  })();
+
+  // Daily/Monthly: submit score
+  if(golf.daily){
+    const idx=golf.dailyIdx,per=golf.dailyPeriod||'daily';
+    daily.results[per+':'+daily.date+':'+idx]={moves:golf.moves,path:fullPath,date:daily.date};
+    saveResults(); // localStorageに永続化
+    submitScore(per,idx,golf.moves,fullPath).then(()=>{
+      if(daily.period===per){DP.classList.add('visible');renderPuzzles();loadBoard(idx)}
+    });
+    savedSessions[per]=null; // 完了したので中断状態をクリア
+    golf.daily=false;
+  }else{
+    savedSessions.golf=null; // 通常ゴルフ完了
+  }
+}
+
+// Undo (1 per game)
+GU.addEventListener('click',()=>{
+  if(!golf.active||golf.undoUsed||!golf.prevState)return;
+  golf.undoUsed=true;GU.disabled=true;
+  golf.moves=golf.prevState.moves;golf.path=[...golf.prevState.path];
+  GM.textContent=golf.moves;renderTrail();
+  WI.value=golf.prevState.word;
+  gen--;// step back one generation visually
+  explore(golf.prevState.word,null,{suppressGolfMove:true});
+  toast('手戻りしました（残り0回）','info');
+});
+
+async function startGolf(){
+  toast('お題を生成中…','info',1500);
+  try{
+    const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),body:JSON.stringify({action:'pair'})});
+    if(r.status===429){const d=await r.json();toast(d.message||'ゴルフ上限到達','error',3000);return}
+    const d=await r.json();
+    golf.active=true;golf.start=d.start;golf.goal=d.goal;golf.par=d.par||5;
+    golf.moves=0;golf.path=[d.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;
+    GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+    GU.disabled=false;GP.classList.add('visible');renderTrail();
+    WI.value=golf.start;explore(golf.start);
+    toast(`「${golf.start}」→「${golf.goal}」`,  'success');
+  }catch{toast('お題の生成に失敗しました','error')}
+}
+
+GH.addEventListener('click',async()=>{
+  if(!golf.active)return;toast('ヒント取得中…','info',1500);
+  try{const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+    body:JSON.stringify({action:'hint',from:currentCenter(),goal:golf.goal})});
+    if(r.status===429){const d=await r.json();toast(d.message||'ヒント上限到達','error',3000);return}
+    const d=await r.json();toast('ヒント: '+(d.hints||[]).join(' / '),'info',5000);
+  }catch{toast('ヒント取得失敗','error')}
+});
+GN.addEventListener('click',()=>{savedSessions.golf=null;startGolf()});
+
+// ===== DAILY/MONTHLY =====
+function resultKey(p,i){return p+':'+daily.date+':'+i}
+async function openChallenge(period){
+  daily.period=period;daily.current=0;
+  DP.classList.add('visible');
+  DT.textContent=period==='monthly'?'マンスリーチャレンジ':'デイリーチャレンジ';
+  PL.innerHTML='<div class="board-empty">読み込み中…</div>';
+  try{const r=await fetch(`/api/daily?period=${period}`);const d=await r.json();
+    daily.date=d.date;daily.puzzles=d.puzzles||[];
+    DD.textContent=(period==='monthly'?'今月 ':'')+d.date;
+    renderPuzzles();loadBoard(daily.current);
+  }catch{PL.innerHTML='<div class="board-empty">読み込みに失敗しました</div>'}
+}
+function renderPuzzles(){
+  PL.innerHTML=daily.puzzles.map((p,i)=>{
+    const res=daily.results[resultKey(daily.period,i)];
+    return `<div class="puzzle-card ${res?'cleared':''}" data-puzzle="${i}">
+      <div class="puzzle-top"><span class="puzzle-diff diff-${p.difficulty}">${p.difficulty}</span><span class="puzzle-par">パー ${p.par}</span></div>
+      <div class="puzzle-route"><span class="puzzle-word s">${p.start}</span><span class="arrow">→</span><span class="puzzle-word g">${p.goal}</span></div>
+      ${res?`<div class="puzzle-result">クリア済み：${res.moves}手</div>`:''}
+    </div>`;
+  }).join('');
+  PL.querySelectorAll('.puzzle-card').forEach(c=>c.addEventListener('click',()=>startDailyPuzzle(Number(c.dataset.puzzle))));
+}
+function startDailyPuzzle(idx){
+  const p=daily.puzzles[idx];if(!p)return;
+  // ハンドルネーム未設定なら確認
+  if(!handleName){
+    const ok=confirm('ハンドルネームが未設定です。\n「名無し」のまま開始しますか？\n\n（キャンセルを押すと、上の入力欄でハンドルネームを設定できます）');
+    if(!ok){HN.focus();return}
+  }
+  DP.classList.remove('visible');
+  savedSessions[daily.period]=null; // パネルから新規開始したら中断状態を破棄
+  golf.active=true;golf.start=p.start;golf.goal=p.goal;golf.par=p.par||5;
+  golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;
+  golf.daily=true;golf.dailyIdx=idx;golf.dailyPeriod=daily.period;
+  GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+  GU.disabled=false;GP.classList.add('visible');renderTrail();
+  WI.value=golf.start;explore(golf.start);
+  toast(`${daily.period==='monthly'?'マンスリー':''}第${idx+1}問`,  'success');
+}
+async function loadBoard(pi){
+  daily.current=pi;
+  BT.querySelectorAll('.board-tab').forEach(t=>t.classList.toggle('active',Number(t.dataset.puzzle)===pi));
+  BL.innerHTML='<div class="board-empty">読み込み中…</div>';
+  try{const r=await fetch(`/api/daily?action=board&period=${daily.period}&puzzle=${pi}`);
+    const d=await r.json();renderBoard(d.board||[]);
+  }catch{BL.innerHTML='<div class="board-empty">読み込み失敗</div>'}
+}
+function renderBoard(board){
+  if(!board.length){BL.innerHTML='<div class="board-empty">まだ記録がありません</div>';return}
+  BL.innerHTML=board.map((row,i)=>{
+    const rank=i+1,isMe=handleName&&row.name===handleName;
+    const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    return `<div class="board-row ${isMe?'me':''}"><div class="board-rank ${rank<=3?'top':''}">${medal}</div>
+      <div class="board-name">${esc(row.name)}</div><div class="board-moves">${row.moves}<small>手</small></div>
+      ${row.path?`<div class="board-path">${esc(row.path)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+BT.querySelectorAll('.board-tab').forEach(t=>t.addEventListener('click',()=>loadBoard(Number(t.dataset.puzzle))));
+DC.addEventListener('click',()=>DP.classList.remove('visible'));
+async function submitScore(period,pi,moves,path){
+  try{await fetch('/api/daily',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'submit',period,puzzle:pi,name:handleName||'名無し',moves,path})})}catch{}
+}
+SB.addEventListener('click',()=>{
+  const idx=daily.current,p=daily.puzzles[idx],res=daily.results[resultKey(daily.period,idx)];
+  const label=daily.period==='monthly'?'マンスリー':'デイリー';
+  let text=`語彙ゴルフ ${label} 🏌️ ${daily.date}\n第${idx+1}問：${p?p.start+'→'+p.goal:''}`;
+  if(res)text+=`\n${handleName?handleName+' さんの記録：':'私の記録：'}${res.moves}手（パー${p.par}）`;
+  text+=`\nあなたも挑戦！`;
+  shareOnX(text);
+});
+
+// ===== MODE SWITCH (進行状態を保存して途中再開) =====
+let currentMode='explore';
+// 各モードの中断状態を保存（ゴルフ進行＋キャンバスの語彙空間）
+const savedSessions={golf:null,daily:null,monthly:null};
+const savedCanvas={explore:null,golf:null,daily:null,monthly:null};
+
+// 現在のキャンバス（ノード・エッジ）を保存
+function snapshotCanvas(){
+  return {nodes:nodes.map(n=>({...n})),edges:edges.map(e=>({...e})),gen};
+}
+// キャンバスを復元（なければ空に）
+function restoreCanvas(snap){
+  if(snap){
+    nodes=snap.nodes.map(n=>({...n}));
+    edges=snap.edges.map(e=>({...e}));
+    gen=snap.gen;
+  }else{
+    nodes=[];edges=[];
+  }
+  if(animFrame)cancelAnimationFrame(animFrame);
+  loop();
+}
+// キャンバスを完全にクリア
+function clearCanvas(){
+  nodes=[];edges=[];
+  if(animFrame)cancelAnimationFrame(animFrame);
+  draw();
+}
+
+// 現在のゴルフ状態のスナップショットを取る
+function snapshotGolf(){
+  if(!golf.active)return null;
+  return {
+    start:golf.start,goal:golf.goal,par:golf.par,moves:golf.moves,
+    path:[...golf.path],undoUsed:golf.undoUsed,
+    prevState:golf.prevState?{...golf.prevState,path:[...golf.prevState.path]}:null,
+    daily:golf.daily,dailyIdx:golf.dailyIdx,dailyPeriod:golf.dailyPeriod,
+    centerWord:currentCenter(),
+  };
+}
+// スナップショットからゴルフを復元
+function restoreGolf(s){
+  golf.active=true;golf.start=s.start;golf.goal=s.goal;golf.par=s.par;
+  golf.moves=s.moves;golf.path=[...s.path];golf.undoUsed=s.undoUsed;
+  golf.prevState=s.prevState;golf.daily=s.daily;golf.dailyIdx=s.dailyIdx;golf.dailyPeriod=s.dailyPeriod;
+  GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent=golf.moves;
+  GU.disabled=golf.undoUsed;GP.classList.add('visible');renderTrail();
+  SE.style.opacity='0';// 再開時は初期ステータスを隠す
+  toast('続きから再開しました','info',1800);
+}
+
+function leaveMode(mode){
+  // キャンバス状態を保存（全モード）
+  savedCanvas[mode]=snapshotCanvas();
+  // ゴルフ系モードを離れるとき、進行中なら保存
+  if((mode==='golf'||mode==='daily'||mode==='monthly')&&golf.active){
+    savedSessions[mode]=snapshotGolf();
+  }
+}
+
+document.querySelectorAll('.mode-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    const m=tab.dataset.mode;
+    if(m===currentMode){
+      // 同じモードを再クリックした場合は何もしない（誤操作防止）
+      return;
+    }
+    // 現在のモードの状態を保存
+    leaveMode(currentMode);
+
+    document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+
+    golf.active=false;GP.classList.remove('visible');GT.classList.remove('visible');
+    DP.classList.remove('visible');CO.classList.remove('visible');
+    // 前モードのノードを必ずクリア（混在を防ぐ）
+    clearCanvas();
+    currentMode=m;
+
+    if(m==='golf'){
+      if(savedSessions.golf){restoreGolf(savedSessions.golf);restoreCanvas(savedCanvas.golf)}
+      else startGolf();
+    }else if(m==='daily'){
+      if(savedSessions.daily){daily.period='daily';restoreGolf(savedSessions.daily);restoreCanvas(savedCanvas.daily)}
+      else openChallenge('daily');
+    }else if(m==='monthly'){
+      if(savedSessions.monthly){daily.period='monthly';restoreGolf(savedSessions.monthly);restoreCanvas(savedCanvas.monthly)}
+      else openChallenge('monthly');
+    }else if(m==='explore'){
+      // 探索モード：保存済みの語彙空間があれば復元、なければ空＋中央検索バー表示
+      restoreCanvas(savedCanvas.explore);
+      if(!savedCanvas.explore||!savedCanvas.explore.nodes.length){
+        SE.style.opacity='1';
+        if(centerInput)centerInput.value='';
+      }else{
+        SE.style.opacity='0';
+      }
+    }
+  });
+});
+
+// ===== PIN SYSTEM =====
+const pins=new Set(); // ピン留めした語のSet
+
+function togglePin(word){
+  if(!word)return;
+  if(pins.has(word)){
+    pins.delete(word);
+    toast(`「${word}」のピンを外しました`,'info',1500);
+  }else{
+    pins.add(word);
+    toast(`「${word}」をピン留めしました 📌`,'success',1500);
+  }
+  renderPinTray();
+  // ツールチップのピンアイコンも更新
+  if(TTP._word===word)TTP.classList.toggle('pinned',pins.has(word));
+}
+
+function renderPinTray(){
+  PT.innerHTML=[...pins].map(w=>`
+    <div class="pin-chip" data-word="${w}">
+      <span class="pin-chip-word">${w}</span>
+      <button class="pin-chip-remove" data-remove="${w}" title="ピンを外す">×</button>
+    </div>`).join('');
+
+  // チップクリック → 探索
+  PT.querySelectorAll('.pin-chip').forEach(chip=>{
+    chip.addEventListener('click',e=>{
+      if(e.target.classList.contains('pin-chip-remove'))return;
+      const word=chip.dataset.word;
+      WI.value=word;explore(word,currentCenter());
+    });
+  });
+  // 削除ボタン
+  PT.querySelectorAll('.pin-chip-remove').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      togglePin(btn.dataset.remove);
+    });
+  });
+}
+
+// ツールチップのピンボタン
+TTP.addEventListener('click',e=>{
+  e.stopPropagation();
+  togglePin(TTP._word);
+});
+
+// ===== USAGE & UPGRADE =====
+function updateUsage(remaining,limit){
+  if(typeof updateAccountTab==='function')updateAccountTab();
+  if(premiumEmail){UB.innerHTML='<span class="count">✨ プレミアム</span>';UB.classList.remove('low');UB.classList.add('premium');return}
+  UB.classList.remove('premium');
+  UC.textContent=remaining;
+  UB.classList.toggle('low',remaining<=5);
+}
+function showUpgrade(){
+  if(premiumEmail)return; // 課金者には出さない
+  UO.classList.add('visible');
+}
+UCL.addEventListener('click',()=>UO.classList.remove('visible'));
+
+// ===== ACCOUNT PANEL =====
+const AO=document.getElementById('accountOverlay');
+const accEmail=document.getElementById('accountEmail');
+const accPlanName=document.getElementById('accountPlanName');
+
+// バッジクリック：課金者ならアカウント画面、未課金ならアップグレード画面（トグル）
+UB.addEventListener('click',()=>{
+  if(premiumEmail){
+    if(AO.classList.contains('visible'))AO.classList.remove('visible');
+    else openAccount();
+  }else{
+    if(UO.classList.contains('visible'))UO.classList.remove('visible');
+    else showUpgrade();
+  }
+});
+
+// アカウントタブ（常時表示・モバイルでも見える）
+const accountTab=document.getElementById('accountTab');
+function updateAccountTab(){
+  if(!accountTab)return;
+  if(premiumEmail){
+    accountTab.textContent=isFastMode()?'⚡ 会員+':'✨ 会員';
+    accountTab.classList.add('premium');
+  }else{
+    accountTab.textContent='プラン';
+    accountTab.classList.remove('premium');
+  }
+}
+accountTab.addEventListener('click',()=>{
+  if(premiumEmail){
+    // 表示中なら閉じる（トグル）
+    if(AO.classList.contains('visible'))AO.classList.remove('visible');
+    else openAccount();
+  }else{
+    // アップグレード画面もトグル
+    if(UO.classList.contains('visible'))UO.classList.remove('visible');
+    else showUpgrade();
+  }
+});
+
+async function openAccount(){
+  AO.classList.add('visible');
+  accEmail.textContent=premiumEmail;
+  accPlanName.textContent='読み込み中…';
+  const rows=document.getElementById('accountPlanRows');
+  rows.innerHTML='';
+  try{
+    const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
+    const d=await r.json();
+    if(d.plan){
+      accPlanName.textContent=d.plan.label;
+      const fmt=ts=>ts?new Date(ts*1000).toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'}):'—';
+      const yen=d.plan.amount?`¥${d.plan.amount.toLocaleString()}`:'';
+      const list=[];
+      list.push(['料金',`${yen} / ${d.plan.interval==='year'?'年':'月'}`]);
+      if(d.plan.startedAt)list.push(['入会日',fmt(d.plan.startedAt)]);
+      if(d.plan.cancelAtEnd){
+        list.push(['解約予定日',fmt(d.plan.renewsAt),'warn']);
+      }else{
+        list.push(['次回課金日',fmt(d.plan.renewsAt)]);
+      }
+      rows.innerHTML=list.map(([k,v,cls])=>
+        `<div class="account-plan-row"><span class="k">${k}</span><span class="v ${cls||''}">${v}</span></div>`
+      ).join('');
+    }else{
+      accPlanName.textContent='プレミアム会員';
+    }
+  }catch{accPlanName.textContent='プレミアム会員'}
+}
+
+document.getElementById('accountClose').addEventListener('click',()=>AO.classList.remove('visible'));
+
+// プラン管理（Stripe Customer Portal）へ
+document.getElementById('managePlanBtn').addEventListener('click',async()=>{
+  toast('管理画面へ移動します…','info',2000);
+  try{
+    const r=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:premiumEmail})});
+    const d=await r.json();
+    if(d.url){location.href=d.url}
+    else{toast(d.error||'管理画面を開けませんでした','error',3000)}
+  }catch{toast('管理画面を開けませんでした','error',3000)}
+});
+
+// ログアウト（この端末のプレミアム情報を消す）
+document.getElementById('accountLogout').addEventListener('click',()=>{
+  if(!confirm('この端末からログアウトしますか？\n（課金は継続されます。再ログインはメール復元から可能です）'))return;
+  premiumEmail='';setUserPlan('free');
+  try{localStorage.removeItem('premiumEmail')}catch{}
+  AO.classList.remove('visible');
+  toast('ログアウトしました','info',2500);
+  loadUsage();
+});
+
+// ===== STRIPE CHECKOUT =====
+async function startCheckout(plan){
+  toast('決済ページへ移動します…','info',2000);
+  try{
+    const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plan})});
+    const d=await r.json();
+    if(d.url){location.href=d.url}
+    else{toast(d.error||'決済の開始に失敗しました','error',3000)}
+  }catch{toast('決済の開始に失敗しました','error',3000)}
+}
+document.getElementById('planMonthly').addEventListener('click',()=>startCheckout('monthly'));
+document.getElementById('planYearly').addEventListener('click',()=>startCheckout('yearly'));
+document.getElementById('planPlusMonthly').addEventListener('click',()=>startCheckout('plus_monthly'));
+document.getElementById('planPlusYearly').addEventListener('click',()=>startCheckout('plus_yearly'));
+
+// 購入済み復元（メール入力）
+document.getElementById('restoreBtn').addEventListener('click',async()=>{
+  const email=prompt('購入時のメールアドレスを入力してください');
+  if(!email)return;
+  toast('確認中…','info',1500);
+  try{
+    const r=await fetch(`/api/subscription?email=${encodeURIComponent(email)}`);
+    const d=await r.json();
+    if(d.premium){
+      premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+      setUserPlan(d.plan&&d.plan.tier?d.plan.tier:'premium');
+      UO.classList.remove('visible');
+      toast('プレミアムを復元しました！','success',3000);
+      updateUsage(9999);
+      loadUserData();
+    }else{
+      toast('そのメールでは課金が確認できませんでした','error',3000);
+    }
+  }catch{toast('確認に失敗しました','error',3000)}
+});
+
+// 決済完了後の戻り処理
+async function handleCheckoutReturn(){
+  const params=new URLSearchParams(location.search);
+  const checkout=params.get('checkout');
+  const sessionId=params.get('session_id');
+  if(checkout==='success'&&sessionId){
+    toast('決済を確認しています…','info',2000);
+    try{
+      const r=await fetch(`/api/subscription?session_id=${encodeURIComponent(sessionId)}`);
+      const d=await r.json();
+      if(d.premium&&d.email){
+        premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+        toast('プレミアム登録が完了しました！🎉','success',4000);
+        updateUsage(9999);
+        loadUserData();
+        // プラン階層（premium / premium_plus）を確定させる
+        try{
+          const sr=await fetch(`/api/subscription?email=${encodeURIComponent(d.email)}`);
+          const sd=await sr.json();
+          setUserPlan(sd.plan&&sd.plan.tier?sd.plan.tier:'premium');
+          updateUsage(9999);
+        }catch{setUserPlan('premium')}
+      }else{
+        toast('決済の確認ができませんでした','error',3000);
+      }
+    }catch{}
+    // URLをクリーンにする
+    history.replaceState({},'',location.pathname);
+  }else if(checkout==='cancel'){
+    toast('決済はキャンセルされました','info',2500);
+    history.replaceState({},'',location.pathname);
+  }
+}
+
+// 起動時に残り回数を取得
+async function loadUsage(){
+  // 課金情報があればサーバーで再検証（localStorageを盲信しない）
+  if(premiumEmail){
+    try{
+      const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
+      const d=await r.json();
+      if(d.premium){
+        setUserPlan(d.plan&&d.plan.tier?d.plan.tier:'premium');
+        updateUsage(9999);
+        loadUserData(); // アカウント紐づけデータを読み込み
+        return;
+      }else{
+        // サーバーで課金が確認できない→ローカル情報をクリア
+        premiumEmail='';setUserPlan('free');
+        try{localStorage.removeItem('premiumEmail')}catch{}
+      }
+    }catch{
+      // 通信失敗時はローカル情報を信じて続行
+      updateUsage(9999);
+      loadUserData();
+      return;
+    }
+  }
+  try{const r=await fetch('/api/usage');const d=await r.json();
+    updateUsage(d.explore.remaining,d.explore.limit);
+  }catch{}
+}
+handleCheckoutReturn();
+loadUsage();
+
+draw();
+</script>
+</body>
+</html>
