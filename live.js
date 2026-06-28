@@ -1,85 +1,141 @@
-// api/_wordpool.js
-// ゴルフのお題用の語プール。多様な分野から集めた一般的な名詞。
-// ここから2語をランダムに選ぶことで、AI任せより遥かに高いランダム性を確保する。
+// api/daily.js
+// チャレンジAPI（デイリー & マンスリー両対応）。
+//
+//   GET  /api/daily?period=daily              → 今日の3問
+//   GET  /api/daily?period=monthly            → 今月の3問（距離が遠いお題）
+//   POST {action:"submit", period, puzzle, name, moves, path}  → スコア登録
+//   GET  /api/daily?action=board&period=daily&puzzle=0         → ランキング上位
+//
+// データ構造（Redis）:
+//   STRING "puzzles:{period}:{key}"             お題3問(JSON)をキャッシュ
+//   ZSET   "rank:{period}:{key}:{puzzleIdx}"    member="{name}|{path}" score=手数
+//
+// key は daily なら "2024-06-22"、monthly なら "2024-06"。
+// 同じ期間は全員同じお題になる（キャッシュで固定）。
 
-export const WORD_POOL = [
-  // 自然・天体
-  '海','山','川','森','空','雲','雷','虹','滝','砂漠','氷河','火山','洞窟','星','月','太陽','彗星','銀河','潮','霧',
-  // 動物
-  '象','鯨','蟻','鷹','狼','亀','蛸','蝶','梟','馬','猫','蛙','鮫','駱駝','蜂','蛍','狐','熊','鹿','鰻',
-  // 植物・食物
-  'りんご','稲','竹','苔','薔薇','向日葵','椎茸','人参','蜂蜜','味噌','胡椒','珈琲','葡萄','麦','茄子','西瓜','昆布','山葵','栗','筍',
-  // 工業・道具
-  '鍛造','溶接','歯車','旋盤','鋳型','螺子','溶鉱炉','錆','鋼','鉄塔','滑車','蒸気','配管','工具','釘','鑿','鋸','錨','発電機','潤滑油',
-  // 建築・場所
-  '橋','灯台','城','神社','倉庫','迷路','階段','煙突','井戸','広場','市場','埠頭','地下道','屋根','柱','門','塔','堤防','回廊','地下室',
-  // 乗り物
-  '船','汽車','気球','潜水艦','自転車','馬車','凧','筏','帆船','戦車','宇宙船','貨物','橇','艀','索道',
-  // 芸術・文化
-  '絵本','彫刻','陶器','版画','楽譜','仮面','刺繍','漆','屏風','水墨','舞台','旋律','詩','書道','織物','花火','祭り','人形','茶道','和歌',
-  // 抽象・感情
-  '郷愁','静寂','混沌','均衡','余韻','黄昏','孤独','陶酔','焦燥','憧憬','郷土','記憶','幻影','宿命','調和',
-  // 身体・生活
-  '骨','心臓','睫毛','指紋','寝床','財布','鍵','眼鏡','傘','時計','鏡','枕','箒','蝋燭','硝子',
-  // 気象・季節
-  '吹雪','陽炎','木枯らし','梅雨','霜','稲妻','夕立','薄氷','五月雨','残暑',
-  // 科学・概念
-  '重力','磁石','結晶','化石','遺伝子','原子','化学反応','摩擦','光速','真空','電流','波長','酵素','細胞','螺旋',
-  // 金融・社会
-  '為替','株式','利子','貿易','関税','契約','貨幣','商標','保険','債券',
-  // 楽器・音
-  '太鼓','三味線','風鈴','尺八','琴','鈴','笛','鐘','鼓','銅鑼',
-  // 色・素材
-  '藍','朱','金箔','真珠','琥珀','翡翠','水晶','大理石','黒曜石','象牙',
-];
+import { redis, setCors } from './_redis.js';
+import { randomPair, randomDistantPair, expandWord } from './_wordpool.js';
 
-// ランダムに2語を選んでペアにする（重複なし）
-export function randomPair() {
-  const i = Math.floor(Math.random() * WORD_POOL.length);
-  let j = Math.floor(Math.random() * WORD_POOL.length);
-  while (j === i) j = Math.floor(Math.random() * WORD_POOL.length);
-  return { start: WORD_POOL[i], goal: WORD_POOL[j] };
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+
+function nowJST() {
+  return new Date(Date.now() + 9 * 3600 * 1000);
 }
+function dailyKey() { return nowJST().toISOString().slice(0, 10); }   // YYYY-MM-DD
+function monthlyKey() { return nowJST().toISOString().slice(0, 7); }  // YYYY-MM
 
-// 距離が遠いペア（マンスリー用）：分野インデックスが離れた2語を選ぶ
-export function randomDistantPair() {
-  // プールを前半・後半に分けて、各から1語ずつ選ぶと分野が離れやすい
-  const half = Math.floor(WORD_POOL.length / 2);
-  const i = Math.floor(Math.random() * half);
-  const j = half + Math.floor(Math.random() * (WORD_POOL.length - half));
-  // ランダムに順序を入れ替え
-  return Math.random() < 0.5
-    ? { start: WORD_POOL[i], goal: WORD_POOL[j] }
-    : { start: WORD_POOL[j], goal: WORD_POOL[i] };
-}
-
-// 種となる語からAIで関連語を生成し、その中からランダムに1語選ぶ。
-// プール語そのものではなく派生語をお題にすることで多様性を高める。
-export async function expandWord(seed, anthropicKey) {
+// Haikuでパーを推定
+async function estimatePar(start, goal) {
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
+        'x-api-key': ANTHROPIC_KEY,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
-        temperature: 1,
-        messages: [{ role: 'user', content: `日本語の語「${seed}」から連想される、関連の深い具体的な名詞を8個挙げてください。一般的で誰でも知っている語にしてください。JSON配列のみで返答：["語1","語2",...]` }],
+        max_tokens: 20,
+        messages: [{ role: 'user', content: `日本語のワードゴルフで「${start}」から関連語をたどって「${goal}」に到達するのに必要な手数の目安を整数だけで答えてください。数字のみ。` }],
       }),
     });
     const data = await resp.json();
     const raw = data.content.map(c => c.text || '').join('');
-    const arr = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    if (Array.isArray(arr) && arr.length > 0) {
-      // 種語自身は除外
-      const filtered = arr.filter(w => w !== seed && typeof w === 'string');
-      const pool = filtered.length > 0 ? filtered : arr;
-      return pool[Math.floor(Math.random() * pool.length)];
-    }
+    const n = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+    if (n >= 3 && n <= 14) return n * 3; // 実際は手数がかさむため3倍
   } catch {}
-  return seed; // 失敗時は種語をそのまま使う
+  return null;
+}
+
+// お題生成。語プールからランダムに選ぶ（真のランダム性）。
+async function generatePuzzles(period, key) {
+  const puzzles = [];
+  const diffs = period === 'monthly' ? ['激難', '激難', '激難'] : ['易', '中', '難'];
+  const used = new Set();
+
+  for (let i = 0; i < 3; i++) {
+    // マンスリーは距離の遠いペア、デイリーは通常ペア
+    let seed;
+    let tries = 0;
+    do {
+      seed = period === 'monthly' ? randomDistantPair() : randomPair();
+      tries++;
+    } while ((used.has(seed.start) || used.has(seed.goal)) && tries < 10);
+    used.add(seed.start);
+    used.add(seed.goal);
+
+    // 種語をAIで関連語に展開
+    const [start, goal] = await Promise.all([
+      expandWord(seed.start, ANTHROPIC_KEY),
+      expandWord(seed.goal, ANTHROPIC_KEY),
+    ]);
+
+    // パー推定（失敗時はデフォルト・3倍基準）
+    const par = await estimatePar(start, goal)
+      || (period === 'monthly' ? 21 : 15);
+
+    puzzles.push({ start, goal, par, difficulty: diffs[i] });
+  }
+
+  return { puzzles };
+}
+
+export default async function handler(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // period: "daily"（既定）または "monthly"
+  const period = (req.body?.period || req.query.period) === 'monthly' ? 'monthly' : 'daily';
+  const key = period === 'monthly' ? monthlyKey() : dailyKey();
+  // 失効秒数：デイリー=30時間、マンスリー=35日
+  const ttl = period === 'monthly' ? 3024000 : 108000;
+
+  try {
+    // --- スコア登録 ---
+    if (req.method === 'POST') {
+      const { action, puzzle, name, moves, path } = req.body || {};
+      if (action !== 'submit') return res.status(400).json({ error: 'unknown action' });
+      if (typeof puzzle !== 'number' || typeof moves !== 'number')
+        return res.status(400).json({ error: 'invalid' });
+      const cleanName = (name || '名無し').slice(0, 16);
+      const pathStr = Array.isArray(path) ? path.join('→') : '';
+      const member = `${cleanName}|${pathStr}`;
+      const rankKey = `rank:${period}:${key}:${puzzle}`;
+      await redis('ZADD', rankKey, moves, member);
+      await redis('EXPIRE', rankKey, ttl);
+      return res.status(200).json({ ok: true });
+    }
+
+    // --- ランキング取得 ---
+    if (req.method === 'GET' && req.query.action === 'board') {
+      const puzzle = Number(req.query.puzzle || 0);
+      const rankKey = `rank:${period}:${key}:${puzzle}`;
+      const raw = await redis('ZRANGE', rankKey, 0, 19, 'WITHSCORES');
+      const board = [];
+      for (let i = 0; i < (raw?.length || 0); i += 2) {
+        const [name, pathStr] = String(raw[i]).split('|');
+        board.push({ name, path: pathStr, moves: Number(raw[i + 1]) });
+      }
+      return res.status(200).json({ period, key, puzzle, board });
+    }
+
+    // --- お題取得 ---
+    if (req.method === 'GET') {
+      const cacheKey = `puzzles:${period}:${key}`;
+      let cached = await redis('GET', cacheKey);
+      if (cached) {
+        return res.status(200).json({ period, key, date: key, ...JSON.parse(cached) });
+      }
+      const puzzles = await generatePuzzles(period, key);
+      await redis('SET', cacheKey, JSON.stringify(puzzles));
+      await redis('EXPIRE', cacheKey, ttl);
+      return res.status(200).json({ period, key, date: key, ...puzzles });
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Internal error' });
+  }
 }

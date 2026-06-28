@@ -1,69 +1,115 @@
-// api/userdata.js
-// メールアカウントに紐づくユーザーデータ（ハンドルネーム・プレイ履歴）を保存/取得。
+// api/_ratelimit.js
+// IPベースの日次レートリミッター。Redis INCRで簡潔に実装。
 //
-//   GET  /api/userdata?email=xxx          → { handle, results }
-//   POST { email, handle?, results? }      → 保存（部分更新）
-//
-// データ構造（Redis）:
-//   STRING "userdata:{email}" = JSON {handle, results}
-//
-// メールはプレミアム会員のものを想定。未課金でもメールがあれば保存可能。
+// 使い方: const { ok, remaining } = await checkLimit(req, 'explore', 20);
+//   ok=true: 許可（残りremaining回）
+//   ok=false: 上限到達
 
-import { redis, setCors } from './_redis.js';
+import { redis } from './_redis.js';
 
-function normEmail(e) {
-  return String(e || '').trim().toLowerCase();
+function getIP(req) {
+  // Vercelでは x-forwarded-for にクライアントIPが入る
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) return xff.split(',')[0].trim();
+  return req.headers['x-real-ip'] || 'unknown';
 }
 
-export default async function handler(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
+function todayKey() {
+  // JST基準
+  const now = new Date(Date.now() + 9 * 3600 * 1000);
+  return now.toISOString().slice(0, 10);
+}
+
+// 課金済みユーザーか確認（リクエストのpremium_emailヘッダー or bodyで判定）
+async function isPremium(req) {
+  // フロントが課金者のメールを送ってくる（x-premium-email ヘッダー）
+  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
+  if (!email) return false;
+  try {
+    const sub = await redis('GET', `premium:${email}`);
+    return !!sub;
+  } catch {
+    return false;
+  }
+}
+
+// プラン階層を取得: 'free' | 'premium' | 'premium_plus'
+export async function getPlan(req) {
+  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
+  if (!email) return 'free';
+  try {
+    // "plan:{email}" に階層を保存（premium / premium_plus）。なければ premium:{email} の有無で判定。
+    const tier = await redis('GET', `plan:${email}`);
+    if (tier === 'premium_plus' || tier === 'premium') return tier;
+    const sub = await redis('GET', `premium:${email}`);
+    return sub ? 'premium' : 'free';
+  } catch {
+    return 'free';
+  }
+}
+
+// クレジット残高を取得
+export async function getCredits(req) {
+  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
+  if (!email) return { email: '', credits: 0 };
+  try {
+    const c = parseInt(await redis('GET', `credits:${email}`), 10) || 0;
+    return { email, credits: c };
+  } catch {
+    return { email, credits: 0 };
+  }
+}
+
+// クレジットを消費（残高があれば true）
+export async function consumeCredits(email, amount) {
+  if (!email) return false;
+  try {
+    const c = parseInt(await redis('GET', `credits:${email}`), 10) || 0;
+    if (c < amount) return false;
+    await redis('DECRBY', `credits:${email}`, amount);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function checkLimit(req, action, limit) {
+  // 課金済みなら無制限
+  if (await isPremium(req)) {
+    return { ok: true, remaining: 9999, used: 0, premium: true };
+  }
+
+  const ip = getIP(req);
+  const key = `limit:${action}:${ip}:${todayKey()}`;
 
   try {
-    // --- 取得 ---
-    if (req.method === 'GET') {
-      const email = normEmail(req.query.email);
-      if (!email) return res.status(400).json({ error: 'email required' });
-      let raw = null;
-      try { raw = await redis('GET', `userdata:${email}`); } catch {}
-      const data = raw ? JSON.parse(raw) : { handle: '', results: {} };
-      return res.status(200).json(data);
+    const count = await redis('INCR', key);
+
+    // 初回なら24時間TTLを設定
+    if (count === 1) {
+      await redis('EXPIRE', key, 86400);
     }
 
-    // --- 保存（部分更新） ---
-    if (req.method === 'POST') {
-      const { email, handle, results } = req.body || {};
-      const e = normEmail(email);
-      if (!e) return res.status(400).json({ error: 'email required' });
-
-      // 既存データを読み込んでマージ
-      let cur = { handle: '', results: {} };
-      try {
-        const raw = await redis('GET', `userdata:${e}`);
-        if (raw) cur = JSON.parse(raw);
-      } catch {}
-
-      if (typeof handle === 'string') cur.handle = handle.slice(0, 16);
-      if (results && typeof results === 'object') {
-        // 既存の記録とマージ（新しい記録を優先）
-        cur.results = { ...cur.results, ...results };
-        // 上限200件（古いものから削除）
-        const keys = Object.keys(cur.results);
-        if (keys.length > 200) {
-          keys.slice(0, keys.length - 200).forEach(k => delete cur.results[k]);
-        }
-      }
-
-      await redis('SET', `userdata:${e}`, JSON.stringify(cur));
-      // 1年保持
-      await redis('EXPIRE', `userdata:${e}`, 31536000);
-
-      return res.status(200).json({ ok: true });
+    if (count > limit) {
+      return { ok: false, remaining: 0, used: count };
     }
 
-    return res.status(405).json({ error: 'Method not allowed' });
+    return { ok: true, remaining: limit - count, used: count };
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'Internal error' });
+    // Redis障害時は通す（サービス停止よりマシ）
+    console.error('Rate limit error:', err);
+    return { ok: true, remaining: -1, used: 0 };
+  }
+}
+
+// 現在の使用量を取得（INCRせずに確認だけ）
+export async function getUsage(req, action) {
+  const ip = getIP(req);
+  const key = `limit:${action}:${ip}:${todayKey()}`;
+  try {
+    const count = await redis('GET', key);
+    return Number(count) || 0;
+  } catch {
+    return 0;
   }
 }

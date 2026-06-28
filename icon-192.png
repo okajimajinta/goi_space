@@ -1,1 +1,64 @@
-google.com, pub-9246118623869056, DIRECT, f08c47fec0942fa0
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プライバシーポリシー — 語彙空間</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080C18; color: #D4DCF0; font-family: 'Inter', 'Noto Serif JP', sans-serif; line-height: 1.8; }
+  header { padding: 20px 40px; border-bottom: 1px solid #1E2840; display: flex; align-items: center; gap: 20px; }
+  .logo { font-family: 'Noto Serif JP', serif; font-size: 16px; font-weight: 600; color: #F5A623; text-decoration: none; }
+  main { max-width: 720px; margin: 60px auto; padding: 0 24px 80px; }
+  h1 { font-family: 'Noto Serif JP', serif; font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+  .updated { font-size: 12px; color: #5B6A8A; margin-bottom: 48px; }
+  h2 { font-family: 'Noto Serif JP', serif; font-size: 16px; font-weight: 600; color: #F5A623; margin: 36px 0 12px; }
+  p { font-size: 14px; color: #A0AECF; margin-bottom: 12px; }
+  a { color: #5B8FDE; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/">語彙空間</a>
+</header>
+<main>
+  <h1>プライバシーポリシー</h1>
+  <!-- ★ 公開日を実際の日付に書き換えてください -->
+  <p class="updated">最終更新日：2026年6月27日</p>
+
+  <h2>1. 基本方針</h2>
+  <p>語彙空間（以下「本サービス」）は、ユーザーの個人情報保護を重要事項と考え、適切に管理・保護します。</p>
+
+  <h2>2. 収集する情報</h2>
+  <p>本サービスでは、以下の情報を収集する場合があります：</p>
+  <p>・アクセスログ（IPアドレス、ブラウザの種類、アクセス日時など）<br>
+  ・Cookie情報（広告配信・アクセス解析のため）<br>
+  ・ユーザーが入力した検索語（APIへのリクエスト目的のみ。サーバーに保存しません）</p>
+
+  <h2>3. 情報の利用目的</h2>
+  <p>収集した情報は以下の目的で使用します：</p>
+  <p>・サービスの提供・改善<br>
+  ・アクセス解析（Google Analytics）<br>
+  ・広告配信（Google AdSense）</p>
+
+  <h2>4. Cookieについて</h2>
+  <p>本サービスでは、Google AdSense・Google Analyticsなどの第三者配信事業者がCookieを使用することがあります。Cookieの使用を希望されない場合は、ブラウザの設定で無効にできます。</p>
+  <p>Googleによる広告配信の詳細は、<a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">Googleの広告ポリシー</a>をご参照ください。</p>
+
+  <h2>5. 第三者へのデータ提供</h2>
+  <p>法令に基づく場合を除き、ユーザーの個人情報を第三者に提供することはありません。</p>
+
+  <h2>6. Google AdSenseについて</h2>
+  <p>本サービスはGoogle AdSenseを利用した広告を掲載しています。広告配信にあたり、Googleとその提携企業がCookieを使用してユーザーに適切な広告を表示します。ユーザーは<a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Googleの広告設定ページ</a>でパーソナライズ広告を無効にできます。</p>
+
+  <h2>7. プライバシーポリシーの変更</h2>
+  <p>本ポリシーは必要に応じて改訂することがあります。改訂後のポリシーはこのページに掲載します。</p>
+
+  <h2>8. お問い合わせ</h2>
+  <!-- ★ メールアドレスを自分のものに書き換えてください -->
+  <p>プライバシーポリシーに関するお問い合わせは <a href="mailto:girlsvibesproject@gmail.com">girlsvibesproject@gmail.com</a> までご連絡ください。</p>
+</main>
+</body>
+</html>

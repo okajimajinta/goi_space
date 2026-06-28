@@ -1,139 +1,149 @@
-// api/daily.js
-// チャレンジAPI（デイリー & マンスリー両対応）。
+// api/subscription.js
+// 課金状態の確認と、チェックアウト完了の検証。
 //
-//   GET  /api/daily?period=daily              → 今日の3問
-//   GET  /api/daily?period=monthly            → 今月の3問（距離が遠いお題）
-//   POST {action:"submit", period, puzzle, name, moves, path}  → スコア登録
-//   GET  /api/daily?action=board&period=daily&puzzle=0         → ランキング上位
+//   GET  /api/subscription?session_id=cs_xxx   → セッションから課金確認＆メール保存
+//   GET  /api/subscription?email=xxx           → そのメールが課金済みか確認
 //
-// データ構造（Redis）:
-//   STRING "puzzles:{period}:{key}"             お題3問(JSON)をキャッシュ
-//   ZSET   "rank:{period}:{key}:{puzzleIdx}"    member="{name}|{path}" score=手数
+// 課金済みのメールは Redis に保存（"premium:{email}" = サブスクID, TTL 35日）。
+// Stripe Webhookを使わない簡易版。決済成功画面の戻りで検証する。
 //
-// key は daily なら "2024-06-22"、monthly なら "2024-06"。
-// 同じ期間は全員同じお題になる（キャッシュで固定）。
+// 必要な環境変数:
+//   STRIPE_SECRET_KEY … Stripeのシークレットキー
 
 import { redis, setCors } from './_redis.js';
-import { randomPair, randomDistantPair, expandWord } from './_wordpool.js';
 
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 
-function nowJST() {
-  return new Date(Date.now() + 9 * 3600 * 1000);
-}
-function dailyKey() { return nowJST().toISOString().slice(0, 10); }   // YYYY-MM-DD
-function monthlyKey() { return nowJST().toISOString().slice(0, 7); }  // YYYY-MM
-
-// Haikuでパーを推定
-async function estimatePar(start, goal) {
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 20,
-        messages: [{ role: 'user', content: `日本語のワードゴルフで「${start}」から関連語をたどって「${goal}」に到達するのに必要な手数の目安を整数だけで答えてください。数字のみ。` }],
-      }),
-    });
-    const data = await resp.json();
-    const raw = data.content.map(c => c.text || '').join('');
-    const n = parseInt(raw.replace(/[^0-9]/g, ''), 10);
-    if (n >= 3 && n <= 14) return n * 3; // 実際は手数がかさむため3倍
-  } catch {}
-  return null;
+async function stripeGet(path) {
+  const resp = await fetch(`https://api.stripe.com/v1/${path}`, {
+    headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` },
+  });
+  return resp.json();
 }
 
-// お題生成。語プールからランダムに選ぶ（真のランダム性）。
-async function generatePuzzles(period, key) {
-  const puzzles = [];
-  const diffs = period === 'monthly' ? ['激難', '激難', '激難'] : ['易', '中', '難'];
-  const used = new Set();
-
-  for (let i = 0; i < 3; i++) {
-    // マンスリーは距離の遠いペア、デイリーは通常ペア
-    let seed;
-    let tries = 0;
-    do {
-      seed = period === 'monthly' ? randomDistantPair() : randomPair();
-      tries++;
-    } while ((used.has(seed.start) || used.has(seed.goal)) && tries < 10);
-    used.add(seed.start);
-    used.add(seed.goal);
-
-    // 種語をAIで関連語に展開
-    const [start, goal] = await Promise.all([
-      expandWord(seed.start, ANTHROPIC_KEY),
-      expandWord(seed.goal, ANTHROPIC_KEY),
-    ]);
-
-    // パー推定（失敗時はデフォルト・3倍基準）
-    const par = await estimatePar(start, goal)
-      || (period === 'monthly' ? 21 : 15);
-
-    puzzles.push({ start, goal, par, difficulty: diffs[i] });
-  }
-
-  return { puzzles };
+function normEmail(e) {
+  return String(e || '').trim().toLowerCase();
 }
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  // period: "daily"（既定）または "monthly"
-  const period = (req.body?.period || req.query.period) === 'monthly' ? 'monthly' : 'daily';
-  const key = period === 'monthly' ? monthlyKey() : dailyKey();
-  // 失効秒数：デイリー=30時間、マンスリー=35日
-  const ttl = period === 'monthly' ? 3024000 : 108000;
+  if (!STRIPE_SECRET) return res.status(500).json({ error: 'Stripe未設定です' });
 
   try {
-    // --- スコア登録 ---
-    if (req.method === 'POST') {
-      const { action, puzzle, name, moves, path } = req.body || {};
-      if (action !== 'submit') return res.status(400).json({ error: 'unknown action' });
-      if (typeof puzzle !== 'number' || typeof moves !== 'number')
-        return res.status(400).json({ error: 'invalid' });
-      const cleanName = (name || '名無し').slice(0, 16);
-      const pathStr = Array.isArray(path) ? path.join('→') : '';
-      const member = `${cleanName}|${pathStr}`;
-      const rankKey = `rank:${period}:${key}:${puzzle}`;
-      await redis('ZADD', rankKey, moves, member);
-      await redis('EXPIRE', rankKey, ttl);
-      return res.status(200).json({ ok: true });
-    }
+    // --- チェックアウト完了の検証 ---
+    if (req.query.session_id) {
+      const session = await stripeGet(`checkout/sessions/${req.query.session_id}`);
+      if (session.error) return res.status(400).json({ premium: false });
 
-    // --- ランキング取得 ---
-    if (req.method === 'GET' && req.query.action === 'board') {
-      const puzzle = Number(req.query.puzzle || 0);
-      const rankKey = `rank:${period}:${key}:${puzzle}`;
-      const raw = await redis('ZRANGE', rankKey, 0, 19, 'WITHSCORES');
-      const board = [];
-      for (let i = 0; i < (raw?.length || 0); i += 2) {
-        const [name, pathStr] = String(raw[i]).split('|');
-        board.push({ name, path: pathStr, moves: Number(raw[i + 1]) });
+      const paid = session.payment_status === 'paid' || session.status === 'complete';
+      const email = normEmail(session.customer_details?.email || session.customer_email);
+
+      if (paid && email) {
+        // クレジットパック購入の場合：残高に加算（重複加算防止つき）
+        const creditPlan = session.metadata?.credit_plan;
+        if (creditPlan) {
+          const CREDIT_AMOUNTS = { credits_small: 100, credits_large: 300 };
+          const add = CREDIT_AMOUNTS[creditPlan] || 0;
+          // 同一セッションの二重付与を防ぐ
+          const guardKey = `credited:${session.id}`;
+          let already = null;
+          try { already = await redis('GET', guardKey); } catch {}
+          if (!already && add > 0) {
+            try {
+              await redis('INCRBY', `credits:${email}`, add);
+              await redis('SET', guardKey, '1');
+              await redis('EXPIRE', guardKey, 7776000); // 90日
+            } catch {}
+          }
+          let bal = 0;
+          try { bal = parseInt(await redis('GET', `credits:${email}`), 10) || 0; } catch {}
+          return res.status(200).json({ credits: bal, email, creditPurchase: true });
+        }
+
+        // サブスク（プレミアム / プレミアム+）
+        await redis('SET', `premium:${email}`, session.subscription || 'active');
+        await redis('EXPIRE', `premium:${email}`, 3024000);
+        return res.status(200).json({ premium: true, email });
       }
-      return res.status(200).json({ period, key, puzzle, board });
+      return res.status(200).json({ premium: false });
     }
 
-    // --- お題取得 ---
-    if (req.method === 'GET') {
-      const cacheKey = `puzzles:${period}:${key}`;
-      let cached = await redis('GET', cacheKey);
-      if (cached) {
-        return res.status(200).json({ period, key, date: key, ...JSON.parse(cached) });
+    // --- メールで課金状態を確認（プラン詳細つき） ---
+    if (req.query.email) {
+      const email = normEmail(req.query.email);
+
+      // セキュリティ強化：Redisキャッシュだけでなく、Stripeに実在の支払い顧客が
+      // いるかを必ず照合する（ランダムなメール入力での復元を防ぐ）。
+      let customer = null;
+      try {
+        const search = await fetch(
+          `https://api.stripe.com/v1/customers?email=${encodeURIComponent(email)}&limit=1`,
+          { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
+        ).then(r => r.json());
+        customer = search.data && search.data[0];
+      } catch {}
+
+      if (!customer) {
+        // Stripeに該当顧客が存在しない＝復元不可
+        return res.status(200).json({ premium: false, email, verified: false });
       }
-      const puzzles = await generatePuzzles(period, key);
-      await redis('SET', cacheKey, JSON.stringify(puzzles));
-      await redis('EXPIRE', cacheKey, ttl);
-      return res.status(200).json({ period, key, date: key, ...puzzles });
+
+      // 顧客が支払い済みか（サブスク or 過去の支払い）を確認
+      let hasPayment = false;
+      let plan = null;
+      try {
+        const subs = await fetch(
+          `https://api.stripe.com/v1/subscriptions?customer=${customer.id}&status=active&limit=1`,
+          { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
+        ).then(r => r.json());
+        const s = subs.data && subs.data[0];
+        if (s) {
+          hasPayment = true;
+          const item = s.items.data[0];
+          const interval = item.price.recurring?.interval;
+          const amount = item.price.unit_amount;
+          const priceId = item.price.id;
+          const PLUS_PRICES = [
+            process.env.STRIPE_PRICE_PLUS_MONTHLY,
+            process.env.STRIPE_PRICE_PLUS_YEARLY,
+          ].filter(Boolean);
+          const tier = PLUS_PRICES.includes(priceId) ? 'premium_plus' : 'premium';
+          plan = {
+            interval, amount, tier,
+            label: (tier === 'premium_plus' ? 'プレミアム+ ' : '') + (interval === 'year' ? '年額プラン' : '月額プラン'),
+            startedAt: s.start_date || s.created,
+            renewsAt: s.current_period_end,
+            cancelAtEnd: s.cancel_at_period_end,
+          };
+          try {
+            await redis('SET', `premium:${email}`, s.id);
+            await redis('EXPIRE', `premium:${email}`, 3024000);
+            await redis('SET', `plan:${email}`, tier);
+            await redis('EXPIRE', `plan:${email}`, 3024000);
+          } catch {}
+        }
+      } catch {}
+
+      // サブスクが無くても、過去にクレジット購入（支払い）があれば復元可
+      if (!hasPayment) {
+        try {
+          const pays = await fetch(
+            `https://api.stripe.com/v1/payment_intents?customer=${customer.id}&limit=1`,
+            { headers: { 'Authorization': `Bearer ${STRIPE_SECRET}` } }
+          ).then(r => r.json());
+          if (pays.data && pays.data.some(p => p.status === 'succeeded')) hasPayment = true;
+        } catch {}
+      }
+
+      if (!hasPayment) {
+        return res.status(200).json({ premium: false, email, verified: true });
+      }
+
+      return res.status(200).json({ premium: !!plan, email, plan, verified: true });
     }
 
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(400).json({ error: 'session_id または email が必要です' });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Internal error' });

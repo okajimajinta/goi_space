@@ -1,64 +1,67 @@
-// api/portal.js
-// Stripe Customer Portal（顧客管理画面）へのリンクを発行する。
-// 解約・プラン変更・支払い方法更新・請求履歴がすべてここで行える。
+// api/userdata.js
+// メールアカウントに紐づくユーザーデータ（ハンドルネーム・プレイ履歴）を保存/取得。
 //
-// POST { email }  → { url: "https://billing.stripe.com/..." }
+//   GET  /api/userdata?email=xxx          → { handle, results }
+//   POST { email, handle?, results? }      → 保存（部分更新）
 //
-// 必要な環境変数:
-//   STRIPE_SECRET_KEY … Stripeのシークレットキー
-//   SITE_URL          … 戻り先URL（例: https://goispace.app）
+// データ構造（Redis）:
+//   STRING "userdata:{email}" = JSON {handle, results}
+//
+// メールはプレミアム会員のものを想定。未課金でもメールがあれば保存可能。
 
-import { setCors } from './_redis.js';
+import { redis, setCors } from './_redis.js';
 
-const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
-const SITE_URL = process.env.SITE_URL || 'https://goispace.app';
-
-async function stripeRequest(path, params, method = 'POST') {
-  const opts = {
-    method,
-    headers: {
-      'Authorization': `Bearer ${STRIPE_SECRET}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-  };
-  if (params) opts.body = new URLSearchParams(params).toString();
-  const resp = await fetch(`https://api.stripe.com/v1/${path}`, opts);
-  return resp.json();
+function normEmail(e) {
+  return String(e || '').trim().toLowerCase();
 }
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!STRIPE_SECRET) return res.status(500).json({ error: 'Stripe未設定です' });
-
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  if (!email) return res.status(400).json({ error: 'メールが必要です' });
 
   try {
-    // メールからStripeの顧客を取得（list は search と違い即時反映される）
-    const list = await stripeRequest(
-      `customers?email=${encodeURIComponent(email)}&limit=1`,
-      null, 'GET'
-    );
-
-    const customer = list.data && list.data[0];
-    if (!customer) {
-      return res.status(404).json({ error: 'このメールの購入記録が見つかりません' });
+    // --- 取得 ---
+    if (req.method === 'GET') {
+      const email = normEmail(req.query.email);
+      if (!email) return res.status(400).json({ error: 'email required' });
+      let raw = null;
+      try { raw = await redis('GET', `userdata:${email}`); } catch {}
+      const data = raw ? JSON.parse(raw) : { handle: '', results: {} };
+      return res.status(200).json(data);
     }
 
-    // Customer Portal セッション作成
-    const session = await stripeRequest('billing_portal/sessions', {
-      'customer': customer.id,
-      'return_url': SITE_URL,
-    });
+    // --- 保存（部分更新） ---
+    if (req.method === 'POST') {
+      const { email, handle, results } = req.body || {};
+      const e = normEmail(email);
+      if (!e) return res.status(400).json({ error: 'email required' });
 
-    if (session.error) {
-      console.error(session.error);
-      return res.status(400).json({ error: session.error.message });
+      // 既存データを読み込んでマージ
+      let cur = { handle: '', results: {} };
+      try {
+        const raw = await redis('GET', `userdata:${e}`);
+        if (raw) cur = JSON.parse(raw);
+      } catch {}
+
+      if (typeof handle === 'string') cur.handle = handle.slice(0, 16);
+      if (results && typeof results === 'object') {
+        // 既存の記録とマージ（新しい記録を優先）
+        cur.results = { ...cur.results, ...results };
+        // 上限200件（古いものから削除）
+        const keys = Object.keys(cur.results);
+        if (keys.length > 200) {
+          keys.slice(0, keys.length - 200).forEach(k => delete cur.results[k]);
+        }
+      }
+
+      await redis('SET', `userdata:${e}`, JSON.stringify(cur));
+      // 1年保持
+      await redis('EXPIRE', `userdata:${e}`, 31536000);
+
+      return res.status(200).json({ ok: true });
     }
 
-    return res.status(200).json({ url: session.url });
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Internal error' });
