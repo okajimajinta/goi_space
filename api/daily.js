@@ -94,7 +94,7 @@ export default async function handler(req, res) {
   try {
     // --- スコア登録 ---
     if (req.method === 'POST') {
-      const { action, puzzle, name, moves, path } = req.body || {};
+      const { action, puzzle, name, moves, path, email } = req.body || {};
       if (action !== 'submit') return res.status(400).json({ error: 'unknown action' });
       if (typeof puzzle !== 'number' || typeof moves !== 'number')
         return res.status(400).json({ error: 'invalid' });
@@ -104,7 +104,27 @@ export default async function handler(req, res) {
       const rankKey = `rank:${period}:${key}:${puzzle}`;
       await redis('ZADD', rankKey, moves, member);
       await redis('EXPIRE', rankKey, ttl);
-      return res.status(200).json({ ok: true });
+
+      // チャレンジクリアで無償クレジット付与（メールがあれば、1問1回まで）
+      let creditsGranted = 0;
+      let creditsTotal = null;
+      const em = String(email || '').trim().toLowerCase();
+      if (em) {
+        const grantKey = `reward:${em}:${period}:${key}:${puzzle}`;
+        let already = null;
+        try { already = await redis('GET', grantKey); } catch {}
+        if (!already) {
+          const amount = period === 'monthly' ? 20 : 5; // デイリー5・マンスリー20
+          try {
+            await redis('SET', grantKey, '1');
+            await redis('EXPIRE', grantKey, 31536000); // 1年
+            creditsTotal = await redis('INCRBY', `credits:${em}`, amount);
+            creditsGranted = amount;
+          } catch {}
+        }
+      }
+
+      return res.status(200).json({ ok: true, creditsGranted, credits: creditsTotal });
     }
 
     // --- ランキング取得 ---

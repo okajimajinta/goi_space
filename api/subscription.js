@@ -25,6 +25,29 @@ function normEmail(e) {
   return String(e || '').trim().toLowerCase();
 }
 
+// リカバリーコード生成（例: GOI-7K2M-9XQ4）。紛らわしい文字を除外。
+function genRecoveryCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I,O,0,1 を除外
+  const block = n => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `GOI-${block(4)}-${block(4)}`;
+}
+
+// メールのリカバリーコードを取得（なければ生成して保存）
+async function ensureRecoveryCode(email) {
+  try {
+    let code = await redis('GET', `recovery:${email}`);
+    if (!code) {
+      code = genRecoveryCode();
+      await redis('SET', `recovery:${email}`, code);
+      // 期限は長め（5年）
+      await redis('EXPIRE', `recovery:${email}`, 157680000);
+    }
+    return code;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -58,13 +81,15 @@ export default async function handler(req, res) {
           }
           let bal = 0;
           try { bal = parseInt(await redis('GET', `credits:${email}`), 10) || 0; } catch {}
-          return res.status(200).json({ credits: bal, email, creditPurchase: true });
+          const recoveryCode = await ensureRecoveryCode(email);
+          return res.status(200).json({ credits: bal, email, creditPurchase: true, recoveryCode });
         }
 
         // サブスク（プレミアム / プレミアム+）
         await redis('SET', `premium:${email}`, session.subscription || 'active');
         await redis('EXPIRE', `premium:${email}`, 3024000);
-        return res.status(200).json({ premium: true, email });
+        const recoveryCode = await ensureRecoveryCode(email);
+        return res.status(200).json({ premium: true, email, recoveryCode });
       }
       return res.status(200).json({ premium: false });
     }
@@ -72,6 +97,19 @@ export default async function handler(req, res) {
     // --- メールで課金状態を確認（プラン詳細つき） ---
     if (req.query.email) {
       const email = normEmail(req.query.email);
+      const code = String(req.query.code || '').trim().toUpperCase();
+      // restore=1 のときだけ復元コードを厳格に要求（新しい端末での復元）。
+      // 既ログイン端末の定期再検証では要求しない（誤ログアウト防止）。
+      const isRestore = req.query.restore === '1';
+
+      // リカバリーコード照合（不正ログイン対策・復元時のみ）
+      let storedCode = null;
+      try { storedCode = await redis('GET', `recovery:${email}`); } catch {}
+      if (isRestore && storedCode) {
+        if (!code || code !== storedCode) {
+          return res.status(200).json({ premium: false, email, needCode: true, codeError: !!code });
+        }
+      }
 
       // セキュリティ強化：Redisキャッシュだけでなく、Stripeに実在の支払い顧客が
       // いるかを必ず照合する（ランダムなメール入力での復元を防ぐ）。
@@ -140,7 +178,10 @@ export default async function handler(req, res) {
         return res.status(200).json({ premium: false, email, verified: true });
       }
 
-      return res.status(200).json({ premium: !!plan, email, plan, verified: true });
+      // 既存ユーザーでコード未発行なら、ここで発行して返す（次回以降の保護）
+      const recoveryCode = await ensureRecoveryCode(email);
+      const newlyIssued = !storedCode; // 今回初めて発行された場合
+      return res.status(200).json({ premium: !!plan, email, plan, verified: true, recoveryCode, newlyIssued });
     }
 
     return res.status(400).json({ error: 'session_id または email が必要です' });

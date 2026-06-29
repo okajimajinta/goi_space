@@ -59,13 +59,15 @@ export default async function handler(req, res) {
 
   const isSubscriber = plan === 'premium' || plan === 'premium_plus';
   const hasCredits = credits > 0;
-  // 高速モード：永久プレミアム+、またはクレジット残高あり（月額会員でもクレジットがあれば高速）
-  const fastMode = plan === 'premium_plus' || hasCredits;
+  // 月額プレミアム会員が先読み未完了ノードをクリックした際の高速生成要求
+  const fastFallback = req.body?.fastFallback === true && plan === 'premium';
+  // 高速モード：永久プレミアム+、クレジット残高あり、または月額会員の高速フォールバック
+  const fastMode = plan === 'premium_plus' || hasCredits || fastFallback;
   // クレジット消費対象：高速だが永久プレミアム+ではない（=クレジットで高速化している）
   const usesCredit = hasCredits && plan !== 'premium_plus';
 
-  // キャッシュ（高速モードは別キャッシュ）
-  const cacheKey = fastMode ? `vocabfast:${word}` : `vocab:${word}`;
+  // キャッシュ（高速モードは別キャッシュ）。フォールバックは標準キャッシュも参照
+  const cacheKey = (fastMode && !fastFallback) ? `vocabfast:${word}` : `vocab:${word}`;
   let cached = null;
   try { cached = await redis('GET', cacheKey); } catch {}
   if (cached) {
@@ -214,7 +216,8 @@ export default async function handler(req, res) {
     }
 
     // キャッシュ保存（実際に使ったモードのキーに保存）
-    const saveKey = effectiveFast ? `vocabfast:${word}` : `vocab:${word}`;
+    // フォールバックは「月額会員の標準枠」なので標準キャッシュに保存（先読み資産として共有）
+    const saveKey = (effectiveFast && !fastFallback) ? `vocabfast:${word}` : `vocab:${word}`;
     try {
       await redis('SET', saveKey, JSON.stringify(parsed));
       await redis('EXPIRE', saveKey, 86400);

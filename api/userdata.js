@@ -37,25 +37,26 @@ export default async function handler(req, res) {
       if (!e) return res.status(400).json({ error: 'email required' });
 
       // 既存データを読み込んでマージ
-      let cur = { handle: '', results: {} };
+      let cur = { handle: '', results: {}, routeHistory: [] };
       try {
         const raw = await redis('GET', `userdata:${e}`);
-        if (raw) cur = JSON.parse(raw);
+        if (raw) cur = { handle: '', results: {}, routeHistory: [], ...JSON.parse(raw) };
       } catch {}
 
       if (typeof handle === 'string') cur.handle = handle.slice(0, 16);
       if (results && typeof results === 'object') {
-        // 既存の記録とマージ（新しい記録を優先）
         cur.results = { ...cur.results, ...results };
-        // 上限200件（古いものから削除）
         const keys = Object.keys(cur.results);
         if (keys.length > 200) {
           keys.slice(0, keys.length - 200).forEach(k => delete cur.results[k]);
         }
       }
+      // 経路実績（クライアントが管理する全体配列で上書き。最大500件）
+      if (Array.isArray(req.body.routeHistory)) {
+        cur.routeHistory = req.body.routeHistory.slice(-500);
+      }
 
       await redis('SET', `userdata:${e}`, JSON.stringify(cur));
-      // 1年保持
       await redis('EXPIRE', `userdata:${e}`, 31536000);
 
       return res.status(200).json({ ok: true });
