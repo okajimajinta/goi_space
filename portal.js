@@ -1,115 +1,92 @@
-// api/_ratelimit.js
-// IPベースの日次レートリミッター。Redis INCRで簡潔に実装。
+// api/compass.js
+// 知的コンパス：ユーザーの興味（語群）から、文化的に離れた推奨領域と
+// それを取り入れることで生まれる価値を提案する。
 //
-// 使い方: const { ok, remaining } = await checkLimit(req, 'explore', 20);
-//   ok=true: 許可（残りremaining回）
-//   ok=false: 上限到達
+//   POST { interests:[...] }
+//     → {
+//         center: "興味の重心の言葉",
+//         summary: "あなたの興味の傾向",
+//         recommendations: [
+//           { domain, distance(1-10), angle(0-360), reason, value }
+//         ]
+//       }
+//
+// distance: 文化的距離（1=隣接, 10=対極）
+// angle:    方位（地図配置用・0-360度）
 
-import { redis } from './_redis.js';
+import { setCors } from './_redis.js';
 
-function getIP(req) {
-  // Vercelでは x-forwarded-for にクライアントIPが入る
-  const xff = req.headers['x-forwarded-for'];
-  if (xff) return xff.split(',')[0].trim();
-  return req.headers['x-real-ip'] || 'unknown';
-}
+export default async function handler(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-function todayKey() {
-  // JST基準
-  const now = new Date(Date.now() + 9 * 3600 * 1000);
-  return now.toISOString().slice(0, 10);
-}
+  let { interests } = req.body || {};
+  if (!Array.isArray(interests)) interests = [];
+  interests = interests.map(w => String(w || '').slice(0, 50)).filter(Boolean).slice(0, 30);
+  if (interests.length === 0) return res.status(400).json({ error: 'interests required' });
 
-// 課金済みユーザーか確認（リクエストのpremium_emailヘッダー or bodyで判定）
-async function isPremium(req) {
-  // フロントが課金者のメールを送ってくる（x-premium-email ヘッダー）
-  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
-  if (!email) return false;
-  try {
-    const sub = await redis('GET', `premium:${email}`);
-    return !!sub;
-  } catch {
-    return false;
-  }
-}
+  const list = interests.join('、');
+  const prompt = `あなたは知的な探求を導く「知的コンパス」です。あるユーザーが次の言葉に興味を持っています：
+${list}
 
-// プラン階層を取得: 'free' | 'premium' | 'premium_plus'
-export async function getPlan(req) {
-  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
-  if (!email) return 'free';
-  try {
-    // "plan:{email}" に階層を保存（premium / premium_plus）。なければ premium:{email} の有無で判定。
-    const tier = await redis('GET', `plan:${email}`);
-    if (tier === 'premium_plus' || tier === 'premium') return tier;
-    const sub = await redis('GET', `premium:${email}`);
-    return sub ? 'premium' : 'free';
-  } catch {
-    return 'free';
-  }
-}
+このユーザーの興味の傾向を分析し、そこから「文化的・知的に離れた領域」を5つ提案してください。それぞれ、その領域を取り入れることでユーザーに生まれる価値（新しい視点・創造性・意外な繋がり）を述べてください。
 
-// クレジット残高を取得
-export async function getCredits(req) {
-  const email = (req.headers['x-premium-email'] || req.body?.premiumEmail || '').toString().trim().toLowerCase();
-  if (!email) return { email: '', credits: 0 };
-  try {
-    const c = parseInt(await redis('GET', `credits:${email}`), 10) || 0;
-    return { email, credits: c };
-  } catch {
-    return { email, credits: 0 };
-  }
-}
+重要な観点：
+- 単に無関係な領域ではなく、「離れているが繋がると豊かさが生まれる」領域を選ぶ
+- 文化的距離が近いもの（応用・隣接分野）から遠いもの（全く異質な文化・思考様式）まで幅を持たせる
+- 各領域に文化的距離(1=隣接〜10=対極)と、地図上の方位(0-360度、互いに散らばるように)を割り当てる
 
-// クレジットを消費（残高があれば true）
-export async function consumeCredits(email, amount) {
-  if (!email) return false;
-  try {
-    const c = parseInt(await redis('GET', `credits:${email}`), 10) || 0;
-    if (c < amount) return false;
-    await redis('DECRBY', `credits:${email}`, amount);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function checkLimit(req, action, limit) {
-  // 課金済みなら無制限
-  if (await isPremium(req)) {
-    return { ok: true, remaining: 9999, used: 0, premium: true };
-  }
-
-  const ip = getIP(req);
-  const key = `limit:${action}:${ip}:${todayKey()}`;
+次のJSON形式のみで出力してください（前後の説明文は不要）：
+{
+  "center": "ユーザーの興味を最も象徴する一語",
+  "summary": "興味の傾向を40字以内で要約",
+  "recommendations": [
+    {"domain": "領域名（短く）", "distance": 数値, "angle": 数値, "reason": "なぜ離れているか30字以内", "value": "取り入れると生まれる価値50字以内"}
+  ]
+}`;
 
   try {
-    const count = await redis('INCR', key);
-
-    // 初回なら24時間TTLを設定
-    if (count === 1) {
-      await redis('EXPIRE', key, 86400);
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const data = await resp.json();
+    if (!data.content || !Array.isArray(data.content)) {
+      return res.status(502).json({ error: 'AI応答が不正です' });
     }
+    let raw = data.content.map(c => c.text || '').join('');
+    const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+    if (s >= 0 && e > s) raw = raw.slice(s, e + 1);
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch { return res.status(502).json({ error: 'AI応答の解析に失敗しました' }); }
 
-    if (count > limit) {
-      return { ok: false, remaining: 0, used: count };
-    }
+    // 正規化
+    const recs = (parsed.recommendations || []).slice(0, 6).map((r, i) => ({
+      domain: String(r.domain || '').slice(0, 40),
+      distance: Math.max(1, Math.min(10, Number(r.distance) || 5)),
+      angle: ((Number(r.angle) || (i * 67)) % 360 + 360) % 360,
+      reason: String(r.reason || '').slice(0, 60),
+      value: String(r.value || '').slice(0, 100),
+    })).filter(r => r.domain);
 
-    return { ok: true, remaining: limit - count, used: count };
+    return res.status(200).json({
+      center: String(parsed.center || interests[0]).slice(0, 30),
+      summary: String(parsed.summary || '').slice(0, 80),
+      recommendations: recs,
+    });
   } catch (err) {
-    // Redis障害時は通す（サービス停止よりマシ）
-    console.error('Rate limit error:', err);
-    return { ok: true, remaining: -1, used: 0 };
-  }
-}
-
-// 現在の使用量を取得（INCRせずに確認だけ）
-export async function getUsage(req, action) {
-  const ip = getIP(req);
-  const key = `limit:${action}:${ip}:${todayKey()}`;
-  try {
-    const count = await redis('GET', key);
-    return Number(count) || 0;
-  } catch {
-    return 0;
+    console.error(err);
+    return res.status(500).json({ error: 'Internal error' });
   }
 }

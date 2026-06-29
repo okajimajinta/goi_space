@@ -1,26 +1,2678 @@
-{
-  "name": "語彙空間 — Lexical Space",
-  "short_name": "語彙空間",
-  "description": "言葉を入力すると、類義語・対義語・感情・比喩が星雲のように広がる語彙探索ツール",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#080C18",
-  "theme_color": "#080C18",
-  "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    }
-  ]
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="description" content="語彙空間 — 言葉を入力すると、類義語・対義語・感情・比喩が星雲のように広がる語彙探索ツール">
+<title>語彙空間 — 言葉の宇宙を探索する</title>
+<meta property="og:title" content="語彙空間 — 言葉の宇宙を探索する">
+<meta property="og:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://goispace.app">
+<meta property="og:image" content="https://goispace.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="語彙空間 — 言葉の宇宙を探索する">
+<meta name="twitter:description" content="キーワードを入力すると、関連語が星雲のように広がるインタラクティブ語彙マップ">
+<meta name="twitter:image" content="https://goispace.app/og-image.png">
+<!-- アイコン -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#080C18">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056" crossorigin="anonymous"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080C18;--surface:#111726;--border:#1E2840;--text:#D4DCF0;--muted:#5B6A8A;--amber:#F5A623;--blue:#5B8FDE;--green:#4ECBA8;--rose:#E06B8B;--violet:#9B72E8;--goal:#FF6B6B}
+html,body{width:100%;max-width:100vw;height:100%;background:var(--bg);color:var(--text);font-family:'Inter','Noto Serif JP',sans-serif;overflow:hidden;touch-action:none}
+
+/* === LAYOUT === */
+.layout{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr 160px;height:100dvh;width:100%;max-width:100vw}
+
+/* === HEADER === */
+header{grid-column:1/-1;padding:10px 20px;display:flex;align-items:center;gap:10px;background:rgba(8,12,24,0.98);border-bottom:1px solid var(--border);flex-wrap:wrap;z-index:100}
+.logo{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--amber);white-space:nowrap;flex-shrink:0}
+.logo span{color:var(--muted);font-weight:300;font-size:12px;margin-left:4px}
+.mode-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px;flex-shrink:0}
+.mode-tab{background:transparent;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:15px;padding:6px 12px;border-radius:3px;cursor:pointer;transition:all .15s}
+.mode-tab.active{background:var(--amber);color:#080C18}
+.mode-tab:not(.active):hover{color:var(--text)}
+.search-wrap{flex:1;min-width:180px;display:flex;gap:6px}
+input#wordInput{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:18px;padding:10px 15px;border-radius:4px;outline:none;transition:border-color .2s}
+input#wordInput::placeholder{color:var(--muted)}
+input#wordInput:focus{border-color:var(--amber)}
+button#exploreBtn{background:var(--amber);color:#080C18;border:none;padding:10px 18px;border-radius:4px;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}
+button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
+#engineSelect{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:8px;border-radius:4px;cursor:pointer;outline:none;flex-shrink:0;max-width:90px}
+.header-links{display:flex;gap:10px;flex-shrink:0}
+.header-links a{font-size:12px;color:var(--muted);text-decoration:none}
+
+/* === USAGE COUNTER === */
+.usage-badge{font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 10px;border-radius:10px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.usage-badge.premium{border-color:var(--amber);color:var(--amber)}
+.usage-badge .count{color:var(--amber);font-weight:500}
+.usage-badge.low .count{color:var(--rose)}
+
+/* === ACCOUNT TAB (always visible) === */
+.account-tab{background:var(--surface);border:1px solid var(--amber);color:var(--amber);font-family:'Noto Serif JP',serif;font-size:13px;padding:6px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.account-tab:hover{background:var(--amber);color:#080C18}
+.account-tab.premium{background:linear-gradient(135deg,#F5A623,#FF8C42);color:#080C18;border-color:#F5A623;font-weight:600}
+.name-tab{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:13px;padding:6px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.name-tab:hover{border-color:var(--amber);color:var(--amber)}
+
+/* === ACCOUNT PANEL === */
+.account-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
+.account-overlay.visible{display:flex}
+.account-card{background:var(--surface);border:1px solid var(--amber);border-radius:14px;padding:30px 34px;text-align:center;max-width:400px;width:90%}
+.account-icon{font-size:40px;margin-bottom:10px}
+.account-title{font-family:'Noto Serif JP',serif;font-size:20px;font-weight:600;color:var(--amber);margin-bottom:6px}
+.account-email{font-size:13px;color:var(--muted);margin-bottom:20px;word-break:break-all}
+.account-plan{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px}
+.account-plan-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.account-plan-name{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
+.account-plan-detail{font-size:12px;color:var(--muted);margin-top:6px}
+.account-plan-rows{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.account-plan-row{display:flex;justify-content:space-between;font-size:13px}
+.account-plan-row .k{color:var(--muted)}
+.account-plan-row .v{color:var(--text);font-weight:500}
+.account-plan-row .v.warn{color:var(--rose)}
+.account-handle{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;text-align:left}
+.account-handle label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.account-handle input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:9px 12px;border-radius:6px;outline:none}
+.account-handle input:focus{border-color:var(--amber)}
+.account-actions{display:flex;flex-direction:column;gap:10px}
+/* === MYPAGE === */
+.recovery-code{font-family:'Inter',monospace;font-size:26px;font-weight:600;letter-spacing:0.1em;color:var(--amber);background:var(--bg);border:1px dashed var(--amber);border-radius:10px;padding:18px;margin:16px 0;user-select:all}
+.nebula-intro{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7}
+.nebula-search{display:flex;gap:8px;margin-bottom:18px}
+.nebula-search input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:11px 14px;border-radius:8px;outline:none}
+.nebula-search input:focus{border-color:var(--amber)}
+.nebula-search button{background:var(--amber);color:#080C18;border:none;padding:11px 20px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.nebula-paths{display:flex;flex-direction:column;gap:14px;max-height:380px;overflow-y:auto}
+.nebula-path{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.nebula-path-head{font-size:11px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+.nebula-path-flow{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.nebula-path-word{font-family:'Noto Serif JP',serif;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:3px 9px;border-radius:8px;cursor:pointer;transition:all .15s}
+.nebula-path-word:hover{border-color:var(--amber);color:var(--amber)}
+.nebula-path-word.match{border-color:var(--amber);color:var(--amber);background:rgba(245,166,35,0.12)}
+.nebula-path-arrow{color:var(--muted);font-size:11px}
+.nebula-empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;line-height:1.7}
+.nebula-subtabs{display:flex;gap:6px;margin-bottom:16px}
+.nebula-subtab{flex:1;padding:9px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;cursor:pointer;transition:all .15s}
+.nebula-subtab.active{border-color:var(--amber);color:var(--amber);background:rgba(245,166,35,0.08)}
+.nebula-sub{display:none}
+.nebula-sub.active{display:block}
+.compass-interests{margin-bottom:12px}
+.compass-interests label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px}
+.compass-interests textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:10px 12px;border-radius:8px;outline:none;resize:vertical}
+.compass-interests textarea:focus{border-color:var(--amber)}
+.compass-result{font-size:13px;color:var(--text);margin:14px 0;line-height:1.7;text-align:center}
+.compass-result .c-center{font-family:'Noto Serif JP',serif;font-size:18px;color:var(--amber);font-weight:600}
+.compass-map-wrap{position:relative;width:100%;height:320px;background:radial-gradient(ellipse at center,#0c1228 0%,#060912 100%);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px}
+#compassCanvas{width:100%;height:100%;display:block}
+.compass-cards{display:flex;flex-direction:column;gap:10px}
+.compass-card{background:var(--bg);border:1px solid var(--border);border-left-width:3px;border-radius:8px;padding:12px 14px}
+.compass-card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.compass-card-domain{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:600;color:var(--text)}
+.compass-card-dist{font-size:11px;color:var(--muted)}
+.compass-card-reason{font-size:12px;color:var(--muted);margin-bottom:6px}
+.compass-card-value{font-size:13px;color:var(--text);line-height:1.6}
+.compass-card-value::before{content:'✨ ';}
+.mypage-card{max-width:480px;width:92%;max-height:88vh;overflow-y:auto}
+.mypage-header{text-align:center;margin-bottom:16px}
+.mypage-tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border)}
+.mypage-tab{flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;cursor:pointer;transition:all .15s}
+.mypage-tab:hover{color:var(--text)}
+.mypage-tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.mypage-section{display:none}
+.mypage-section.active{display:block}
+.mypage-note{font-size:12px;color:var(--muted);margin:8px 0 16px;text-align:center}
+.history-summary{font-size:13px;color:var(--muted);margin-bottom:12px;text-align:center}
+.history-list{max-height:300px;overflow-y:auto;margin-bottom:16px;display:flex;flex-direction:column;gap:6px}
+.history-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px}
+.history-row .h-from{color:var(--muted)}
+.history-row .h-arrow{color:var(--amber)}
+.history-row .h-to{color:var(--text);font-weight:500}
+.history-row .h-mode{margin-left:auto;font-size:10px;color:var(--muted);background:var(--surface);padding:2px 7px;border-radius:10px}
+.history-row .h-time{font-size:10px;color:var(--muted)}
+.account-credits{background:var(--bg);border:1px solid var(--amber);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.account-credits-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.account-credits-label{font-size:13px;color:var(--muted)}
+.account-credits-val{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber)}
+.account-btn{padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer;transition:all .15s}
+.account-btn:hover{border-color:var(--amber);color:var(--amber)}
+.account-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:500}
+.account-btn.primary:hover{opacity:.85;color:#080C18}
+.account-close{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-top:8px}
+
+/* === UPGRADE PROMPT === */
+.upgrade-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:80;backdrop-filter:blur(6px)}
+.upgrade-overlay.visible{display:flex}
+.upgrade-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:35px 40px;text-align:center;max-width:380px;width:90%}
+.upgrade-icon{font-size:45px;margin-bottom:12px}
+.upgrade-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--amber);margin-bottom:8px}
+.upgrade-desc{font-size:16px;color:var(--muted);line-height:1.7;margin-bottom:20px}
+.upgrade-plans{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.upgrade-plan.plus{border-color:var(--amber);background:linear-gradient(135deg,rgba(245,166,35,0.08),rgba(255,140,66,0.08))}
+.upgrade-plan.plus .upgrade-plan-name{color:var(--amber)}
+.upgrade-divider{font-size:12px;color:var(--muted);text-align:center;margin:6px 0 2px;padding-top:8px;border-top:1px dashed var(--border)}
+.upgrade-plan{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
+.upgrade-plan:hover{border-color:var(--amber)}
+.upgrade-plan-name{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:600}
+.upgrade-plan-price{font-size:15px;color:var(--amber);font-weight:500}
+.upgrade-plan-detail{font-size:12px;color:var(--muted)}
+.upgrade-close{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;margin-top:4px}
+.upgrade-close:hover{color:var(--text)}
+
+/* === CANVAS === */
+.canvas-area{grid-column:1;grid-row:2;position:relative;overflow:hidden}
+#canvas{position:absolute;inset:0;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+#canvas:active{cursor:grabbing}
+
+/* === NEBULA VIEW (全画面星図) === */
+.nebula-view{position:absolute;inset:0;display:none;background:radial-gradient(ellipse at center,#0a1024 0%,#05080f 100%);z-index:30}
+.nebula-view.visible{display:block}
+.nebula-view #nebulaCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+.nebula-view #nebulaCanvas:active{cursor:grabbing}
+.nebula-topbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:32;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(560px,94vw)}
+.nebula-modes{display:flex;gap:6px;background:rgba(10,16,36,0.9);border:1px solid var(--border);border-radius:22px;padding:4px;backdrop-filter:blur(8px)}
+.nv-mode{background:none;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;padding:7px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.nv-mode.active{background:var(--amber);color:#080C18}
+.nebula-bar{display:flex;gap:6px;width:100%}
+.nebula-bar input{flex:1;background:rgba(10,16,36,0.9);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:10px 15px;border-radius:8px;outline:none;backdrop-filter:blur(8px)}
+.nebula-bar input:focus{border-color:var(--amber)}
+.nebula-bar button{background:var(--amber);color:#080C18;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;white-space:nowrap}
+.nebula-panel{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:32;width:min(560px,94vw);max-height:42vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.nebula-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:31;font-size:11px;color:var(--muted);text-align:center;width:94vw;pointer-events:none}
+.nv-card{background:rgba(12,18,40,0.92);border:1px solid var(--border);border-radius:10px;padding:10px 13px;backdrop-filter:blur(8px)}
+.nv-card-head{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+.nv-flow{display:flex;flex-wrap:wrap;gap:3px;align-items:center}
+.nv-w{font-family:'Noto Serif JP',serif;font-size:13px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:2px 7px;border-radius:7px;cursor:pointer}
+.nv-w.match{border-color:var(--amber);color:var(--amber)}
+.nv-w:hover{border-color:var(--amber)}
+.nv-arrow{color:var(--muted);font-size:10px}
+.nv-card-domain{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:var(--text)}
+.nv-card-value{font-size:12px;color:var(--text);line-height:1.5;margin-top:4px}
+.nv-card-value::before{content:'✨ '}
+.nv-empty{text-align:center;color:var(--muted);font-size:12px;padding:16px}
+
+/* === ADS === */
+.ad-sidebar{grid-column:2;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px}
+.ad-label{font-size:10px;color:#2E3A55;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.ad-slot-side{width:136px;min-height:600px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px}
+.ad-bottom{grid-column:1/-1;grid-row:3;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:8px}
+.ad-slot-bottom{width:728px;max-width:100%;height:90px;background:var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px}
+
+/* === LOADING OVERLAY (with ad) === */
+.loading-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(8,12,24,0.85);z-index:60;backdrop-filter:blur(4px)}
+.loading-overlay.visible{display:flex}
+.loading-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite}
+.loading-text{font-family:'Noto Serif JP',serif;font-size:18px;color:var(--text);letter-spacing:.06em;max-width:80vw;text-align:center;line-height:1.7;min-height:1.7em;transition:opacity .5s}
+.loading-word{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:600;color:var(--amber);margin-bottom:12px;letter-spacing:.08em;text-align:center;transition:opacity .5s}
+.loading-word.fading{opacity:0}
+.loading-text::after{content:'▋';color:var(--amber);animation:cursorBlink 0.9s steps(2) infinite;margin-left:2px}
+.loading-text.fading{opacity:0}
+@keyframes cursorBlink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+.loading-ad{width:300px;height:250px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px;margin-top:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* === STATUS (initial) === */
+.status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s}
+.status.hidden{opacity:0!important;pointer-events:none!important;visibility:hidden}
+.status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
+.status-hint{margin-top:8px;font-size:14px;color:#2E3A55}
+.center-search{display:flex;gap:8px;justify-content:center;margin:18px 0;pointer-events:auto}
+.center-search input{width:min(340px,60vw);background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:12px 18px;border-radius:8px;outline:none;transition:border-color .2s}
+.center-search input::placeholder{color:var(--muted)}
+.center-search input:focus{border-color:var(--amber)}
+.center-search button{background:var(--amber);color:#080C18;border:none;padding:12px 22px;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}
+.center-search button:hover{opacity:.85}
+
+/* === GOLF PANEL === */
+.golf-panel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:none;align-items:center;gap:14px;z-index:50;backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw}
+.golf-panel.visible{display:flex}
+.golf-leg{text-align:center}
+.golf-leg-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.golf-leg-word{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600}
+.golf-start .golf-leg-word{color:var(--blue)}
+.golf-goal .golf-leg-word{color:var(--goal)}
+.golf-panel.blind .golf-goal .golf-leg-word{color:var(--muted);letter-spacing:0.15em}
+.golf-dist{position:absolute;top:90px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--amber);border-radius:20px;padding:8px 18px;font-family:'Noto Serif JP',serif;font-size:14px;z-index:51;backdrop-filter:blur(8px);display:none;white-space:nowrap;max-width:94vw;text-align:center}
+.golf-dist.visible{display:block}
+.golf-arrow{color:var(--muted);font-size:15px}
+.golf-stat{text-align:center}
+.golf-stat-num{font-family:'Inter',sans-serif;font-size:22px;font-weight:500;color:var(--amber)}
+.golf-stat-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.golf-actions{display:flex;gap:6px;flex-wrap:wrap}
+.golf-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:14px;padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.golf-btn:hover{border-color:var(--amber);color:var(--amber)}
+.golf-btn:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);color:var(--muted)}
+.golf-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber)}
+
+/* === GOLF TRAIL === */
+.golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
+.golf-trail.visible{display:flex}
+
+/* === GOLF SETUP === */
+.golf-setup-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px)}
+.golf-setup-overlay.visible{display:flex}
+.golf-setup-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px 34px;text-align:center;max-width:420px;width:90%}
+.golf-setup-title{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:600;color:var(--text);margin-bottom:8px}
+.golf-setup-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
+.golf-setup-modes{display:flex;gap:10px;margin-bottom:18px}
+.golf-setup-mode{flex:1;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--muted);font-family:'Noto Serif JP',serif;font-size:15px;cursor:pointer;transition:all .15s}
+.golf-setup-mode:hover{border-color:var(--blue)}
+.golf-setup-mode.active{border-color:var(--blue);color:var(--blue);background:rgba(91,143,222,0.1)}
+.golf-setup-blind-desc{font-size:12px;color:var(--muted);line-height:1.7;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:18px}
+.golf-setup-custom{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.golf-setup-custom input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:11px 14px;border-radius:8px;outline:none;text-align:center}
+.golf-setup-custom input:focus{border-color:var(--blue)}
+.golf-setup-arrow{color:var(--muted);font-size:18px}
+.golf-setup-start{width:100%;padding:14px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:16px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.golf-setup-start:hover{opacity:.85}
+.trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px;cursor:pointer;transition:all .15s}
+.trail-word[data-trail-word]:hover{border-color:var(--amber);color:var(--amber)}
+.trail-word.start{border-color:var(--blue);color:var(--blue)}
+.trail-word.goal{border-color:var(--goal);color:var(--goal)}
+.trail-word.cur{border-color:var(--amber);color:var(--amber);background:rgba(245,166,35,0.12);font-weight:600}
+.trail-toggle{background:rgba(245,166,35,0.1);border:1px solid var(--border);color:var(--amber);font-size:11px;padding:3px 8px;border-radius:8px;cursor:pointer;font-family:'Noto Serif JP',serif}
+.trail-toggle:hover{border-color:var(--amber)}
+.trail-sep{color:var(--muted);font-size:12px}
+
+/* === COMPLETION OVERLAY === */
+.completion{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px);padding:25px;overflow-y:auto}
+.completion.visible{display:flex}
+.comp-title{font-family:'Noto Serif JP',serif;font-size:28px;font-weight:600;color:var(--amber);margin-bottom:4px}
+.comp-grade{font-size:18px;color:var(--green);margin-bottom:16px}
+.comp-path{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin-bottom:20px}
+.comp-node{text-align:center;padding:10px 15px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:60px}
+.comp-node-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
+.comp-node-dist{font-size:12px;margin-top:2px}
+.comp-node-reason{font-size:11px;color:var(--muted)}
+.comp-arrow{color:var(--muted);font-size:18px}
+.comp-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.comp-btn{padding:12px 22px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .15s}
+.comp-btn:hover{border-color:var(--amber);color:var(--amber)}
+.comp-btn.twitter{background:#1DA1F2;border-color:#1DA1F2;color:#fff}
+.comp-btn.twitter:hover{opacity:.85}
+
+/* === OVERLAY UI === */
+.legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:8px;opacity:0;transition:opacity .4s;pointer-events:none;background:rgba(17,23,38,0.7);padding:12px 14px;border-radius:8px;border:1px solid var(--border)}
+.legend.visible{opacity:1}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text)}
+.legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 15px;font-size:15px;max-width:200px;opacity:0;transition:opacity .15s;z-index:200;line-height:1.5}
+.tooltip.visible{opacity:1}
+.tooltip-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;margin-bottom:3px}
+.tooltip-desc{color:var(--muted);font-size:14px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 22px;font-size:15px;opacity:0;transition:all .3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center}
+.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--green)}
+.toast.error{border-color:var(--rose)}
+
+/* === DAILY PANEL === */
+.daily-panel{position:fixed;top:0;right:0;width:360px;max-width:90vw;height:100dvh;background:var(--surface);border-left:1px solid var(--border);z-index:250;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;overflow-y:auto}
+.daily-panel.visible{transform:translateX(0)}
+.daily-header{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.daily-title{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600;color:var(--amber)}
+.daily-date{font-size:12px;color:var(--muted);margin-top:2px}
+.daily-close{background:none;border:none;color:var(--muted);font-size:25px;cursor:pointer}
+.daily-body{padding:18px 20px}
+.puzzle-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:15px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.puzzle-card:hover{border-color:var(--amber)}
+.puzzle-card.cleared{border-color:var(--green)}
+.puzzle-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.puzzle-diff{font-size:11px;padding:2px 8px;border-radius:8px}
+.diff-易{background:rgba(78,203,168,.18);color:var(--green)}
+.diff-中{background:rgba(91,143,222,.18);color:var(--blue)}
+.diff-難{background:rgba(224,107,139,.18);color:var(--rose)}
+.diff-激難{background:rgba(155,114,232,.22);color:var(--violet)}
+.puzzle-par{font-size:12px;color:var(--muted)}
+.puzzle-route{display:flex;align-items:center;gap:8px}
+.puzzle-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600}
+.puzzle-word.s{color:var(--blue)}
+.puzzle-word.g{color:var(--goal)}
+.puzzle-route .arrow{color:var(--muted)}
+.puzzle-result{font-size:13px;font-weight:600;margin-top:6px;color:var(--green)}
+.puzzle-result.good{color:var(--green)}
+.puzzle-result.ok{color:var(--amber)}
+.puzzle-result.over{color:var(--muted)}
+.board-section{margin-top:8px}
+.board-tabs{display:flex;gap:4px;margin-bottom:10px}
+.board-tab{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:8px;border-radius:4px;cursor:pointer}
+.board-tab.active{background:var(--amber);color:#080C18;border-color:var(--amber)}
+.board-list{display:flex;flex-direction:column;gap:2px}
+.board-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:9px 10px;border-radius:4px;font-size:15px}
+.board-row:nth-child(odd){background:var(--bg)}
+.board-row.me{background:rgba(245,166,35,.12);border:1px solid var(--amber)}
+.board-rank{font-family:'Inter',sans-serif;font-weight:500;color:var(--muted);text-align:center}
+.board-rank.top{color:var(--amber)}
+.board-name{font-family:'Noto Serif JP',serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-moves{font-family:'Inter',sans-serif;font-weight:500;color:var(--amber)}
+.board-moves small{color:var(--muted);font-weight:400}
+.board-path{font-size:11px;color:var(--muted);grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-empty{text-align:center;color:var(--muted);font-size:14px;padding:25px 0}
+.name-row{display:flex;gap:6px;margin:4px 0 12px}
+.name-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:9px 12px;border-radius:4px;outline:none}
+.name-row label{font-size:12px;color:var(--muted);align-self:center;white-space:nowrap}
+.share-btn{width:100%;background:#1DA1F2;border:none;color:#fff;font-size:15px;padding:11px;border-radius:4px;cursor:pointer;margin-top:8px}
+.share-btn:hover{opacity:.85}
+
+/* === PIN TRAY === */
+.pin-tray{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:45;max-height:calc(100% - 80px);overflow-y:auto;pointer-events:none}
+.pin-tray:empty{display:none}
+.pin-chip{display:flex;align-items:center;gap:6px;background:rgba(17,23,38,0.92);border:1px solid var(--amber);border-radius:20px;padding:6px 12px 6px 15px;cursor:pointer;pointer-events:all;transition:all .15s;backdrop-filter:blur(6px);white-space:nowrap}
+.pin-chip:hover{background:rgba(245,166,35,0.15);transform:translateX(-2px)}
+.pin-chip-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--amber)}
+.pin-chip-remove{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0}
+.pin-chip-remove:hover{color:var(--rose)}
+
+/* === ENCHANT === */
+.enchant-btn{position:absolute;bottom:16px;right:12px;z-index:46;background:linear-gradient(135deg,#9B72E8,#5B8FDE);color:#fff;border:none;padding:10px 16px;border-radius:22px;font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(155,114,232,0.4);transition:all .15s;display:none}
+.enchant-btn.visible{display:block}
+.enchant-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(155,114,232,0.55)}
+.enchant-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:90;backdrop-filter:blur(6px)}
+.enchant-overlay.visible{display:flex}
+.enchant-card{background:var(--surface);border:1px solid var(--violet);border-radius:14px;padding:28px 32px;text-align:center;max-width:440px;width:90%}
+.enchant-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--violet);margin-bottom:8px}
+.enchant-sub{font-size:14px;color:var(--muted);margin-bottom:20px}
+.enchant-choices{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.enchant-choice{padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-family:'Noto Serif JP',serif;font-size:18px;color:var(--text);cursor:pointer;transition:all .15s}
+.enchant-choice:hover{border-color:var(--violet);color:var(--violet);transform:scale(1.02)}
+.enchant-reroll{background:none;border:1px solid var(--border);color:var(--muted);font-size:14px;padding:10px;border-radius:8px;cursor:pointer;width:100%;margin-bottom:8px}
+.enchant-reroll:hover{border-color:var(--violet);color:var(--violet)}
+/* Tooltip pin button */
+.tt-pin{display:inline-block;margin-left:8px;cursor:pointer;font-size:15px;opacity:.6;transition:opacity .15s;user-select:none}
+.tt-pin:hover{opacity:1}
+.tt-pin.pinned{opacity:1;filter:saturate(2)}
+
+/* === MOBILE === */
+@media(max-width:768px){
+  .pin-tray{top:8px;right:8px}
+  .pin-chip{padding:5px 10px 5px 12px}
+  .pin-chip-word{font-size:14px}
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;max-width:100vw;overflow-x:hidden}
+  .ad-sidebar{display:none}
+  .ad-slot-bottom{height:50px;max-width:100vw}
+  header{gap:6px;padding:8px 10px;flex-wrap:wrap;max-width:100vw}
+  .logo{font-size:15px}
+  .logo span{display:none}
+  .mode-tabs{flex-wrap:wrap}
+  .mode-tab{font-size:13px;padding:5px 9px}
+  .account-tab{font-size:12px;padding:5px 9px}
+  .name-tab{font-size:12px;padding:5px 9px}
+  .search-wrap{flex-basis:100%;min-width:0;order:5;gap:4px}
+  input#wordInput{font-size:16px;padding:9px 12px;min-width:0}
+  button#exploreBtn{padding:9px 12px;font-size:14px}
+  #engineSelect{display:none}
+  .header-links{display:none}
+  .canvas-area{max-width:100vw;overflow:hidden}
+  .golf-panel{padding:8px 10px;gap:8px;max-width:96vw}
+  .golf-leg-word{font-size:15px}
+  .golf-stat-num{font-size:19px}
+  .legend{bottom:10px;left:8px}
+  .legend-item{font-size:12px}
+  .loading-ad{width:min(250px,80vw);height:200px}
+  .daily-panel{width:100vw}
+  .comp-title{font-size:22px}
+  .center-search input{width:min(280px,70vw)}
 }
+@media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <header>
+    <div class="logo">語彙空間<span>GOI-Space</span></div>
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="explore">探索</button>
+      <button class="mode-tab" data-mode="golf">ゴルフ</button>
+      <button class="mode-tab" data-mode="daily">デイリー</button>
+      <button class="mode-tab" data-mode="monthly">マンスリー</button>
+      <button class="mode-tab" data-mode="nebula">星図</button>
+    </div>
+    <button class="account-tab" id="myPageTab">マイページ</button>
+    <div class="search-wrap">
+      <input id="wordInput" type="text" placeholder="言葉を入力…" autocomplete="off"/>
+      <button id="exploreBtn">探索</button>
+    </div>
+    <select id="engineSelect" title="ダブルクリック時の検索エンジン">
+      <option value="https://www.google.com/search?q=">Google</option>
+      <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+      <option value="https://ja.wikipedia.org/wiki/">Wikipedia</option>
+      <option value="https://www.weblio.jp/content/">Weblio</option>
+    </select>
+    <div class="header-links">
+      <div class="usage-badge" id="usageBadge">残り <span class="count" id="usageCount">—</span>回</div>
+      <a href="/privacy.html">プライバシー</a>
+      <a href="mailto:girlsvibesproject@gmail.com">お問い合わせ</a>
+    </div>
+  </header>
+
+  <div class="canvas-area">
+    <canvas id="canvas"></canvas>
+
+    <!-- 星図ビュー（全画面・全体星雲＋経路＋コンパス） -->
+    <div class="nebula-view" id="nebulaView">
+      <canvas id="nebulaCanvas"></canvas>
+      <div class="nebula-topbar">
+        <div class="nebula-modes">
+          <button class="nv-mode active" data-nv="explore">🌌 星雲</button>
+          <button class="nv-mode" data-nv="peek">🧭 経路</button>
+          <button class="nv-mode" data-nv="compass">🧭 コンパス</button>
+        </div>
+        <div class="nebula-bar" id="nebulaBar">
+          <input id="nvWordInput" type="text" placeholder="語を入力…" autocomplete="off"/>
+          <button id="nvGoBtn">表示</button>
+        </div>
+      </div>
+      <div class="nebula-panel" id="nvPanel"></div>
+      <div class="nebula-hint" id="nvHint">星雲をドラッグで移動・ホイールで拡大。明るい星ほど多くの人が辿った語です。</div>
+    </div>
+
+    <!-- Upgrade prompt -->
+    <div class="upgrade-overlay" id="upgradeOverlay">
+      <div class="upgrade-card">
+        <div class="upgrade-icon" id="upgradeIcon">🚀</div>
+        <div class="upgrade-title" id="upgradeTitle">プレミアムプラン</div>
+        <div class="upgrade-desc" id="upgradeDesc">無制限の探索で、語彙の宇宙をもっと深く。</div>
+        <div class="upgrade-plans">
+          <div class="upgrade-plan" id="planMonthly">
+            <div><div class="upgrade-plan-name">月額プラン</div><div class="upgrade-plan-detail">無制限探索・広告非表示・ヒント無制限</div></div>
+            <div class="upgrade-plan-price">¥500/月</div>
+          </div>
+          <div class="upgrade-plan" id="planYearly">
+            <div><div class="upgrade-plan-name">年額プラン</div><div class="upgrade-plan-detail">2ヶ月分お得！</div></div>
+            <div class="upgrade-plan-price">¥5,000/年</div>
+          </div>
+          <div class="upgrade-divider">⚡ または、買い切りで高速モード</div>
+          <div class="upgrade-plan plus" id="planCreditsSmall">
+            <div><div class="upgrade-plan-name">⚡ クレジット 100</div><div class="upgrade-plan-detail">高速探索100回分・買い切り・期限なし</div></div>
+            <div class="upgrade-plan-price">¥500</div>
+          </div>
+          <div class="upgrade-plan plus" id="planCreditsLarge">
+            <div><div class="upgrade-plan-name">⚡ クレジット 300</div><div class="upgrade-plan-detail">高速探索300回分・お得・期限なし</div></div>
+            <div class="upgrade-plan-price">¥1,200</div>
+          </div>
+        </div>
+        <button class="upgrade-close" id="restoreBtn" style="color:var(--blue);margin-bottom:6px">購入済みの方はこちら（メールで復元）</button>
+        <button class="upgrade-close" id="upgradeClose">明日また無料で遊ぶ</button>
+      </div>
+    </div>
+    <!-- リカバリーコード表示モーダル -->
+    <div class="account-overlay" id="recoveryOverlay">
+      <div class="account-card">
+        <div class="account-icon">🔑</div>
+        <div class="account-title">復元コード</div>
+        <div class="account-email">別の端末でログインする際に必要です。<br><strong style="color:var(--rose)">必ず保存してください。</strong></div>
+        <div class="recovery-code" id="recoveryCodeDisplay">GOI-XXXX-XXXX</div>
+        <div class="account-actions">
+          <button class="account-btn primary" id="copyRecoveryBtn">📋 コードをコピー</button>
+          <button class="account-btn" id="recoveryClose">保存しました</button>
+        </div>
+        <div class="mypage-note">このコードはマイページでもいつでも確認できます</div>
+      </div>
+    </div>
+    <!-- マイページ（名前・プラン・クレジット・経路実績を統合） -->
+    <div class="account-overlay" id="myPageOverlay">
+      <div class="account-card mypage-card">
+        <div class="mypage-header">
+          <div class="account-icon">👤</div>
+          <div class="account-title">マイページ</div>
+          <div class="account-email" id="accountEmail">ゲスト</div>
+        </div>
+        <div class="mypage-tabs">
+          <button class="mypage-tab active" data-mypage="profile">プロフィール</button>
+          <button class="mypage-tab" data-mypage="plan">プラン・クレジット</button>
+          <button class="mypage-tab" data-mypage="history">探索の実績</button>
+        </div>
+
+        <!-- プロフィール（ハンドルネーム） -->
+        <div class="mypage-section active" id="mySectionProfile">
+          <div class="account-handle">
+            <label for="handlePanelInput">ハンドルネーム（16文字まで）</label>
+            <input id="handlePanelInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/>
+          </div>
+          <div class="mypage-note">ランキングや共有に表示される名前です</div>
+          <button class="account-btn primary" id="handleSaveBtn">名前を保存</button>
+        </div>
+
+        <!-- プラン・クレジット -->
+        <div class="mypage-section" id="mySectionPlan">
+          <div class="account-plan">
+            <div class="account-plan-label">現在のプラン</div>
+            <div class="account-plan-name" id="accountPlanName">無料プラン</div>
+            <div class="account-plan-rows" id="accountPlanRows"></div>
+          </div>
+          <div class="account-credits">
+            <div class="account-credits-row">
+              <span class="account-credits-label">⚡ 高速クレジット残高</span>
+              <span class="account-credits-val" id="accountCredits">0</span>
+            </div>
+            <button class="account-btn" id="buyCreditsBtn">⚡ クレジットを購入</button>
+          </div>
+          <div class="account-actions" id="memberActions">
+            <button class="account-btn" id="showRecoveryBtn">🔑 復元コードを表示</button>
+            <button class="account-btn primary" id="managePlanBtn">プランを変更・解約する</button>
+            <button class="account-btn" id="accountLogout">この端末からログアウト</button>
+          </div>
+          <div class="account-actions" id="guestActions">
+            <button class="account-btn primary" id="myUpgradeBtn">プランを見る・アップグレード</button>
+            <button class="account-btn" id="myRestoreBtn">購入済みの方はこちら（復元）</button>
+          </div>
+        </div>
+
+        <!-- 探索の実績（経路履歴 + CSV出力） -->
+        <div class="mypage-section" id="mySectionHistory">
+          <div class="history-summary" id="historySummary">まだ探索の記録がありません</div>
+          <div class="history-list" id="historyList"></div>
+          <div class="account-actions">
+            <button class="account-btn" id="exportCsvBtn">📥 CSVで書き出す</button>
+            <button class="account-btn" id="clearHistoryBtn" style="color:var(--rose)">履歴を消去</button>
+          </div>
+        </div>
+
+
+        <button class="account-close" id="myPageClose">閉じる</button>
+      </div>
+    </div>
+    <div class="status" id="status">
+      <div class="status-text">言葉を入力して、語彙の宇宙を探索する</div>
+      <div class="center-search" id="centerSearch">
+        <input id="centerInput" type="text" placeholder="探索する言葉を入力…" autocomplete="off"/>
+        <button id="centerBtn">探索</button>
+      </div>
+      <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
+    </div>
+    <div class="golf-panel" id="golfPanel">
+      <div class="golf-leg golf-start"><div class="golf-leg-label">START</div><div class="golf-leg-word" id="golfStart">—</div></div>
+      <div class="golf-arrow">→</div>
+      <div class="golf-leg golf-goal"><div class="golf-leg-label">GOAL</div><div class="golf-leg-word" id="golfGoal">—</div></div>
+      <div class="golf-stat"><div class="golf-stat-num" id="golfMoves">0</div><div class="golf-stat-label">手数</div></div>
+      <div class="golf-stat"><div class="golf-stat-num" id="golfPar">—</div><div class="golf-stat-label">パー</div></div>
+      <div class="golf-actions">
+        <button class="golf-btn" id="golfUndoBtn" disabled>↩ 戻る</button>
+        <button class="golf-btn" id="golfHintBtn">ヒント</button>
+        <button class="golf-btn" id="golfNewBtn">新しいお題</button>
+      </div>
+    </div>
+    <div class="golf-dist" id="golfDist"></div>
+    <div class="golf-trail" id="golfTrail"></div>
+    <!-- ゴルフ お題設定画面 -->
+    <div class="golf-setup-overlay" id="golfSetupOverlay">
+      <div class="golf-setup-card">
+        <div class="golf-setup-title">🏌️ ワードゴルフ</div>
+        <div class="golf-setup-sub">お題の決め方を選んでください</div>
+        <div class="golf-setup-modes">
+          <button class="golf-setup-mode active" id="golfModeRandom" data-mode="random">🎲 ランダム</button>
+          <button class="golf-setup-mode" id="golfModeCustom" data-mode="custom">✏️ 自分で設定</button>
+          <button class="golf-setup-mode" id="golfModeBlind" data-mode="blind">🌑 ブラインド</button>
+        </div>
+        <div class="golf-setup-blind-desc" id="golfBlindDesc" style="display:none">ゴールは見えません。語を選ぶたびに「ゴールまでの距離」だけが手がかり。近づいているか、遠ざかっているかを頼りに探り当てましょう。</div>
+        <div class="golf-setup-custom" id="golfCustomFields" style="display:none">
+          <input id="golfStartInput" type="text" maxlength="20" placeholder="スタートの言葉" autocomplete="off"/>
+          <div class="golf-setup-arrow">↓</div>
+          <input id="golfGoalInput" type="text" maxlength="20" placeholder="ゴールの言葉" autocomplete="off"/>
+        </div>
+        <button class="golf-setup-start" id="golfSetupStart">この設定で始める</button>
+      </div>
+    </div>
+    <div class="pin-tray" id="pinTray"></div>
+    <button class="enchant-btn" id="enchantBtn" title="ランダムな語との意外な文脈を発見">✨ ランダムエンチャント</button>
+    <!-- エンチャント語選択モーダル -->
+    <div class="enchant-overlay" id="enchantOverlay">
+      <div class="enchant-card">
+        <div class="enchant-title">✨ ランダムエンチャント</div>
+        <div class="enchant-sub" id="enchantSub">中心語と組み合わせる言葉を1つ選んでください</div>
+        <div class="enchant-choices" id="enchantChoices"></div>
+        <button class="enchant-reroll" id="enchantReroll">🎲 引き直す</button>
+        <button class="account-close" id="enchantClose">閉じる</button>
+      </div>
+    </div>
+    <div class="legend" id="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>中心語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>類義語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>対義語</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--rose)"></div>感情</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>比喩</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E8C547"></div>コンテキスト</div>
+    </div>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-word" id="loadingWord"></div>
+      <div class="loading-text" id="loadingText">語彙空間を探索中…</div>
+      <div class="loading-ad">広告スペース（300×250）</div>
+    </div>
+    <div class="completion" id="completion"></div>
+  </div>
+
+  <div class="ad-sidebar"><div class="ad-label">広告</div><div class="ad-slot-side">広告スペース</div></div>
+  <div class="ad-bottom"><div class="ad-slot-bottom">広告スペース</div></div>
+</div>
+
+<div class="tooltip" id="tooltip"><div class="tooltip-word" id="ttWord"></div><div class="tooltip-desc" id="ttDesc"></div><span class="tt-pin" id="ttPin">📌</span></div>
+<div class="toast" id="toast"></div>
+
+<div class="daily-panel" id="dailyPanel">
+  <div class="daily-header"><div><div class="daily-title" id="dailyTitle">デイリーチャレンジ</div><div class="daily-date" id="dailyDate">—</div></div><button class="daily-close" id="dailyClose">×</button></div>
+  <div class="daily-body">
+    <div class="name-row"><label>ハンドルネーム</label><input id="handleInput" type="text" maxlength="16" placeholder="名無し" autocomplete="off"/></div>
+    <div id="puzzleList"></div>
+    <div class="board-section">
+      <div class="board-tabs" id="boardTabs"><button class="board-tab active" data-puzzle="0">第1問</button><button class="board-tab" data-puzzle="1">第2問</button><button class="board-tab" data-puzzle="2">第3問</button></div>
+      <div class="board-list" id="boardList"><div class="board-empty">読み込み中…</div></div>
+      <button class="share-btn" id="shareBoardBtn">Xで共有する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DOM =====
+const C=document.getElementById('canvas'),X=C.getContext('2d'),
+CA=document.querySelector('.canvas-area'),
+WI=document.getElementById('wordInput'),EB=document.getElementById('exploreBtn'),
+SE=document.getElementById('status'),LO=document.getElementById('loadingOverlay'),
+LT=document.getElementById('loadingText'),
+LW=document.getElementById('loadingWord'),
+LE=document.getElementById('legend'),TT=document.getElementById('tooltip'),
+TTW=document.getElementById('ttWord'),TTD=document.getElementById('ttDesc'),
+GP=document.getElementById('golfPanel'),GT=document.getElementById('golfTrail'),
+GS=document.getElementById('golfStart'),GG=document.getElementById('golfGoal'),
+GM=document.getElementById('golfMoves'),GPR=document.getElementById('golfPar'),
+GU=document.getElementById('golfUndoBtn'),GH=document.getElementById('golfHintBtn'),
+GN=document.getElementById('golfNewBtn'),CO=document.getElementById('completion'),
+GDIST=document.getElementById('golfDist'),
+DP=document.getElementById('dailyPanel'),DT=document.getElementById('dailyTitle'),
+DD=document.getElementById('dailyDate'),DC=document.getElementById('dailyClose'),
+HN=document.getElementById('handleInput'),PL=document.getElementById('puzzleList'),
+BT=document.getElementById('boardTabs'),BL=document.getElementById('boardList'),
+SB=document.getElementById('shareBoardBtn'),ES=document.getElementById('engineSelect'),
+TE=document.getElementById('toast'),
+UB=document.getElementById('usageBadge'),UC=document.getElementById('usageCount'),
+UO=document.getElementById('upgradeOverlay'),UCL=document.getElementById('upgradeClose'),
+PT=document.getElementById('pinTray'),TTP=document.getElementById('ttPin');
+
+// ===== COLORS =====
+const COL={center:'#F5A623',synonym:'#5B8FDE',antonym:'#4ECBA8',emotion:'#E06B8B',metaphor:'#9B72E8',context:'#E8C547',goal:'#FF6B6B'};
+
+// ===== STATE =====
+let nodes=[],edges=[],gen=0,pan={x:0,y:0},zoom=1,
+drag=false,moved=false,dStart={x:0,y:0},pStart={x:0,y:0},dLast={x:0,y:0},
+wHist=[],hoverN=null,simTick=0,animFrame=null,time=0,
+clickTimer=null,lastTap=0,pinchDist=0;
+
+// Client-side cache: word→API result
+const vocabCache={};
+let isSearching=false; // 検索中はモード切替を禁止
+// Vocabulary memory during play (all nodes ever seen)
+const vocabMem=new Map();
+// Live search words (other users)
+let liveWords=[];
+
+// Stars (animated background)
+const stars=Array.from({length:200},()=>({
+  x:Math.random(),y:Math.random(),r:Math.random()*1.3,
+  a:Math.random()*0.4+0.05,dx:(Math.random()-0.5)*0.00003,dy:Math.random()*0.00008+0.00002
+}));
+
+// Golf state
+const golf={active:false,start:'',goal:'',par:0,moves:0,path:[],
+  daily:false,dailyIdx:0,dailyPeriod:'daily',
+  undoUsed:false,prevState:null};
+
+// Daily/Monthly state
+const daily={period:'daily',date:'',puzzles:[],current:0,results:{}};
+// 達成記録を復元（localStorage）
+try{const saved=localStorage_get('dailyResults');if(saved)daily.results=JSON.parse(saved)}catch{}
+function saveResults(){
+  // 古い記録を整理（最新60件まで保持）
+  const keys=Object.keys(daily.results);
+  if(keys.length>60){
+    keys.slice(0,keys.length-60).forEach(k=>delete daily.results[k]);
+  }
+  localStorage_set('dailyResults',JSON.stringify(daily.results));
+  syncUserData(); // メールがあればサーバーにも保存
+}
+
+let handleName=localStorage_get('handleName')||'';
+HN.value=handleName;
+// ハンドルネームを一元管理（複数の入力欄を同期）
+function setHandleName(v){
+  handleName=String(v||'').trim();
+  localStorage_set('handleName',handleName);
+  if(HN.value!==handleName)HN.value=handleName;
+  const hp=document.getElementById('handlePanelInput');
+  if(hp&&hp.value!==handleName)hp.value=handleName;
+  syncUserDataDebounced(); // メールがあればサーバーにも保存
+}
+HN.addEventListener('input',()=>setHandleName(HN.value));
+
+// ===== アカウント紐づけデータ同期 =====
+// メール（premiumEmail）があれば、ハンドルネーム・記録をサーバーに保存
+function syncUserData(){
+  if(!premiumEmail)return;
+  fetch('/api/userdata',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:premiumEmail,handle:handleName,results:daily.results})}).catch(()=>{});
+}
+let syncTimer=null;
+function syncUserDataDebounced(){
+  if(syncTimer)clearTimeout(syncTimer);
+  syncTimer=setTimeout(syncUserData,1200);
+}
+// サーバーからユーザーデータを読み込んで反映
+async function loadUserData(){
+  if(!premiumEmail)return;
+  try{
+    const r=await fetch(`/api/userdata?email=${encodeURIComponent(premiumEmail)}`);
+    const d=await r.json();
+    // ハンドルネーム：サーバー優先（端末未設定 or サーバーに値があれば）
+    if(d.handle&&d.handle!==handleName){
+      handleName=d.handle;localStorage_set('handleName',handleName);
+      HN.value=handleName;
+      const hp=document.getElementById('handlePanelInput');if(hp)hp.value=handleName;
+    }
+    // 記録：サーバーとローカルをマージ
+    if(d.results&&typeof d.results==='object'){
+      daily.results={...daily.results,...d.results};
+      localStorage_set('dailyResults',JSON.stringify(daily.results));
+    }
+    // 経路実績：サーバーとローカルをタイムスタンプでマージ・重複排除
+    if(Array.isArray(d.routeHistory)&&d.routeHistory.length){
+      const merged=[...routeHistory,...d.routeHistory];
+      const seen=new Set();
+      routeHistory=merged.filter(h=>{
+        const k=`${h.ts}|${h.from}|${h.to}`;
+        if(seen.has(k))return false;seen.add(k);return true;
+      }).sort((a,b)=>a.ts-b.ts).slice(-500);
+      try{localStorage_set('routeHistory',JSON.stringify(routeHistory))}catch{}
+    }
+  }catch{}
+}
+
+// ===== ハンドルネーム入力（マイページ内） =====
+const handlePanelInput=document.getElementById('handlePanelInput');
+handlePanelInput.addEventListener('input',()=>setHandleName(handlePanelInput.value));
+document.getElementById('handleSaveBtn').addEventListener('click',()=>{
+  setHandleName(handlePanelInput.value);
+  toast(handleName?`名前を「${handleName}」に設定しました`:'名前を空にしました','success',2500);
+});
+
+// ===== RESIZE =====
+function resize(){C.width=CA.clientWidth;C.height=CA.clientHeight}
+resize();
+window.addEventListener('resize',()=>{resize();draw()});
+window.addEventListener('orientationchange',()=>{setTimeout(()=>{resize();draw()},200)});
+
+// ===== PHYSICS =====
+function initPhysics(){
+  const cx=C.width/2,cy=C.height/2;
+  nodes.forEach(n=>{n.vx=0;n.vy=0;
+    if(n.fixed){n.x=cx;n.y=cy}
+    else if(!n.x||n.generation===gen){
+      const a=Math.random()*Math.PI*2,d=120+Math.random()*80;
+      n.x=cx+Math.cos(a)*d;n.y=cy+Math.sin(a)*d;
+    }
+  });simTick=0;
+}
+function tick(){
+  if(simTick>300)return;simTick++;
+  const center=nodes.find(n=>n.fixed&&n.generation===gen);
+  if(!center)return;
+  nodes.forEach(n=>{
+    if(n.fixed)return;
+    if(n.generation<gen-3)return; // skip very old
+    nodes.forEach(m=>{
+      if(m===n||m.generation<gen-3)return;
+      const dx=n.x-m.x,dy=n.y-m.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+      const f=3000/(d*d);n.vx+=(dx/d)*f;n.vy+=(dy/d)*f;
+    });
+    if(center){
+      const dx=center.x-n.x,dy=center.y-n.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+      const target=n.generation===gen?(n.targetDist||170):d+20; // old nodes drift out
+      const f=(d-target)*(n.generation===gen?0.004:0.001);
+      n.vx+=(dx/d)*f;n.vy+=(dy/d)*f;
+    }
+    n.vx*=0.82;n.vy*=0.82;n.x+=n.vx;n.y+=n.vy;
+  });
+}
+
+// ===== NODE OPACITY (generation-based fading) =====
+function nodeOpacity(n){
+  const age=gen-n.generation;
+  if(age<0)return 0;
+  if(age>=4)return 0;
+  // Sequential appear
+  if(n.appearAt&&Date.now()<n.appearAt)return 0;
+  if(n.appearAt&&Date.now()<n.appearAt+300)return(Date.now()-n.appearAt)/300*(1-age*0.25);
+  return Math.max(0,1-age*0.25);
+}
+
+// ===== DRAW =====
+function draw(){
+  X.clearRect(0,0,C.width,C.height);time++;
+  // Animated starfield
+  stars.forEach(s=>{
+    s.x=(s.x+s.dx+1)%1;s.y=(s.y+s.dy+1)%1;
+    const twinkle=0.7+0.3*Math.sin(time*0.02+s.x*50);
+    X.beginPath();X.arc(s.x*C.width,s.y*C.height,s.r,0,Math.PI*2);
+    X.fillStyle=`rgba(212,220,240,${s.a*twinkle})`;X.fill();
+  });
+
+  // Apply zoom (scale around canvas center)
+  X.save();
+  const ccx=C.width/2,ccy=C.height/2;
+  X.translate(ccx,ccy);X.scale(zoom,zoom);X.translate(-ccx,-ccy);
+
+  // Draw edges
+  edges.forEach(e=>{
+    const a=nodes.find(n=>n.id===e.source),b=nodes.find(n=>n.id===e.target);
+    if(!a||!b)return;
+    const oA=nodeOpacity(a),oB=nodeOpacity(b);
+    if(oA<=0||oB<=0)return;
+    const o=Math.min(oA,oB);
+    const pull=b.pull||0,str=Math.min(1,pull/10);
+    X.globalAlpha=o*(0.25+str*0.5);
+    X.beginPath();X.moveTo(a.x,a.y);X.lineTo(b.x,b.y);
+    X.strokeStyle=COL[b.type]||'#3D4560';
+    X.lineWidth=1+str*2;X.stroke();
+  });
+  X.globalAlpha=1;
+
+  // Clean up very old nodes
+  nodes=nodes.filter(n=>gen-n.generation<4);
+  edges=edges.filter(e=>nodes.some(n=>n.id===e.source)&&nodes.some(n=>n.id===e.target));
+
+  // Draw nodes
+  nodes.forEach(n=>{
+    const o=nodeOpacity(n);if(o<=0)return;
+    const isHov=n===hoverN;
+    // ブラインドモードではゴールを目立たせない（距離だけが手がかり）
+    const isGoal=golf.active&&!golf.blind&&n.word===golf.goal;
+    const col=isGoal?COL.goal:(COL[n.type]||'#5B6A8A');
+    const r=n.fixed&&n.generation===gen?24:(isHov?18:14);
+
+    // Live: 他ユーザーが探索中の語（点滅でノードを薄くせず、外周リングで表現）
+    const blink=liveWords.includes(n.word);
+    const blinkAlpha=1;
+
+    X.globalAlpha=o*blinkAlpha;
+
+    // Glow
+    const grd=X.createRadialGradient(n.x,n.y,0,n.x,n.y,r*2.5);
+    grd.addColorStop(0,col+(n.fixed&&n.generation===gen?'AA':'55'));
+    grd.addColorStop(1,col+'00');
+    X.beginPath();X.arc(n.x,n.y,r*2.5,0,Math.PI*2);X.fillStyle=grd;X.fill();
+
+    // Circle
+    X.beginPath();X.arc(n.x,n.y,r,0,Math.PI*2);
+    X.fillStyle=(n.fixed&&n.generation===gen)?col:(isGoal?'#1a0a0a':'#111726');
+    X.strokeStyle=col;X.lineWidth=isGoal?2.5:(n.fixed?0:(isHov?2:1.5));
+    X.fill();if(!n.fixed||n.generation!==gen)X.stroke();
+
+    // ライブ表示：他ユーザーが探索中の語は、ノードを薄くせず外周にパルスリングを描く
+    if(blink){
+      const pulse=0.5+0.5*Math.sin(time*0.06);
+      X.save();
+      X.globalAlpha=o*(0.25+0.35*pulse);
+      X.beginPath();X.arc(n.x,n.y,r+4+pulse*3,0,Math.PI*2);
+      X.strokeStyle=col;X.lineWidth=1.5;X.stroke();
+      X.restore();
+    }
+
+    // Label
+    const isCur=n.fixed&&n.generation===gen;
+    X.font=isCur?`600 13px 'Noto Serif JP',serif`:`400 11px 'Noto Serif JP',serif`;
+    X.fillStyle=isCur?'#080C18':col;
+    X.textAlign='center';X.textBaseline='middle';
+    X.fillText(n.word,n.x,n.y);
+    if(!isCur&&n.reading){
+      X.font=`300 8px 'Inter',sans-serif`;X.fillStyle=col+'88';
+      X.fillText(n.reading,n.x,n.y+r+9);
+    }
+  });
+  X.globalAlpha=1;
+  X.restore();
+  // 光の波紋（スクリーン座標で描画）
+  drawBursts();
+}
+
+function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
+
+// ===== API (with client cache) =====
+// 課金者のメール（あれば全APIリクエストに付与して無制限化）
+let premiumEmail=localStorage_get('premiumEmail')||'';
+let userPlan=localStorage_get('userPlan')||'free'; // free | premium | premium_plus
+let userCredits=parseInt(localStorage_get('userCredits'),10)||0; // 高速クレジット残高
+// 常時高速モード（premium_plus or クレジット保有）
+function isFastMode(){return userPlan==='premium_plus'||userCredits>0}
+// プリフェッチ対象：常時高速ユーザーのみ（月額premiumは先読みしない＝コスト抑制）
+function isPrefetchEligible(){return userPlan==='premium_plus'||userCredits>0}
+function setUserPlan(tier){
+  userPlan=tier||'free';
+  localStorage_set('userPlan',userPlan);
+}
+// クレジット残高をサーバーから取得
+async function refreshCredits(){
+  if(!premiumEmail)return;
+  try{
+    const r=await fetch(`/api/subscription?credits=1&email=${encodeURIComponent(premiumEmail)}`);
+    const d=await r.json();
+    userCredits=d.credits||0;localStorage_set('userCredits',String(userCredits));
+    updateCreditDisplay();
+  }catch{}
+}
+function updateCreditDisplay(){
+  if(typeof updateUsage==='function')updateUsage(0);
+  // 会員画面が開いていればクレジット欄も更新
+  const ce=document.getElementById('accountCredits');
+  if(ce)ce.textContent=userCredits;
+}
+function apiHeaders(){
+  const h={'Content-Type':'application/json'};
+  if(premiumEmail)h['x-premium-email']=premiumEmail;
+  return h;
+}
+// localStorageは使えない環境用のフォールバック付き
+function localStorage_get(k){try{return localStorage.getItem(k)}catch{return null}}
+function localStorage_set(k,v){try{localStorage.setItem(k,v)}catch{}}
+
+async function fetchWords(word,context,fastFallback){
+  // 文脈つきの探索はキャッシュを使わない（毎回文脈語が変わるため）
+  const body=context?{word,context}:{word};
+  // クライアントキャッシュがあれば即返す（ネットワーク呼び出しなし・消費なし）
+  if(!context&&vocabCache[word]){
+    return vocabCache[word];
+  }
+  // 月額会員で先読みが間に合わなかった場合、この検索だけ高速生成(Haiku)を要求
+  if(fastFallback)body.fastFallback=true;
+  const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
+  if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
+  if(resp.status===402){const d=await resp.json();return{_error:'no_credits',_message:d.message}}
+  if(!resp.ok)throw new Error('API error '+resp.status);
+  const data=await resp.json();if(!context)vocabCache[word]=data;
+  // APIが返したクレジット残高を反映（高速消費後の最新値）
+  if(typeof data._credits==='number'){
+    userCredits=data._credits;localStorage_set('userCredits',String(userCredits));
+    updateCreditDisplay();
+  }
+  return data;
+}
+async function fetchGravity(word){
+  try{const r=await fetch(`/api/transitions?word=${encodeURIComponent(word)}`);
+    if(!r.ok)return{};const d=await r.json();const m={};(d.neighbors||[]).forEach(n=>{m[n.word]=n.count});return m;
+  }catch{return{}}
+}
+function logTransition(from,to){
+  if(!from||!to||from===to)return;
+  fetch('/api/transitions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}).catch(()=>{});
+}
+
+// ===== 検索経路の実績（マイページで確認・CSV出力） =====
+let routeHistory=[];
+try{const s=localStorage_get('routeHistory');if(s)routeHistory=JSON.parse(s)}catch{}
+
+// ===== 探索セッション（経路）を記録：星図の「あの人の語彙モデル」用 =====
+let currentPath=[];      // 今の連続探索の語の列
+let pathFlushTimer=null;
+function pushToPath(from,to){
+  // 連続した探索を1つの経路として蓄積。fromが現在の末尾と違えば新しい経路として開始
+  if(!currentPath.length){
+    if(from)currentPath.push(from);
+    currentPath.push(to);
+  }else{
+    const last=currentPath[currentPath.length-1];
+    if(from&&from!==last){
+      // 経路が途切れた（別の場所から再開）→ 一旦保存して新規開始
+      flushPath();
+      if(from)currentPath.push(from);
+      currentPath.push(to);
+    }else{
+      currentPath.push(to);
+    }
+  }
+  // 一定時間操作がなければ経路として確定・保存
+  if(pathFlushTimer)clearTimeout(pathFlushTimer);
+  pathFlushTimer=setTimeout(flushPath,8000);
+  if(currentPath.length>=40)flushPath();
+}
+function flushPath(){
+  if(pathFlushTimer){clearTimeout(pathFlushTimer);pathFlushTimer=null}
+  if(currentPath.length>=2){
+    const words=[...currentPath];
+    fetch('/api/routes',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({words,handle:handleName||'名無し'})}).catch(()=>{});
+  }
+  currentPath=[];
+}
+// ページを離れる時にも確定
+window.addEventListener('beforeunload',flushPath);
+
+function recordRoute(from,to,mode){
+  if(!to)return;
+  routeHistory.push({from:from||'',to,mode:mode||'explore',ts:Date.now()});
+  if(routeHistory.length>500)routeHistory=routeHistory.slice(-500); // 上限500件
+  try{localStorage_set('routeHistory',JSON.stringify(routeHistory))}catch{}
+  // 探索モードの経路を星図用に蓄積
+  if(mode==='explore')pushToPath(from,to);
+  // サーバーにも保存（メールがあれば）
+  if(premiumEmail){
+    fetch('/api/userdata',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:premiumEmail,routeHistory})}).catch(()=>{});
+  }
+}
+
+// ===== EXPLORE (gradual transition + sequential appearance) =====
+async function explore(word,fromWord,opts){
+  if(!word.trim())return;
+  const suppressGolfMove=opts&&opts.suppressGolfMove;
+  // Game protection: block explore from history during golf
+  if(golf.active&&fromWord==='__history__')return;
+  if(fromWord&&fromWord!=='__history__')logTransition(fromWord,word);
+  // 経路実績を記録（全モード・履歴クリックは除外）
+  if(fromWord!=='__history__'){
+    recordRoute(fromWord,word,currentMode);
+  }
+
+  EB.disabled=true;
+  isSearching=true; // 検索中フラグ（モード切替を抑止）
+  SE.classList.add('hidden');
+  LO.classList.add('visible');
+  // 選択ノードの説明文を1文字ずつ表示する演出（語そのものも上部に表示）
+  const loadingDesc=(opts&&opts.description)?opts.description:`${word} へ`;
+  startLoadingTypewriter(loadingDesc,word);
+
+  // Refresh ad during loading (placeholder)
+  refreshAd();
+
+  try{
+    // 前の語があれば文脈として渡す（A→Bの流れからコンテキスト語を追加生成）
+    const context=(fromWord&&fromWord!=='__history__')?fromWord:null;
+    const fastFallback=opts&&opts.fastFallback;
+    const[result,gravity]=await Promise.all([fetchWords(word,context,fastFallback),fetchGravity(word)]);
+
+    // Check for rate limit error
+    if(result._error==='daily_limit'){
+      LO.classList.remove('visible');
+      showUpgrade(true);
+      EB.disabled=false;isSearching=false;
+      return;
+    }
+    if(result._error==='no_credits'){
+      LO.classList.remove('visible');
+      userCredits=0;localStorage_set('userCredits','0');updateUsage(0);
+      toast('クレジットが不足しています。追加購入できます。','info',3000);
+      showUpgrade(false);
+      EB.disabled=false;isSearching=false;
+      return;
+    }
+
+    // Update usage badge
+    if(result._remaining!=null)updateUsage(result._remaining,result._limit);
+
+    gen++;
+    const cx=C.width/2,cy=C.height/2;
+
+    // Old center: unfix
+    nodes.forEach(n=>{if(n.fixed&&n.generation<gen)n.fixed=false});
+
+    // New center
+    const centerNode={id:`c${gen}`,word,type:'center',fixed:true,x:cx,y:cy,generation:gen};
+    nodes.push(centerNode);
+
+    // Add new nodes with staggered appearance
+    const maxC=Math.max(1,...Object.values(gravity));
+    // 重複除外：同じ語・中心語を除き、語の重複も1つに
+    const seen=new Set([word]);
+    const filtered=(result.words||[]).filter(w=>{
+      if(!w||!w.word)return false;
+      if(seen.has(w.word))return false;
+      seen.add(w.word);return true;
+    });
+    filtered.forEach((w,i)=>{
+      const pull=gravity[w.word]||0;
+      const ratio=pull/maxC;
+      const base=140+Math.random()*70;
+      const td=base-ratio*60;
+      const nd={
+        id:`n${gen}_${i}`,word:w.word,reading:w.reading,type:w.type,
+        description:w.description,targetDist:td,pull,generation:gen,
+        appearAt:Date.now()+i*120 // staggered: 120ms apart
+      };
+      nodes.push(nd);edges.push({source:`c${gen}`,target:nd.id});
+      // Store in vocab memory
+      vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
+    });
+
+    LE.classList.add('visible');
+    pan={x:0,y:0};
+    initPhysics();
+    if(animFrame)cancelAnimationFrame(animFrame);
+    loop();
+
+    stopLoadingTypewriter();
+    LO.classList.remove('visible');
+
+    // ★有料会員：表示中ノードを先読みキャッシュ（クリックを即時化）
+    if(isPrefetchEligible()){
+      prefetchNodes(result.words||[]);
+    }
+    if(typeof updateEnchantBtn==='function')updateEnchantBtn();
+
+    // Golf: goal check（再開時など抑制フラグがあればスキップ）
+    if(golf.active&&!suppressGolfMove)handleGolfMove(word);
+  }catch(err){
+    stopLoadingTypewriter();
+    LO.classList.remove('visible');
+    toast('エラーが発生しました','error');
+    console.error(err);
+  }finally{EB.disabled=false;isSearching=false}
+}
+
+// ===== PREFETCH（プレミアム+の先読み） =====
+const prefetchQueue=[];
+let prefetching=false;
+function prefetchNodes(words){
+  // まだキャッシュにない語をキューに追加
+  words.forEach(w=>{
+    if(w&&w.word&&!vocabCache[w.word]&&!prefetchQueue.includes(w.word)){
+      prefetchQueue.push(w.word);
+    }
+  });
+  runPrefetch();
+}
+async function runPrefetch(){
+  if(prefetching)return;
+  prefetching=true;
+  // 表示された全ノードを先読み。レート制限回避のため6並列で流す
+  const CONCURRENCY=6;
+  while(prefetchQueue.length>0){
+    const batch=prefetchQueue.splice(0,CONCURRENCY);
+    await Promise.all(batch.map(async word=>{
+      if(!word||vocabCache[word])return;
+      try{
+        const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify({word,prefetch:true})});
+        if(resp.ok){const data=await resp.json();vocabCache[word]=data;}
+      }catch{}
+    }));
+    // 連続バッチ間にごく短い間隔（レート制限のスパイク緩和）
+    if(prefetchQueue.length>0)await new Promise(r=>setTimeout(r,80));
+  }
+  prefetching=false;
+}
+
+// ===== INTERACTIONS =====
+function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);return c?c.word:null}
+
+// ローディング中の説明文タイプライター演出
+let _typeTimer=null;
+function startLoadingTypewriter(text,word){
+  if(_typeTimer){clearInterval(_typeTimer);_typeTimer=null}
+  LT.classList.remove('fading');
+  // 選択した語そのものを上部に表示
+  if(LW){LW.classList.remove('fading');LW.textContent=word||'';}
+  LT.textContent='';
+  const chars=[...String(text||'')];
+  let i=0;
+  _typeTimer=setInterval(()=>{
+    if(i<chars.length){LT.textContent+=chars[i++];}
+    else{
+      clearInterval(_typeTimer);_typeTimer=null;
+    }
+  },55);
+}
+function stopLoadingTypewriter(){
+  if(_typeTimer){clearInterval(_typeTimer);_typeTimer=null}
+  LT.classList.add('fading');
+  if(LW)LW.classList.add('fading');
+}
+
+// 光の波紋エフェクト（ゴール到達時）
+let bursts=[];
+function triggerBurst(x,y){
+  bursts.push({x,y,r:0,max:Math.hypot(C.width,C.height),start:Date.now()});
+}
+function drawBursts(){
+  const now=Date.now();
+  bursts=bursts.filter(b=>now-b.start<900);
+  bursts.forEach(b=>{
+    const t=(now-b.start)/900; // 0→1
+    const r=b.max*t;
+    const alpha=(1-t)*0.9;
+    // 広がる光の輪
+    const grd=X.createRadialGradient(b.x,b.y,Math.max(0,r-60),b.x,b.y,r);
+    grd.addColorStop(0,`rgba(255,107,107,0)`);
+    grd.addColorStop(0.7,`rgba(255,180,120,${alpha*0.5})`);
+    grd.addColorStop(0.9,`rgba(245,166,35,${alpha})`);
+    grd.addColorStop(1,`rgba(255,255,255,0)`);
+    X.globalAlpha=1;
+    X.beginPath();X.arc(b.x,b.y,r,0,Math.PI*2);
+    X.lineWidth=8*(1-t)+2;X.strokeStyle=grd;X.stroke();
+    // 中心のフラッシュ
+    if(t<0.3){
+      const fa=(0.3-t)/0.3;
+      X.beginPath();X.arc(b.x,b.y,40*(1-fa),0,Math.PI*2);
+      X.fillStyle=`rgba(255,255,255,${fa*0.8})`;X.fill();
+    }
+  });
+  X.globalAlpha=1;
+}
+
+// ノード選択（ゴール判定を先に、検索はバックグラウンド）
+let _lastSelect={word:'',ts:0};
+function selectNode(n,screenX,screenY){
+  if(!n||(n.fixed&&n.generation===gen))return;
+  // 二重発火ガード：同じ語が500ms以内に再度選択されたら無視
+  // （タッチ端末でtouchendとclickが二重発火し手数が重複する不具合の対策）
+  const now=Date.now();
+  if(n.word===_lastSelect.word&&now-_lastSelect.ts<500)return;
+  _lastSelect={word:n.word,ts:now};
+  const from=currentCenter();
+  WI.value=n.word;
+
+  // ★ゴール判定を最優先（検索より先に）
+  if(golf.active&&n.word===golf.goal){
+    // ブラインドモード：ゴール到達でゴールを公開
+    if(golf.blind){
+      golf.blind=false;GP.classList.remove('blind');GG.textContent=golf.goal;
+      if(GDIST)GDIST.innerHTML=`<span style="color:var(--green)">🎯 ゴールは「${golf.goal}」でした！</span>`;
+      toast(`🎯 到達！ゴールは「${golf.goal}」でした`,'success',4000);
+    }
+    // クリックしたノードの画面座標から光を放つ
+    const ccx=C.width/2,ccy=C.height/2;
+    const bx=(n.x-ccx)*zoom+ccx, by=(n.y-ccy)*zoom+ccy;
+    triggerBurst(bx,by);
+    // 手数・経路を記録
+    golf.moves++;golf.path.push(n.word);
+    GM.textContent=golf.moves;renderTrail();
+    // 少し余韻を持たせてから完了画面（光の演出を見せる）
+    setTimeout(()=>finishGolf(),800);
+    // 検索はバックグラウンドで（語彙空間も更新しておくが、ゴール判定はしない）
+    exploreBackground(n.word,from);
+    return;
+  }
+
+  // 通常の探索
+  if(golf.active&&!golf.undoUsed)golf.prevState={word:from,moves:golf.moves,path:[...golf.path]};
+  let fastFallback=false;
+  if(!vocabCache[n.word]){
+    // 先読み対象ユーザー：キューから外して即座に本探索（待ち時間を最短化）
+    if(isPrefetchEligible()){
+      const qi=prefetchQueue.indexOf(n.word);
+      if(qi>=0)prefetchQueue.splice(qi,1);
+    }
+    // 月額プレミアム会員：先読みしないので、未キャッシュのクリックは高速生成で短縮
+    if(userPlan==='premium')fastFallback=true;
+  }
+  explore(n.word,from,{fastFallback,description:n.description});
+}
+
+// ゴール後のバックグラウンド探索（ゴール判定なし・ローディング非表示）
+async function exploreBackground(word,fromWord){
+  if(fromWord)logTransition(fromWord,word);
+  try{
+    const[result,gravity]=await Promise.all([fetchWords(word),fetchGravity(word)]);
+    if(result._error)return;
+    gen++;
+    const cx=C.width/2,cy=C.height/2;
+    nodes.forEach(nd=>{if(nd.fixed&&nd.generation<gen)nd.fixed=false});
+    nodes.push({id:`c${gen}`,word,type:'center',fixed:true,x:cx,y:cy,generation:gen});
+    const maxC=Math.max(1,...Object.values(gravity));
+    (result.words||[]).filter(w=>w.word!==word).forEach((w,i)=>{
+      const pull=gravity[w.word]||0,ratio=pull/maxC,base=140+Math.random()*70;
+      nodes.push({id:`n${gen}_${i}`,word:w.word,reading:w.reading,type:w.type,
+        description:w.description,targetDist:base-ratio*60,pull,generation:gen,appearAt:Date.now()+i*120});
+      edges.push({source:`c${gen}`,target:`n${gen}_${i}`});
+      vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
+    });
+    initPhysics();if(animFrame)cancelAnimationFrame(animFrame);loop();
+  }catch{}
+}
+
+function getNodeAt(mx,my){
+  const r=C.getBoundingClientRect();
+  // スクリーン座標→ワールド座標（ズーム逆変換）
+  const ccx=C.width/2,ccy=C.height/2;
+  const x=(mx-r.left-ccx)/zoom+ccx,y=(my-r.top-ccy)/zoom+ccy;
+  // Prioritize current gen, then older
+  const sorted=[...nodes].sort((a,b)=>(b.generation-a.generation));
+  return sorted.find(n=>{
+    if(nodeOpacity(n)<=0.1)return false;
+    const nr=n.fixed&&n.generation===gen?24:14;
+    return(n.x-x)**2+(n.y-y)**2<(nr+6)**2;
+  });
+}
+
+// Double-click → external search
+C.addEventListener('dblclick',e=>{
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(!n)return;e.preventDefault();
+  window.open(ES.value+encodeURIComponent(n.word),'_blank','noopener');
+});
+
+// Mouse
+C.addEventListener('mousedown',e=>{if(e.button!==0)return;drag=true;moved=false;dStart={x:e.clientX,y:e.clientY};dLast={x:e.clientX,y:e.clientY}});
+C.addEventListener('mousemove',e=>{
+  if(drag){
+    if(Math.abs(e.clientX-dStart.x)>4||Math.abs(e.clientY-dStart.y)>4)moved=true;
+    // 全ノードを差分だけ移動（画面全体のパン、ズーム考慮）
+    const ddx=(e.clientX-dLast.x)/zoom,ddy=(e.clientY-dLast.y)/zoom;
+    nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
+    dLast={x:e.clientX,y:e.clientY};
+    return;
+  }
+  const n=getNodeAt(e.clientX,e.clientY);hoverN=n||null;
+  C.style.cursor=n?'pointer':'grab';
+  if(n){
+    TTW.textContent=n.word;
+    TTD.textContent=(n.description||'')+(n.fixed?'':'  ·  Wクリック→検索 / 右クリック→ピン');
+    TTP.classList.toggle('pinned',pins.has(n.word));
+    TTP.title=pins.has(n.word)?'ピンを外す':'ピン留め';
+    TTP._word=n.word;
+    TT.classList.add('visible');TT.style.left=(e.clientX+14)+'px';TT.style.top=(e.clientY-36)+'px';
+  }else TT.classList.remove('visible');
+});
+C.addEventListener('mouseup',e=>{
+  if(e.button!==0){drag=false;return}
+  drag=false;if(moved)return;
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(n&&!(n.fixed&&n.generation===gen)){
+    if(clickTimer)clearTimeout(clickTimer);
+    clickTimer=setTimeout(()=>{selectNode(n,e.clientX,e.clientY)},220);
+  }
+});
+C.addEventListener('dblclick',()=>{if(clickTimer)clearTimeout(clickTimer)});
+C.addEventListener('mouseleave',()=>{drag=false;TT.classList.remove('visible')});
+
+// Touch
+C.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    // ピンチ開始
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    pinchDist=Math.sqrt(dx*dx+dy*dy);
+    drag=false;
+    return;
+  }
+  const t=e.touches[0];dStart={x:t.clientX,y:t.clientY};dLast={x:t.clientX,y:t.clientY};drag=true;moved=false;
+},{passive:true});
+C.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===2){
+    // ピンチズーム
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(pinchDist>0){
+      zoom*=d/pinchDist;
+      zoom=Math.max(0.4,Math.min(3,zoom));
+    }
+    pinchDist=d;moved=true;
+    return;
+  }
+  const t=e.touches[0];
+  if(Math.abs(t.clientX-dStart.x)>4||Math.abs(t.clientY-dStart.y)>4)moved=true;
+  const ddx=(t.clientX-dLast.x)/zoom,ddy=(t.clientY-dLast.y)/zoom;
+  nodes.forEach(n=>{n.x+=ddx;n.y+=ddy});
+  dLast={x:t.clientX,y:t.clientY};
+},{passive:false});
+C.addEventListener('touchend',e=>{
+  if(e.touches.length>0){pinchDist=0;return}
+  drag=false;pinchDist=0;if(moved)return;
+  const t=e.changedTouches[0],n=getNodeAt(t.clientX,t.clientY);
+  if(!n||n.fixed&&n.generation===gen)return;
+  const now=Date.now();
+  if(now-lastTap<300){
+    window.open(ES.value+encodeURIComponent(n.word),'_blank','noopener');lastTap=0;
+  }else{
+    lastTap=now;
+    setTimeout(()=>{if(lastTap===now){selectNode(n,t.clientX,t.clientY)}},310);
+  }
+});
+
+// ===== ZOOM (wheel) =====
+C.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const factor=e.deltaY<0?1.1:0.9;
+  zoom*=factor;
+  zoom=Math.max(0.4,Math.min(3,zoom));
+},{passive:false});
+
+// ===== RIGHT-CLICK → PIN =====
+C.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const n=getNodeAt(e.clientX,e.clientY);
+  if(n&&!(n.fixed&&n.generation===gen)){
+    togglePin(n.word);
+  }
+});
+
+EB.addEventListener('click',()=>explore(WI.value,currentCenter()));
+WI.addEventListener('keydown',e=>{if(e.key==='Enter')explore(WI.value,currentCenter())});
+
+// 中央の検索バー（初回アクセス時）
+const centerInput=document.getElementById('centerInput');
+const centerBtn=document.getElementById('centerBtn');
+
+// ヒント用の語リスト（多様な分野）
+const HINT_WORDS=['海','森','星','猫','花火','迷路','灯台','珈琲','時計','旋律','化石','虹','砂漠','歯車','仮面','潮騒','銀河','陶器','稲妻','汽車','蝶','彫刻','琥珀','三日月','羅針盤','万華鏡','蜃気楼','水脈','残響','黄昏','古書','硝子','螺旋','標本','茶室','風鈴','潜水艦','天文台','地下水','蝋燭'];
+function randomHint(){
+  let a=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  let b=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  while(b===a)b=HINT_WORDS[Math.floor(Math.random()*HINT_WORDS.length)];
+  // ランダムな2語を組み合わせた言葉をヒントに
+  return `${a}${b}`;
+}
+// プレースホルダーを定期的に変える
+function refreshHint(){centerInput.placeholder=randomHint()}
+refreshHint(); // 初回のみ表示（自動切替なし）
+
+function centerSearch(){
+  const v=centerInput.value.trim();
+  if(!v)return;
+  WI.value=v;
+  explore(v,currentCenter());
+}
+centerBtn.addEventListener('click',centerSearch);
+centerInput.addEventListener('keydown',e=>{if(e.key==='Enter')centerSearch()});
+
+// ===== TOAST =====
+let toastT=null;
+function toast(msg,type='info',ms=2600){
+  TE.textContent=msg;TE.className='toast visible '+type;
+  if(toastT)clearTimeout(toastT);toastT=setTimeout(()=>TE.classList.remove('visible'),ms);
+}
+
+// ===== X (TWITTER) SHARE =====
+const SITE_URL='https://goispace.app';
+function shareOnX(text,opts={}){
+  // text・url・hashtagsを正しいパラメータで渡す（Xがリンクカードを生成）
+  const params=new URLSearchParams();
+  params.set('text',text);
+  params.set('url',opts.url||SITE_URL);
+  params.set('hashtags',opts.hashtags||'語彙空間,ワードゴルフ');
+  const url='https://twitter.com/intent/tweet?'+params.toString();
+  window.open(url,'_blank','noopener,width=550,height=480');
+}
+
+// ===== AD REFRESH =====
+function refreshAd(){
+  try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch{}
+}
+// Periodic refresh every 60s during play
+setInterval(refreshAd,60000);
+
+// ===== LIVE SEARCH POLLING =====
+async function pollLive(){
+  try{const r=await fetch('/api/usage?live=1');const d=await r.json();liveWords=d.words||[]}catch{liveWords=[]}
+}
+setInterval(pollLive,5000);
+pollLive();
+
+// ===== GOLF =====
+function handleGolfMove(word){
+  if(word===golf.start&&golf.path.length===1)return;
+  if(word===golf.goal)return; // ゴールはselectNodeで処理済み
+  golf.moves++;golf.path.push(word);
+  GM.textContent=golf.moves;renderTrail();
+  // ブラインドモード：移動のたびにゴールまでの距離を測定して提示
+  if(golf.blind)measureBlindDistance(word);
+}
+let trailExpanded=false;
+function renderTrail(){
+  GT.classList.add('visible');
+  const path=golf.path;
+  const n=path.length;
+  if(n<=1)trailExpanded=false; // 新しいゲームでリセット
+  const sep='<span class="trail-sep">→</span>';
+  const wordSpan=(w,cls)=>`<span class="trail-word ${cls||''}" data-trail-word="${w}" title="クリックで意味を検索">${w}</span>`;
+  const goalLabel=golf.blind?'？？？':golf.goal;
+  const goalSpan=`<span class="trail-word goal" ${golf.blind?'':`data-trail-word="${golf.goal}"`} title="${golf.blind?'ゴールは隠れています':'クリックで意味を検索'}">${goalLabel}</span>`;
+  const dots='<span class="trail-sep">…→</span>';
+
+  let html;
+  if(trailExpanded||n<=3){
+    // 全表示（または短いので省略不要）
+    const parts=path.map((w,i)=>wordSpan(w,i===0?'start':''));
+    html=parts.join(sep)+dots+goalSpan;
+    if(n>3)html+=`<button class="trail-toggle" id="trailToggle">▲ 折りたたむ</button>`;
+  }else{
+    // 省略表示：スタート … 1手前 → 現在 … ゴール
+    const start=wordSpan(path[0],'start');
+    const prev=wordSpan(path[n-2]);
+    const cur=wordSpan(path[n-1],'cur');
+    const expandBtn=`<button class="trail-toggle" id="trailToggle" title="経路の詳細を表示">…(${n-2}手) ▾</button>`;
+    html=`${start}${sep}${expandBtn}${sep}${prev}${sep}${cur}${dots}${goalSpan}`;
+  }
+  GT.innerHTML=html;
+  // 各語クリックで意味をweb検索
+  GT.querySelectorAll('[data-trail-word]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const w=el.dataset.trailWord;
+      window.open(ES.value+encodeURIComponent(w),'_blank','noopener');
+    });
+  });
+  // 展開/折りたたみトグル
+  const tt=document.getElementById('trailToggle');
+  if(tt)tt.addEventListener('click',()=>{trailExpanded=!trailExpanded;renderTrail()});
+}
+
+async function finishGolf(){
+  const par=golf.par,diff=golf.moves-par;
+  const grade=diff<=-2?'イーグル！':diff===-1?'バーディー！':diff===0?'パー':diff===1?'ボギー':`+${diff}`;
+  golf.active=false;
+  const fullPath=[...golf.path];
+
+  const periodLabel=golf.daily?(golf.dailyPeriod==='monthly'?'マンスリー':'デイリー'):'';
+  const who=handleName?`${handleName} さんの記録\n`:'';
+  const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${who}${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
+
+  // ★まず経路を即座に表示（距離は「測定中」プレースホルダー）
+  const buildPathHTML=(distData)=>fullPath.map((w,i)=>{
+    const isGoal=w===golf.goal;
+    let inner;
+    if(isGoal){
+      inner='<div class="comp-node-dist" style="color:var(--goal)">GOAL!</div>';
+    }else if(distData){
+      const dist=distData.find(d=>d.word===w);
+      const dNum=dist?dist.distance:'?';
+      const dReason=dist?dist.reason:'';
+      const col=dNum<=3?'var(--green)':dNum<=6?'var(--amber)':'var(--rose)';
+      inner=`<div class="comp-node-dist" style="color:${col}">距離: ${dNum}</div><div class="comp-node-reason">${dReason}</div>`;
+    }else{
+      inner='<div class="comp-node-dist" style="color:var(--muted);font-size:9px">測定中…</div>';
+    }
+    const col=isGoal?'var(--goal)':'var(--border)';
+    return `<div class="comp-node" style="border-color:${col}">
+      <div class="comp-node-word" style="color:${isGoal?'var(--goal)':'var(--text)'}">${w}</div>${inner}
+    </div>${i<fullPath.length-1?'<div class="comp-arrow">→</div>':''}`;
+  }).join('');
+
+  CO.innerHTML=`
+    <div class="comp-title">ゴール！🎉</div>
+    <div class="comp-grade">${golf.moves}手（パー${par}）— ${grade}</div>
+    <div class="comp-path" id="compPath">${buildPathHTML(null)}</div>
+    <div class="comp-actions">
+      <button class="comp-btn twitter" onclick="shareOnX(\`${shareText.replace(/`/g,"'")}\`)">Xで共有</button>
+      <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
+    </div>`;
+  CO.classList.add('visible');
+
+  // ★距離測定は裏で実行し、完了したら逐次反映（タイムアウトしても経路は表示済み）
+  (async()=>{
+    try{
+      const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({action:'distance',words:fullPath,goal:golf.goal})});
+      const d=await r.json();
+      const distData=d.distances||[];
+      const el=document.getElementById('compPath');
+      if(el&&CO.classList.contains('visible'))el.innerHTML=buildPathHTML(distData);
+    }catch{
+      // 失敗時は「測定中」を消してそのまま
+      const el=document.getElementById('compPath');
+      if(el)el.innerHTML=buildPathHTML([]);
+    }
+  })();
+
+  // Daily/Monthly: submit score
+  if(golf.daily){
+    const idx=golf.dailyIdx,per=golf.dailyPeriod||'daily';
+    daily.results[per+':'+daily.date+':'+idx]={moves:golf.moves,path:fullPath,date:daily.date};
+    saveResults(); // localStorageに永続化
+    submitScore(per,idx,golf.moves,fullPath).then(()=>{
+      if(daily.period===per){DP.classList.add('visible');renderPuzzles();loadBoard(idx)}
+    });
+    savedSessions[per]=null; // 完了したので中断状態をクリア
+    golf.daily=false;
+  }else{
+    savedSessions.golf=null; // 通常ゴルフ完了
+  }
+}
+
+// Undo (1 per game)
+GU.addEventListener('click',()=>{
+  if(!golf.active||golf.undoUsed||!golf.prevState)return;
+  golf.undoUsed=true;GU.disabled=true;
+  golf.moves=golf.prevState.moves;golf.path=[...golf.prevState.path];
+  GM.textContent=golf.moves;renderTrail();
+  WI.value=golf.prevState.word;
+  gen--;// step back one generation visually
+  explore(golf.prevState.word,null,{suppressGolfMove:true});
+  toast('手戻りしました（残り0回）','info');
+});
+
+// ===== GOLF SETUP =====
+const golfSetupOverlay=document.getElementById('golfSetupOverlay');
+let golfSetupMode='random';
+function showGolfSetup(){
+  golfSetupOverlay.classList.add('visible');
+}
+document.querySelectorAll('.golf-setup-mode').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.golf-setup-mode').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    golfSetupMode=btn.dataset.mode;
+    document.getElementById('golfCustomFields').style.display=golfSetupMode==='custom'?'flex':'none';
+    document.getElementById('golfBlindDesc').style.display=golfSetupMode==='blind'?'block':'none';
+  });
+});
+document.getElementById('golfSetupStart').addEventListener('click',()=>{
+  if(golfSetupMode==='custom'){
+    const s=document.getElementById('golfStartInput').value.trim();
+    const g=document.getElementById('golfGoalInput').value.trim();
+    if(!s||!g){toast('スタートとゴールの両方を入力してください','info',2500);return}
+    if(s===g){toast('スタートとゴールは別の言葉にしてください','info',2500);return}
+    golfSetupOverlay.classList.remove('visible');
+    startGolf({start:s,goal:g});
+  }else if(golfSetupMode==='blind'){
+    golfSetupOverlay.classList.remove('visible');
+    startGolf({blind:true});
+  }else{
+    golfSetupOverlay.classList.remove('visible');
+    startGolf();
+  }
+});
+
+async function startGolf(custom){
+  // カスタム指定がある場合はパーだけ取得して即開始
+  if(custom&&custom.start&&custom.goal){
+    toast('お題を準備中…','info',1200);
+    let par=15;
+    try{
+      const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({action:'par',start:custom.start,goal:custom.goal})});
+      if(r.ok){const d=await r.json();if(d.par)par=d.par}
+    }catch{}
+    golf.active=true;golf.start=custom.start;golf.goal=custom.goal;golf.par=par;
+    golf.moves=0;golf.path=[custom.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;golf.blind=false;
+    GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+    GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');GP.classList.remove('blind');renderTrail();
+    WI.value=golf.start;explore(golf.start);
+    toast(`「${golf.start}」→「${golf.goal}」`,'success');
+    return;
+  }
+  // ランダム生成（通常 or ブラインド）
+  const blind=!!(custom&&custom.blind);
+  toast('お題を生成中…','info',1500);
+  try{
+    const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),body:JSON.stringify({action:'pair'})});
+    if(r.status===429){const d=await r.json();toast(d.message||'ゴルフ上限到達','error',3000);return}
+    const d=await r.json();
+    golf.active=true;golf.start=d.start;golf.goal=d.goal;golf.par=d.par||5;
+    golf.moves=0;golf.path=[d.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;golf.blind=blind;
+    golf.lastDist=null;
+    GS.textContent=golf.start;GPR.textContent=golf.par;GM.textContent='0';
+    GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');renderTrail();
+    if(blind){
+      GG.textContent='？？？';GP.classList.add('blind');
+      WI.value=golf.start;explore(golf.start);
+      toast(`🌑 ブラインド開始「${golf.start}」→ ？？？　距離だけが頼り`,'success',4000);
+      // 初期距離を測定して提示
+      measureBlindDistance(golf.start);
+    }else{
+      GG.textContent=golf.goal;GP.classList.remove('blind');
+      WI.value=golf.start;explore(golf.start);
+      toast(`「${golf.start}」→「${golf.goal}」`,'success');
+    }
+  }catch{toast('お題の生成に失敗しました','error')}
+}
+
+// ブラインドモード：現在の語からゴールまでの距離を測定して提示
+async function measureBlindDistance(word){
+  try{
+    const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({action:'distance',words:[word],goal:golf.goal})});
+    const d=await r.json();
+    const dist=(d.distances&&d.distances[0])?d.distances[0].distance:null;
+    if(dist==null)return;
+    updateBlindMeter(dist);
+  }catch{}
+}
+
+// 距離メーターの表示更新（近い/遠いを色とテキストで）
+function updateBlindMeter(dist){
+  const prev=golf.lastDist;
+  golf.lastDist=dist;
+  let trend='',col='var(--amber)';
+  if(prev!=null){
+    if(dist<prev){trend='🔥 近づいた！';col='var(--green)'}
+    else if(dist>prev){trend='❄️ 遠ざかった';col='var(--rose)'}
+    else{trend='→ 変わらず';col='var(--muted)'}
+  }
+  // 距離に応じた温度表現
+  let temp='';
+  if(dist<=2)temp='🔥🔥 灼熱（ゴール目前）';
+  else if(dist<=4)temp='🔥 あたたかい';
+  else if(dist<=6)temp='🌤 ふつう';
+  else if(dist<=8)temp='❄️ つめたい';
+  else temp='🧊 極寒（遠い）';
+  GDIST.innerHTML=`<span style="color:${col}">距離 ${dist}</span>　${temp}${trend?'　'+trend:''}`;
+  GDIST.classList.add('visible');
+}
+
+GH.addEventListener('click',async()=>{
+  if(!golf.active)return;
+  if(golf.blind){toast('ブラインドモードではヒントは使えません（距離だけが頼り）','info',3000);return}
+  toast('ヒント取得中…','info',1500);
+  try{const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+    body:JSON.stringify({action:'hint',from:currentCenter(),goal:golf.goal})});
+    if(r.status===429){const d=await r.json();toast(d.message||'ヒント上限到達','error',3000);return}
+    const d=await r.json();toast('ヒント: '+(d.hints||[]).join(' / '),'info',5000);
+  }catch{toast('ヒント取得失敗','error')}
+});
+GN.addEventListener('click',()=>{savedSessions.golf=null;showGolfSetup()});
+
+// ===== DAILY/MONTHLY =====
+function resultKey(p,i){return p+':'+daily.date+':'+i}
+async function openChallenge(period){
+  daily.period=period;daily.current=0;
+  DP.classList.add('visible');
+  DT.textContent=period==='monthly'?'マンスリーチャレンジ':'デイリーチャレンジ';
+  PL.innerHTML='<div class="board-empty">読み込み中…</div>';
+  try{const r=await fetch(`/api/daily?period=${period}`);const d=await r.json();
+    daily.date=d.date;daily.puzzles=d.puzzles||[];
+    DD.textContent=(period==='monthly'?'今月 ':'')+d.date;
+    renderPuzzles();loadBoard(daily.current);
+  }catch{PL.innerHTML='<div class="board-empty">読み込みに失敗しました</div>'}
+}
+function renderPuzzles(){
+  PL.innerHTML=daily.puzzles.map((p,i)=>{
+    const res=daily.results[resultKey(daily.period,i)];
+    let resultHtml='';
+    if(res){
+      const diff=res.moves-(p.par||0);
+      const grade=diff<=-2?'イーグル':diff===-1?'バーディー':diff===0?'パー':diff===1?'ボギー':`+${diff}`;
+      const cls=diff<=0?'good':diff<=1?'ok':'over';
+      resultHtml=`<div class="puzzle-result ${cls}">🏆 ${res.moves}手（${grade}）</div>`;
+    }
+    return `<div class="puzzle-card ${res?'cleared':''}" data-puzzle="${i}">
+      <div class="puzzle-top"><span class="puzzle-diff diff-${p.difficulty}">${p.difficulty}</span><span class="puzzle-par">パー ${p.par}</span></div>
+      <div class="puzzle-route"><span class="puzzle-word s">${p.start}</span><span class="arrow">→</span><span class="puzzle-word g">${p.goal}</span></div>
+      ${resultHtml}
+    </div>`;
+  }).join('');
+  PL.querySelectorAll('.puzzle-card').forEach(c=>c.addEventListener('click',()=>startDailyPuzzle(Number(c.dataset.puzzle))));
+}
+function startDailyPuzzle(idx){
+  const p=daily.puzzles[idx];if(!p)return;
+  // ハンドルネーム未設定なら確認
+  if(!handleName){
+    const ok=confirm('ハンドルネームが未設定です。\n「名無し」のまま開始しますか？\n\n（キャンセルを押すと、上の入力欄でハンドルネームを設定できます）');
+    if(!ok){HN.focus();return}
+  }
+  DP.classList.remove('visible');
+  savedSessions[daily.period]=null; // パネルから新規開始したら中断状態を破棄
+  golf.active=true;golf.start=p.start;golf.goal=p.goal;golf.par=p.par||5;
+  golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;
+  golf.daily=true;golf.dailyIdx=idx;golf.dailyPeriod=daily.period;
+  GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
+  GU.disabled=false;GP.classList.add('visible');renderTrail();
+  WI.value=golf.start;explore(golf.start);
+  toast(`${daily.period==='monthly'?'マンスリー':''}第${idx+1}問`,  'success');
+}
+async function loadBoard(pi){
+  daily.current=pi;
+  BT.querySelectorAll('.board-tab').forEach(t=>t.classList.toggle('active',Number(t.dataset.puzzle)===pi));
+  BL.innerHTML='<div class="board-empty">読み込み中…</div>';
+  try{const r=await fetch(`/api/daily?action=board&period=${daily.period}&puzzle=${pi}`);
+    const d=await r.json();renderBoard(d.board||[]);
+  }catch{BL.innerHTML='<div class="board-empty">読み込み失敗</div>'}
+}
+function renderBoard(board){
+  if(!board.length){BL.innerHTML='<div class="board-empty">まだ記録がありません</div>';return}
+  BL.innerHTML=board.map((row,i)=>{
+    const rank=i+1,isMe=handleName&&row.name===handleName;
+    const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    return `<div class="board-row ${isMe?'me':''}"><div class="board-rank ${rank<=3?'top':''}">${medal}</div>
+      <div class="board-name">${esc(row.name)}</div><div class="board-moves">${row.moves}<small>手</small></div>
+      ${row.path?`<div class="board-path">${esc(row.path)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+BT.querySelectorAll('.board-tab').forEach(t=>t.addEventListener('click',()=>loadBoard(Number(t.dataset.puzzle))));
+DC.addEventListener('click',()=>DP.classList.remove('visible'));
+async function submitScore(period,pi,moves,path){
+  try{
+    const r=await fetch('/api/daily',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'submit',period,puzzle:pi,name:handleName||'名無し',moves,path,email:premiumEmail||''})});
+    const d=await r.json();
+    // チャレンジクリアで無償クレジット付与
+    if(d&&d.creditsGranted>0){
+      if(typeof d.credits==='number'){userCredits=d.credits;localStorage_set('userCredits',String(userCredits))}
+      updateCreditDisplay();
+      const label=period==='monthly'?'マンスリー':'デイリー';
+      toast(`🎁 ${label}クリアで${d.creditsGranted}クレジット獲得！`,'success',3500);
+    }
+  }catch{}
+}
+SB.addEventListener('click',()=>{
+  const idx=daily.current,p=daily.puzzles[idx],res=daily.results[resultKey(daily.period,idx)];
+  const label=daily.period==='monthly'?'マンスリー':'デイリー';
+  let text=`語彙ゴルフ ${label} 🏌️ ${daily.date}\n第${idx+1}問：${p?p.start+'→'+p.goal:''}`;
+  if(res)text+=`\n${handleName?handleName+' さんの記録：':'私の記録：'}${res.moves}手（パー${p.par}）`;
+  text+=`\nあなたも挑戦！`;
+  shareOnX(text);
+});
+
+// ===== MODE SWITCH (進行状態を保存して途中再開) =====
+let currentMode='explore';
+// 各モードの中断状態を保存（ゴルフ進行＋キャンバスの語彙空間）
+const savedSessions={golf:null,daily:null,monthly:null};
+const savedCanvas={explore:null,golf:null,daily:null,monthly:null};
+
+// 現在のキャンバス（ノード・エッジ）を保存
+function snapshotCanvas(){
+  return {nodes:nodes.map(n=>({...n})),edges:edges.map(e=>({...e})),gen};
+}
+// キャンバスを復元（なければ空に）
+function restoreCanvas(snap){
+  if(snap){
+    nodes=snap.nodes.map(n=>({...n}));
+    edges=snap.edges.map(e=>({...e}));
+    gen=snap.gen;
+  }else{
+    nodes=[];edges=[];
+  }
+  if(animFrame)cancelAnimationFrame(animFrame);
+  loop();
+}
+// キャンバスを完全にクリア
+function clearCanvas(){
+  nodes=[];edges=[];
+  if(animFrame)cancelAnimationFrame(animFrame);
+  draw();
+}
+
+// 現在のゴルフ状態のスナップショットを取る
+function snapshotGolf(){
+  if(!golf.active)return null;
+  return {
+    start:golf.start,goal:golf.goal,par:golf.par,moves:golf.moves,
+    path:[...golf.path],undoUsed:golf.undoUsed,
+    prevState:golf.prevState?{...golf.prevState,path:[...golf.prevState.path]}:null,
+    daily:golf.daily,dailyIdx:golf.dailyIdx,dailyPeriod:golf.dailyPeriod,
+    blind:golf.blind,lastDist:golf.lastDist,
+    centerWord:currentCenter(),
+  };
+}
+// スナップショットからゴルフを復元
+function restoreGolf(s){
+  golf.active=true;golf.start=s.start;golf.goal=s.goal;golf.par=s.par;
+  golf.moves=s.moves;golf.path=[...s.path];golf.undoUsed=s.undoUsed;
+  golf.prevState=s.prevState;golf.daily=s.daily;golf.dailyIdx=s.dailyIdx;golf.dailyPeriod=s.dailyPeriod;
+  golf.blind=s.blind||false;golf.lastDist=s.lastDist!=null?s.lastDist:null;
+  GS.textContent=golf.start;GPR.textContent=golf.par;GM.textContent=golf.moves;
+  GG.textContent=golf.blind?'？？？':golf.goal;
+  GP.classList.toggle('blind',golf.blind);
+  GU.disabled=golf.undoUsed;GP.classList.add('visible');renderTrail();
+  if(golf.blind&&golf.lastDist!=null)updateBlindMeter(golf.lastDist);
+  SE.classList.add('hidden');// 再開時は初期ステータスを隠す
+  toast('続きから再開しました','info',1800);
+}
+
+function leaveMode(mode){
+  // キャンバス状態を保存（全モード）
+  savedCanvas[mode]=snapshotCanvas();
+  // ゴルフ系モードを離れるとき、進行中なら保存
+  if((mode==='golf'||mode==='daily'||mode==='monthly')&&golf.active){
+    savedSessions[mode]=snapshotGolf();
+  }
+}
+
+document.querySelectorAll('.mode-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    const m=tab.dataset.mode;
+    if(m===currentMode){
+      // 同じモードを再クリックした場合は何もしない（誤操作防止）
+      return;
+    }
+    if(isSearching){
+      toast('探索中はモードを切り替えられません','info',1800);
+      return;
+    }
+    // 現在のモードの状態を保存
+    leaveMode(currentMode);
+
+    document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+
+    golf.active=false;GP.classList.remove('visible');GT.classList.remove('visible');
+    DP.classList.remove('visible');CO.classList.remove('visible');
+    golfSetupOverlay.classList.remove('visible');
+    if(GDIST)GDIST.classList.remove('visible');
+    if(typeof exitNebula==='function'&&m!=='nebula')exitNebula();
+    // 前モードのノードを必ずクリア（混在を防ぐ）
+    clearCanvas();
+    currentMode=m;
+
+    if(m==='golf'){
+      if(savedSessions.golf){restoreGolf(savedSessions.golf);restoreCanvas(savedCanvas.golf)}
+      else showGolfSetup();
+    }else if(m==='daily'){
+      if(savedSessions.daily){daily.period='daily';restoreGolf(savedSessions.daily);restoreCanvas(savedCanvas.daily)}
+      else openChallenge('daily');
+    }else if(m==='monthly'){
+      if(savedSessions.monthly){daily.period='monthly';restoreGolf(savedSessions.monthly);restoreCanvas(savedCanvas.monthly)}
+      else openChallenge('monthly');
+    }else if(m==='nebula'){
+      // 星図モード：全画面星図ビューを開く
+      SE.classList.add('hidden');
+      enterNebula();
+    }else if(m==='explore'){
+      // 探索モード：保存済みの語彙空間があれば復元、なければ空＋中央検索バー表示
+      restoreCanvas(savedCanvas.explore);
+      if(!savedCanvas.explore||!savedCanvas.explore.nodes.length){
+        SE.classList.remove('hidden');
+        if(centerInput)centerInput.value='';
+      }else{
+        SE.classList.add('hidden');
+      }
+    }
+    if(typeof updateEnchantBtn==='function')updateEnchantBtn();
+  });
+});
+
+// ===== PIN SYSTEM =====
+const pins=new Set(); // ピン留めした語のSet
+
+function togglePin(word){
+  if(!word)return;
+  if(pins.has(word)){
+    pins.delete(word);
+    toast(`「${word}」のピンを外しました`,'info',1500);
+  }else{
+    pins.add(word);
+    toast(`「${word}」をピン留めしました 📌`,'success',1500);
+  }
+  renderPinTray();
+  // ツールチップのピンアイコンも更新
+  if(TTP._word===word)TTP.classList.toggle('pinned',pins.has(word));
+}
+
+function renderPinTray(){
+  PT.innerHTML=[...pins].map(w=>`
+    <div class="pin-chip" data-word="${w}">
+      <span class="pin-chip-word">${w}</span>
+      <button class="pin-chip-remove" data-remove="${w}" title="ピンを外す">×</button>
+    </div>`).join('');
+
+  // チップクリック → 探索モードで探索（モード外なら切替）
+  PT.querySelectorAll('.pin-chip').forEach(chip=>{
+    chip.addEventListener('click',e=>{
+      if(e.target.classList.contains('pin-chip-remove'))return;
+      if(isSearching){toast('探索中です','info',1500);return}
+      const word=chip.dataset.word;
+      // 探索モード以外にいる場合は探索モードへ切替
+      if(currentMode!=='explore'){
+        const exploreTab=document.querySelector('.mode-tab[data-mode="explore"]');
+        if(exploreTab)exploreTab.click();
+      }
+      toast(`ピンの「${word}」を探索します`,'info',2000);
+      WI.value=word;explore(word,currentCenter());
+    });
+  });
+  // 削除ボタン
+  PT.querySelectorAll('.pin-chip-remove').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      togglePin(btn.dataset.remove);
+    });
+  });
+}
+
+// ツールチップのピンボタン
+TTP.addEventListener('click',e=>{
+  e.stopPropagation();
+  togglePin(TTP._word);
+});
+
+// ===== ENCHANT（探索モード限定） =====
+const ENCHANT_POOL=['海','森','星','猫','花火','迷路','灯台','珈琲','時計','旋律','化石','虹','砂漠','歯車','仮面','潮騒','銀河','陶器','稲妻','汽車','蝶','彫刻','琥珀','三日月','羅針盤','万華鏡','蜃気楼','水脈','残響','黄昏','古書','硝子','螺旋','標本','茶室','風鈴','潜水艦','天文台','地下水','蝋燭','鯨','砂時計','図書館','遺跡','宝石','楽器','霧','氷河','流星','望遠鏡','原稿','種子','鉱石','洞窟','焚火','足跡','地図'];
+const EB_enchant=document.getElementById('enchantBtn');
+const EO_enchant=document.getElementById('enchantOverlay');
+const enchantChoices=document.getElementById('enchantChoices');
+const enchantSub=document.getElementById('enchantSub');
+
+function updateEnchantBtn(){
+  // 探索モードかつ中心語がある時だけ表示
+  if(currentMode==='explore'&&currentCenter()){
+    EB_enchant.classList.add('visible');
+  }else{
+    EB_enchant.classList.remove('visible');
+  }
+}
+function rollEnchantChoices(){
+  const center=currentCenter();
+  enchantSub.textContent=`「${center}」と組み合わせる言葉を選んでください`;
+  // ランダムに3語選ぶ（中心語と重複しない、ASCII混入を除外）
+  const pool=ENCHANT_POOL.filter(w=>w!==center&&/^[\u3000-\u9fff\u30a0-\u30ff\u3040-\u309f]+$/.test(w));
+  const picks=[];
+  while(picks.length<3&&pool.length>0){
+    const i=Math.floor(Math.random()*pool.length);
+    picks.push(pool.splice(i,1)[0]);
+  }
+  enchantChoices.innerHTML=picks.map(w=>`<button class="enchant-choice" data-enchant="${w}">${w}</button>`).join('');
+  enchantChoices.querySelectorAll('[data-enchant]').forEach(btn=>{
+    btn.addEventListener('click',()=>runEnchant(btn.dataset.enchant));
+  });
+}
+EB_enchant.addEventListener('click',()=>{
+  if(!currentCenter()){toast('まず言葉を探索してください','info',1800);return}
+  rollEnchantChoices();
+  EO_enchant.classList.add('visible');
+});
+document.getElementById('enchantReroll').addEventListener('click',rollEnchantChoices);
+document.getElementById('enchantClose').addEventListener('click',()=>EO_enchant.classList.remove('visible'));
+
+async function runEnchant(randomWord){
+  const center=currentCenter();
+  if(!center)return;
+  EO_enchant.classList.remove('visible');
+  toast(`「${center}」×「${randomWord}」の文脈を発見中…`,'info',2500);
+  try{
+    const r=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({action:'enchant',word:center,randomWord})});
+    const d=await r.json();
+    if(!d.words||!d.words.length){toast('エンチャントに失敗しました','error',2500);return}
+    // 5つのコンテキストノードを現在の中心に追加
+    const cx=C.width/2,cy=C.height/2;
+    d.words.forEach((w,i)=>{
+      const base=150+Math.random()*60;
+      const nd={id:`e${gen}_${i}_${Date.now()}`,word:w.word,reading:w.reading,type:'context',
+        description:w.description,targetDist:base,pull:0,generation:gen,appearAt:Date.now()+i*120};
+      // 既存と重複しなければ追加
+      if(!nodes.some(n=>n.word===w.word)){
+        nodes.push(nd);
+        const center=nodes.find(n=>n.fixed&&n.generation===gen);
+        if(center)edges.push({source:center.id,target:nd.id});
+        vocabMem.set(w.word,{type:'context',reading:w.reading,desc:w.description});
+      }
+    });
+    initPhysics();if(animFrame)cancelAnimationFrame(animFrame);loop();
+    toast(`✨ ${d.words.length}個のコンテキストが出現！`,'success',2500);
+  }catch{toast('エンチャントに失敗しました','error',2500)}
+}
+
+// ===== USAGE & UPGRADE =====
+function updateUsage(remaining,limit){
+  if(typeof updateAccountTab==='function')updateAccountTab();
+  const isSub=(userPlan==='premium'||userPlan==='premium_plus');
+  if(isSub){
+    // サブスク会員：プレミアム表示。クレジットがあれば⚡も併記
+    UB.innerHTML=userCredits>0
+      ?`<span class="count">✨ ＋⚡${userCredits}</span>`
+      :'<span class="count">✨ プレミアム</span>';
+    UB.classList.remove('low');UB.classList.add('premium');return;
+  }
+  if(userCredits>0){
+    // クレジットのみ（非サブスク）：残高表示
+    UB.innerHTML=`<span class="count">⚡ ${userCredits}</span>`;
+    UB.classList.add('premium');UB.classList.toggle('low',userCredits<=5);
+    return;
+  }
+  UB.classList.remove('premium');
+  UC.textContent=remaining;
+  UB.classList.toggle('low',remaining<=5);
+}
+function showUpgrade(limitReached){
+  if(premiumEmail)return; // 課金者には出さない
+  // 月額カードを再表示（クレジット専用表示から戻す）
+  document.querySelectorAll('#planMonthly,#planYearly,.upgrade-divider').forEach(el=>{if(el)el.style.display=''});
+  const t=document.getElementById('upgradeTitle');
+  const d=document.getElementById('upgradeDesc');
+  const ic=document.getElementById('upgradeIcon');
+  if(limitReached===true){
+    ic.textContent='🚀';
+    t.textContent='本日の無料回数に達しました';
+    d.textContent='プレミアムプランなら、待たずに無制限で探索できます。';
+  }else{
+    ic.textContent='✨';
+    t.textContent='プレミアムプラン';
+    d.textContent='無制限の探索で、語彙の宇宙をもっと深く。';
+  }
+  UO.classList.add('visible');
+}
+UCL.addEventListener('click',()=>UO.classList.remove('visible'));
+
+// ===== マイページ（プロフィール・プラン・実績の統合） =====
+const AO=document.getElementById('myPageOverlay');
+const accEmail=document.getElementById('accountEmail');
+const accPlanName=document.getElementById('accountPlanName');
+const myPageTab=document.getElementById('myPageTab');
+
+// バッジクリック → マイページを開く
+UB.addEventListener('click',()=>{
+  if(AO.classList.contains('visible'))AO.classList.remove('visible');
+  else openMyPage();
+});
+
+function updateAccountTab(){
+  if(!myPageTab)return;
+  if(premiumEmail){
+    myPageTab.textContent=isFastMode()?'⚡ マイページ':'✨ マイページ';
+    myPageTab.classList.add('premium');
+  }else{
+    myPageTab.textContent='マイページ';
+    myPageTab.classList.remove('premium');
+  }
+}
+myPageTab.addEventListener('click',()=>{
+  if(AO.classList.contains('visible'))AO.classList.remove('visible');
+  else openMyPage();
+});
+
+// マイページ内タブ切替
+document.querySelectorAll('.mypage-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.mypage-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.mypage-section').forEach(s=>s.classList.remove('active'));
+    tab.classList.add('active');
+    const sec=tab.dataset.mypage;
+    document.getElementById('mySection'+sec.charAt(0).toUpperCase()+sec.slice(1)).classList.add('active');
+    if(sec==='history')renderHistory();
+  });
+});
+
+async function openMyPage(){
+  AO.classList.add('visible');
+  // プロフィール初期化
+  handlePanelInput.value=handleName;
+  accEmail.textContent=premiumEmail||'ゲスト（未ログイン）';
+  // 会員/ゲストでアクション切替
+  const memberActions=document.getElementById('memberActions');
+  const guestActions=document.getElementById('guestActions');
+  if(premiumEmail){memberActions.style.display='flex';guestActions.style.display='none'}
+  else{memberActions.style.display='none';guestActions.style.display='flex'}
+  // クレジット残高
+  const ce=document.getElementById('accountCredits');
+  if(ce)ce.textContent=userCredits;
+  if(premiumEmail)refreshCredits();
+  // プラン情報
+  accPlanName.textContent=premiumEmail?'読み込み中…':'無料プラン';
+  const rows=document.getElementById('accountPlanRows');
+  rows.innerHTML='';
+  if(premiumEmail){
+    try{
+      const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
+      const d=await r.json();
+      if(d.plan){
+        accPlanName.textContent=d.plan.label;
+        const fmt=ts=>ts?new Date(ts*1000).toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'}):'—';
+        const yen=d.plan.amount?`¥${d.plan.amount.toLocaleString()}`:'';
+        const list=[];
+        list.push(['料金',`${yen} / ${d.plan.interval==='year'?'年':'月'}`]);
+        if(d.plan.startedAt)list.push(['入会日',fmt(d.plan.startedAt)]);
+        if(d.plan.cancelAtEnd)list.push(['解約予定日',fmt(d.plan.renewsAt),'warn']);
+        else list.push(['次回課金日',fmt(d.plan.renewsAt)]);
+        rows.innerHTML=list.map(([k,v,cls])=>
+          `<div class="account-plan-row"><span class="k">${k}</span><span class="v ${cls||''}">${v}</span></div>`
+        ).join('');
+      }else{
+        accPlanName.textContent=userCredits>0?'クレジット利用':'無料プラン';
+      }
+    }catch{accPlanName.textContent='プレミアム会員'}
+  }
+}
+
+// 探索の実績（経路履歴）を表示
+function renderHistory(){
+  const summary=document.getElementById('historySummary');
+  const list=document.getElementById('historyList');
+  if(!routeHistory.length){
+    summary.textContent='まだ探索の記録がありません';
+    list.innerHTML='';return;
+  }
+  summary.textContent=`これまでの探索：${routeHistory.length}件`;
+  // 新しい順に最大100件表示
+  const recent=[...routeHistory].reverse().slice(0,100);
+  const modeLabel={explore:'探索',golf:'ゴルフ',daily:'デイリー',monthly:'マンスリー'};
+  list.innerHTML=recent.map(h=>{
+    const t=new Date(h.ts);
+    const time=`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    return `<div class="history-row">
+      ${h.from?`<span class="h-from">${h.from}</span><span class="h-arrow">→</span>`:''}
+      <span class="h-to">${h.to}</span>
+      <span class="h-time">${time}</span>
+      <span class="h-mode">${modeLabel[h.mode]||h.mode}</span>
+    </div>`;
+  }).join('');
+}
+
+// CSV書き出し
+document.getElementById('exportCsvBtn').addEventListener('click',()=>{
+  if(!routeHistory.length){toast('書き出す履歴がありません','info',2000);return}
+  const esc=s=>`"${String(s||'').replace(/"/g,'""')}"`;
+  const header='日時,モード,移動元,移動先\n';
+  const rows=routeHistory.map(h=>{
+    const t=new Date(h.ts).toLocaleString('ja-JP');
+    return [esc(t),esc(h.mode),esc(h.from),esc(h.to)].join(',');
+  }).join('\n');
+  const csv='\uFEFF'+header+rows; // BOM付きでExcelの文字化け防止
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`goispace_history_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('CSVを書き出しました','success',2500);
+});
+
+// 履歴消去
+document.getElementById('clearHistoryBtn').addEventListener('click',()=>{
+  if(!confirm('探索の履歴をすべて消去しますか？この操作は元に戻せません。'))return;
+  routeHistory=[];
+  try{localStorage_set('routeHistory','[]')}catch{}
+  if(premiumEmail){fetch('/api/userdata',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:premiumEmail,routeHistory:[]})}).catch(()=>{})}
+  renderHistory();
+  toast('履歴を消去しました','info',2000);
+});
+
+document.getElementById('myPageClose').addEventListener('click',()=>AO.classList.remove('visible'));
+
+document.getElementById('myUpgradeBtn').addEventListener('click',()=>{AO.classList.remove('visible');showUpgrade()});
+document.getElementById('myRestoreBtn').addEventListener('click',()=>{AO.classList.remove('visible');document.getElementById('restoreBtn').click()});
+
+// ===== リカバリーコード =====
+let recoveryCode=localStorage_get('recoveryCode')||'';
+const recoveryOverlay=document.getElementById('recoveryOverlay');
+function showRecoveryCode(code){
+  if(!code)return;
+  recoveryCode=code;localStorage_set('recoveryCode',code);
+  document.getElementById('recoveryCodeDisplay').textContent=code;
+  recoveryOverlay.classList.add('visible');
+}
+document.getElementById('copyRecoveryBtn').addEventListener('click',()=>{
+  const code=document.getElementById('recoveryCodeDisplay').textContent;
+  navigator.clipboard?.writeText(code).then(()=>toast('コードをコピーしました','success',2000)).catch(()=>{});
+});
+document.getElementById('recoveryClose').addEventListener('click',()=>recoveryOverlay.classList.remove('visible'));
+document.getElementById('showRecoveryBtn').addEventListener('click',()=>{
+  if(recoveryCode){AO.classList.remove('visible');showRecoveryCode(recoveryCode);return}
+  toast('この端末には復元コードが保存されていません。購入時に表示されたコードをご確認ください。','info',4000);
+});
+
+// プラン管理（Stripe Customer Portal）へ
+document.getElementById('buyCreditsBtn').addEventListener('click',()=>{
+  // クレジット購入：会員でもアップグレード画面を開いてクレジットパックを選べるように
+  AO.classList.remove('visible');
+  const t=document.getElementById('upgradeTitle');
+  const d=document.getElementById('upgradeDesc');
+  const ic=document.getElementById('upgradeIcon');
+  if(t)t.textContent='⚡ 高速クレジット';
+  if(d)d.textContent='クレジットを購入すると、探索が高速になります。';
+  if(ic)ic.textContent='⚡';
+  // 月額プランカードは隠し、クレジットパックだけ見せる
+  document.querySelectorAll('#planMonthly,#planYearly,.upgrade-divider').forEach(el=>{if(el)el.style.display='none'});
+  UO.classList.add('visible');
+});
+document.getElementById('managePlanBtn').addEventListener('click',async()=>{
+  toast('管理画面へ移動します…','info',2000);
+  try{
+    const r=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:premiumEmail})});
+    const d=await r.json();
+    if(d.url){location.href=d.url}
+    else{toast(d.error||'管理画面を開けませんでした','error',3000)}
+  }catch{toast('管理画面を開けませんでした','error',3000)}
+});
+
+// ログアウト（この端末のプレミアム情報を消す）
+document.getElementById('accountLogout').addEventListener('click',()=>{
+  if(!confirm('この端末からログアウトしますか？\n（課金は継続されます。再ログインはメール復元から可能です）'))return;
+  premiumEmail='';setUserPlan('free');userCredits=0;
+  try{localStorage.removeItem('premiumEmail');localStorage.removeItem('userCredits')}catch{}
+  AO.classList.remove('visible');
+  toast('ログアウトしました','info',2500);
+  loadUsage();
+});
+
+// ===== STRIPE CHECKOUT =====
+async function startCheckout(plan){
+  toast('決済ページへ移動します…','info',2000);
+  try{
+    const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plan})});
+    const d=await r.json();
+    if(d.url){location.href=d.url}
+    else{toast(d.error||'決済の開始に失敗しました','error',3000)}
+  }catch{toast('決済の開始に失敗しました','error',3000)}
+}
+document.getElementById('planMonthly').addEventListener('click',()=>startCheckout('monthly'));
+document.getElementById('planYearly').addEventListener('click',()=>startCheckout('yearly'));
+document.getElementById('planCreditsSmall').addEventListener('click',()=>startCheckout('credits_small'));
+document.getElementById('planCreditsLarge').addEventListener('click',()=>startCheckout('credits_large'));
+
+// 購入済み復元（メール入力）
+document.getElementById('restoreBtn').addEventListener('click',async()=>{
+  const email=prompt('購入時のメールアドレスを入力してください');
+  if(!email)return;
+  const code=prompt('復元コードを入力してください（例: GOI-7K2M-9XQ4）\n※購入時に表示されたコードです');
+  toast('確認中…','info',1500);
+  try{
+    const q=`/api/subscription?email=${encodeURIComponent(email)}&restore=1${code?`&code=${encodeURIComponent(code.trim())}`:''}`;
+    const r=await fetch(q);
+    const d=await r.json();
+    // コードが必要／不一致の場合
+    if(d.needCode){
+      toast(d.codeError?'復元コードが一致しません':'このアカウントは復元コードが必要です','error',3500);
+      return;
+    }
+    if(d.premium){
+      premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+      setUserPlan(d.plan&&d.plan.tier?d.plan.tier:'premium');
+      if(d.recoveryCode){recoveryCode=d.recoveryCode;localStorage_set('recoveryCode',d.recoveryCode)}
+      UO.classList.remove('visible');
+      toast('プレミアムを復元しました！','success',3000);
+      updateUsage(9999);
+      loadUserData();
+      if(d.newlyIssued&&d.recoveryCode)showRecoveryCode(d.recoveryCode);
+    }else if(d.verified&&d.email){
+      // サブスクは無いが、過去に支払い（クレジット購入）がある→クレジット残高を復元
+      premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+      setUserPlan('free');
+      if(d.recoveryCode){recoveryCode=d.recoveryCode;localStorage_set('recoveryCode',d.recoveryCode)}
+      await refreshCredits();
+      if(userCredits>0){
+        UO.classList.remove('visible');
+        toast(`⚡ クレジットを復元しました（残高: ${userCredits}）`,'success',3000);
+        loadUserData();
+        if(d.newlyIssued&&d.recoveryCode)showRecoveryCode(d.recoveryCode);
+      }else{
+        toast('このメールに有効なクレジット残高はありません','info',3000);
+      }
+    }else{
+      toast('そのメールでは購入が確認できませんでした','error',3000);
+    }
+  }catch{toast('確認に失敗しました','error',3000)}
+});
+
+// 決済完了後の戻り処理
+async function handleCheckoutReturn(){
+  const params=new URLSearchParams(location.search);
+  const checkout=params.get('checkout');
+  const sessionId=params.get('session_id');
+  if(checkout==='success'&&sessionId){
+    toast('決済を確認しています…','info',2000);
+    try{
+      const r=await fetch(`/api/subscription?session_id=${encodeURIComponent(sessionId)}`);
+      const d=await r.json();
+      if(d.creditPurchase&&d.email){
+        // クレジット購入完了
+        premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+        userCredits=d.credits||0;localStorage_set('userCredits',String(userCredits));
+        toast(`⚡ クレジットを購入しました！残高: ${userCredits}`,'success',4000);
+        UO.classList.remove('visible');
+        updateCreditDisplay();
+        if(d.recoveryCode)showRecoveryCode(d.recoveryCode);
+      }else if(d.premium&&d.email){
+        premiumEmail=d.email;localStorage_set('premiumEmail',d.email);
+        toast('プレミアム登録が完了しました！🎉','success',4000);
+        updateUsage(9999);
+        loadUserData();
+        if(d.recoveryCode)showRecoveryCode(d.recoveryCode);
+        // プラン階層（premium / premium_plus）を確定させる
+        try{
+          const sr=await fetch(`/api/subscription?email=${encodeURIComponent(d.email)}`);
+          const sd=await sr.json();
+          setUserPlan(sd.plan&&sd.plan.tier?sd.plan.tier:'premium');
+          updateUsage(9999);
+        }catch{setUserPlan('premium')}
+      }else{
+        toast('決済の確認ができませんでした','error',3000);
+      }
+    }catch{}
+    // URLをクリーンにする
+    history.replaceState({},'',location.pathname);
+  }else if(checkout==='cancel'){
+    toast('決済はキャンセルされました','info',2500);
+    history.replaceState({},'',location.pathname);
+  }
+}
+
+// 起動時に残り回数を取得
+async function loadUsage(){
+  // 課金情報があればサーバーで再検証（localStorageを盲信しない）
+  if(premiumEmail){
+    // クレジット残高も取得
+    await refreshCredits();
+    try{
+      const r=await fetch(`/api/subscription?email=${encodeURIComponent(premiumEmail)}`);
+      const d=await r.json();
+      if(d.premium){
+        setUserPlan(d.plan&&d.plan.tier?d.plan.tier:'premium');
+        updateUsage(9999);
+        loadUserData(); // アカウント紐づけデータを読み込み
+        return;
+      }else{
+        // サブスクではない。クレジット残高があればそれを表示
+        setUserPlan('free');
+        if(userCredits>0){updateUsage(userCredits);loadUserData();return}
+        // 課金もクレジットもない→ローカル情報をクリア
+        premiumEmail='';
+        try{localStorage.removeItem('premiumEmail')}catch{}
+      }
+    }catch{
+      // 通信失敗時：クレジットがあれば信じて続行、なければ無料扱い
+      if(userCredits>0){updateUsage(userCredits);return}
+    }
+  }
+  try{const r=await fetch('/api/usage');const d=await r.json();
+    updateUsage(d.explore.remaining,d.explore.limit);
+  }catch{}
+}
+handleCheckoutReturn();
+loadUsage();
+
+// ============ 星図ビュー（全画面・星雲＋経路＋コンパス） ============
+const NV=document.getElementById('nebulaView');
+const NVC=document.getElementById('nebulaCanvas');
+const NVCX=NVC.getContext('2d');
+let nvMode='explore'; // explore(星雲) | peek(経路) | compass
+let nebulaGraph=null;  // 全体星雲データ
+let nvOverlay={paths:null,compass:null}; // 重ねるデータ
+let nvView={x:0,y:0,zoom:1,drag:false,lx:0,ly:0};
+let nvRAF=null;
+
+function wordHue(w){let h=0;for(let i=0;i<w.length;i++)h=(h*31+w.charCodeAt(i))%360;return h;}
+
+async function enterNebula(){
+  NV.classList.add('visible');
+  document.getElementById('nvWordInput').value='';
+  setNvMode('explore');
+  if(!nebulaGraph)await loadNebulaGraph();
+  startNvLoop();
+}
+function exitNebula(){
+  NV.classList.remove('visible');
+  if(nvRAF){cancelAnimationFrame(nvRAF);nvRAF=null}
+}
+async function loadNebulaGraph(){
+  try{
+    const r=await fetch('/api/transitions?action=nebula&limit=120');
+    nebulaGraph=await r.json();
+    layoutNebulaGraph();
+  }catch{nebulaGraph={nodes:[],edges:[]}}
+}
+function layoutNebulaGraph(){
+  const nodes=nebulaGraph.nodes||[];
+  const maxW=Math.max(1,...nodes.map(n=>n.weight));
+  nodes.forEach((n,i)=>{
+    const norm=n.weight/maxW;
+    const radius=40+(1-norm)*240+(i%9)*5;
+    const ang=(wordHue(n.word)/360)*Math.PI*2+i*0.13;
+    n.bx=Math.cos(ang)*radius;n.by=Math.sin(ang)*radius;
+    n.r=4+norm*16;n.hue=wordHue(n.word);n.norm=norm;
+  });
+  nebulaGraph._map={};nodes.forEach(n=>nebulaGraph._map[n.word]=n);
+}
+function setNvMode(m){
+  nvMode=m;
+  document.querySelectorAll('.nv-mode').forEach(b=>b.classList.toggle('active',b.dataset.nv===m));
+  const bar=document.getElementById('nebulaBar');
+  const inp=document.getElementById('nvWordInput');
+  const panel=document.getElementById('nvPanel');
+  const hint=document.getElementById('nvHint');
+  panel.innerHTML='';
+  if(m==='explore'){
+    bar.style.display='none';
+    hint.textContent='星雲をドラッグで移動・ホイールで拡大。明るい星ほど多くの人が辿った語です。';
+  }else if(m==='peek'){
+    bar.style.display='flex';inp.placeholder='語を入力（例：孤独）→その語を辿った経路';
+    hint.textContent='ある語を入力すると、その語を辿った人々の経路が星図上に光ります。';
+  }else{
+    bar.style.display='flex';inp.placeholder='興味を入力（読点区切り）→コンパス';
+    hint.textContent='あなたの興味を入力すると、文化的に離れた領域を指し示します。';
+    const freq={};routeHistory.filter(h=>h.mode==='explore').forEach(h=>{if(h.to)freq[h.to]=(freq[h.to]||0)+1});
+    const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
+    if(top.length&&!inp.value)inp.value=top.join('、');
+  }
+}
+document.querySelectorAll('.nv-mode').forEach(b=>{
+  b.addEventListener('click',()=>{setNvMode(b.dataset.nv);if(b.dataset.nv==='explore'){nvOverlay.paths=null;nvOverlay.compass=null}});
+});
+document.getElementById('nvGoBtn').addEventListener('click',runNvQuery);
+document.getElementById('nvWordInput').addEventListener('keydown',e=>{if(e.key==='Enter')runNvQuery()});
+async function runNvQuery(){
+  const val=document.getElementById('nvWordInput').value.trim();
+  if(!val)return;
+  const panel=document.getElementById('nvPanel');
+  if(nvMode==='peek'){
+    panel.innerHTML='<div class="nv-card nv-empty">経路を探しています…</div>';
+    try{
+      const r=await fetch(`/api/routes?word=${encodeURIComponent(val)}&limit=8`);
+      const d=await r.json();
+      nvOverlay.paths={word:val,paths:d.paths||[]};
+      renderNvPeekPanel(val,d.paths||[]);
+      ensureNebulaWords((d.paths||[]).flatMap(p=>p.words));
+    }catch{panel.innerHTML='<div class="nv-card nv-empty">読み込み失敗</div>'}
+  }else if(nvMode==='compass'){
+    const interests=val.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
+    if(interests.length<2){toast('興味を2つ以上入力してください','info',2500);return}
+    panel.innerHTML='<div class="nv-card nv-empty">コンパスを回しています…</div>';
+    try{
+      const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({interests})});
+      const d=await r.json();
+      nvOverlay.compass=d;
+      ensureNebulaWords([d.center]);
+      renderNvCompassPanel(d);
+    }catch{panel.innerHTML='<div class="nv-card nv-empty">エラー</div>'}
+  }
+}
+function ensureNebulaWords(words){
+  if(!nebulaGraph)return;
+  words.forEach(w=>{
+    if(w&&!nebulaGraph._map[w]){
+      const i=Object.keys(nebulaGraph._map).length;
+      const ang=(wordHue(w)/360)*Math.PI*2+i*0.13;const radius=120+(i%9)*8;
+      const n={word:w,weight:1,bx:Math.cos(ang)*radius,by:Math.sin(ang)*radius,r:5,hue:wordHue(w),norm:0.25};
+      nebulaGraph.nodes.push(n);nebulaGraph._map[w]=n;
+    }
+  });
+}
+function renderNvPeekPanel(word,paths){
+  const panel=document.getElementById('nvPanel');
+  if(!paths.length){panel.innerHTML=`<div class="nv-card nv-empty">「${word}」を含む経路はまだありません</div>`;return}
+  panel.innerHTML=paths.slice(0,6).map(p=>{
+    const flow=p.words.map((w,i)=>{
+      const cls=w===word?'nv-w match':'nv-w';
+      const ar=i<p.words.length-1?'<span class="nv-arrow">→</span>':'';
+      return `<span class="${cls}" data-w="${w.replace(/"/g,'&quot;')}">${w}</span>${ar}`;
+    }).join('');
+    return `<div class="nv-card"><div class="nv-card-head"><span>🧭 ${p.handle||'名無し'}</span></div><div class="nv-flow">${flow}</div></div>`;
+  }).join('');
+  panel.querySelectorAll('.nv-w').forEach(el=>el.addEventListener('click',()=>{
+    const w=el.dataset.w;exitNebula();
+    const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
+    WI.value=w;explore(w,currentCenter());toast(`「${w}」を探索します`,'info',1800);
+  }));
+}
+function renderNvCompassPanel(d){
+  const panel=document.getElementById('nvPanel');
+  if(!d.recommendations||!d.recommendations.length){panel.innerHTML='<div class="nv-card nv-empty">提案を生成できませんでした</div>';return}
+  panel.innerHTML=`<div class="nv-card"><div class="nv-card-head"><span>🧭 ${d.center}</span></div><div style="font-size:12px;color:var(--muted)">${d.summary}</div></div>`+
+    d.recommendations.map(rec=>{
+      const hue=Math.round(rec.angle%360);
+      return `<div class="nv-card" style="border-left:3px solid hsl(${hue},60%,55%)"><div class="nv-card-head"><span class="nv-card-domain">${rec.domain}</span><span>距離 ${rec.distance}/10</span></div><div class="nv-card-value">${rec.value}</div></div>`;
+    }).join('');
+}
+function startNvLoop(){
+  if(nvRAF)cancelAnimationFrame(nvRAF);
+  const dpr=window.devicePixelRatio||1;
+  function frame(){
+    NVC.width=NVC.clientWidth*dpr;NVC.height=NVC.clientHeight*dpr;
+    drawNebulaView(dpr);
+    nvRAF=requestAnimationFrame(frame);
+  }
+  frame();
+}
+function drawNebulaView(dpr){
+  const W=NVC.width,H=NVC.height;
+  NVCX.clearRect(0,0,W,H);
+  const cx=W/2+nvView.x*dpr,cy=H/2+nvView.y*dpr,z=nvView.zoom*dpr;
+  const t=Date.now()*0.001;
+  if(!nebulaGraph||!nebulaGraph.nodes.length){
+    NVCX.fillStyle='rgba(200,210,235,0.5)';NVCX.font=`${14*dpr}px 'Noto Serif JP',serif`;
+    NVCX.textAlign='center';NVCX.fillText('まだ星図に十分なデータがありません。みんなが探索すると星が増えます。',W/2,H/2);
+    return;
+  }
+  const nodes=nebulaGraph.nodes,edges=nebulaGraph.edges||[];
+  const maxE=Math.max(1,...edges.map(e=>e.weight));
+  edges.forEach(e=>{
+    const a=nebulaGraph._map[e.a],b=nebulaGraph._map[e.b];if(!a||!b)return;
+    NVCX.beginPath();NVCX.moveTo(cx+a.bx*z,cy+a.by*z);NVCX.lineTo(cx+b.bx*z,cy+b.by*z);
+    NVCX.strokeStyle=`rgba(140,170,255,${0.04+0.4*(e.weight/maxE)})`;NVCX.lineWidth=0.4+1.2*(e.weight/maxE);NVCX.stroke();
+  });
+  if(nvMode==='peek'&&nvOverlay.paths){
+    nvOverlay.paths.paths.slice(0,6).forEach((p,pi)=>{
+      NVCX.beginPath();let started=false;
+      p.words.forEach(w=>{const n=nebulaGraph._map[w];if(n){const x=cx+n.bx*z,y=cy+n.by*z;if(!started){NVCX.moveTo(x,y);started=true}else NVCX.lineTo(x,y)}});
+      const hue=(pi*53)%360;NVCX.strokeStyle=`hsla(${hue},80%,65%,0.8)`;NVCX.lineWidth=2*dpr;NVCX.stroke();
+    });
+  }
+  nodes.forEach((n,i)=>{
+    const x=cx+n.bx*z,y=cy+n.by*z;
+    const tw=0.7+0.3*Math.sin(t*2+i);const r=Math.max(1,n.r*z*0.5);
+    const isPeekMatch=nvMode==='peek'&&nvOverlay.paths&&nvOverlay.paths.word===n.word;
+    const g=NVCX.createRadialGradient(x,y,0,x,y,r*3);
+    g.addColorStop(0,`hsla(${n.hue},75%,70%,${0.5*tw})`);g.addColorStop(1,`hsla(${n.hue},75%,70%,0)`);
+    NVCX.fillStyle=g;NVCX.beginPath();NVCX.arc(x,y,r*3,0,Math.PI*2);NVCX.fill();
+    NVCX.beginPath();NVCX.arc(x,y,isPeekMatch?r*1.6:r,0,Math.PI*2);
+    NVCX.fillStyle=isPeekMatch?'#F5A623':`hsla(${n.hue},80%,${60+n.norm*20}%,${tw})`;NVCX.fill();
+    if(n.norm>0.32||isPeekMatch){
+      NVCX.font=`${(isPeekMatch?12:10)*dpr}px 'Noto Serif JP',serif`;
+      NVCX.fillStyle=`rgba(235,240,255,${0.5+0.5*n.norm})`;NVCX.textAlign='center';
+      NVCX.fillText(n.word,x,y-r-4*dpr);
+    }
+  });
+  if(nvMode==='compass'&&nvOverlay.compass){
+    const center=nebulaGraph._map[nvOverlay.compass.center];
+    const ox=center?cx+center.bx*z:cx, oy=center?cy+center.by*z:cy;
+    nvOverlay.compass.recommendations.forEach(rec=>{
+      const ang=(rec.angle-90)*Math.PI/180;const dist=(80+rec.distance*22)*z;
+      const x=ox+Math.cos(ang)*dist,y=oy+Math.sin(ang)*dist;const hue=Math.round(rec.angle%360);
+      NVCX.beginPath();NVCX.moveTo(ox,oy);NVCX.lineTo(x,y);
+      NVCX.strokeStyle=`hsla(${hue},65%,60%,0.5)`;NVCX.lineWidth=1.5*dpr;NVCX.setLineDash([4*dpr,4*dpr]);NVCX.stroke();NVCX.setLineDash([]);
+      NVCX.beginPath();NVCX.arc(x,y,7*dpr,0,Math.PI*2);NVCX.fillStyle=`hsl(${hue},65%,60%)`;NVCX.fill();
+      NVCX.font=`${12*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(235,240,255,0.95)';
+      NVCX.textAlign=x<ox?'right':'left';NVCX.fillText(rec.domain,x+(x<ox?-10:10)*dpr,y);
+    });
+    NVCX.beginPath();NVCX.arc(ox,oy,9*dpr,0,Math.PI*2);NVCX.fillStyle='#F5A623';NVCX.fill();
+  }
+}
+NVC.addEventListener('mousedown',e=>{nvView.drag=true;nvView.lx=e.clientX;nvView.ly=e.clientY});
+window.addEventListener('mousemove',e=>{if(nvView.drag){nvView.x+=e.clientX-nvView.lx;nvView.y+=e.clientY-nvView.ly;nvView.lx=e.clientX;nvView.ly=e.clientY}});
+window.addEventListener('mouseup',()=>{nvView.drag=false});
+NVC.addEventListener('wheel',e=>{e.preventDefault();nvView.zoom=Math.max(0.3,Math.min(4,nvView.zoom*(e.deltaY<0?1.1:0.9)))},{passive:false});
+NVC.addEventListener('touchstart',e=>{if(e.touches.length===1){nvView.drag=true;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
+NVC.addEventListener('touchmove',e=>{if(nvView.drag&&e.touches.length===1){nvView.x+=e.touches[0].clientX-nvView.lx;nvView.y+=e.touches[0].clientY-nvView.ly;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
+NVC.addEventListener('touchend',()=>{nvView.drag=false});
+
+draw();
+</script>
+</body>
+</html>
