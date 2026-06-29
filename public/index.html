@@ -212,6 +212,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .loading-overlay.visible{display:flex}
 .loading-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite}
 .loading-text{font-family:'Noto Serif JP',serif;font-size:18px;color:var(--text);letter-spacing:.06em;max-width:80vw;text-align:center;line-height:1.7;min-height:1.7em;transition:opacity .5s}
+.loading-word{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:600;color:var(--amber);margin-bottom:12px;letter-spacing:.08em;text-align:center;transition:opacity .5s}
+.loading-word.fading{opacity:0}
 .loading-text::after{content:'▋';color:var(--amber);animation:cursorBlink 0.9s steps(2) infinite;margin-left:2px}
 .loading-text.fading{opacity:0}
 @keyframes cursorBlink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
@@ -641,6 +643,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
     </div>
     <div class="loading-overlay" id="loadingOverlay">
       <div class="loading-spinner"></div>
+      <div class="loading-word" id="loadingWord"></div>
       <div class="loading-text" id="loadingText">語彙空間を探索中…</div>
       <div class="loading-ad">広告スペース（300×250）</div>
     </div>
@@ -674,6 +677,7 @@ CA=document.querySelector('.canvas-area'),
 WI=document.getElementById('wordInput'),EB=document.getElementById('exploreBtn'),
 SE=document.getElementById('status'),LO=document.getElementById('loadingOverlay'),
 LT=document.getElementById('loadingText'),
+LW=document.getElementById('loadingWord'),
 LE=document.getElementById('legend'),TT=document.getElementById('tooltip'),
 TTW=document.getElementById('ttWord'),TTD=document.getElementById('ttDesc'),
 GP=document.getElementById('golfPanel'),GT=document.getElementById('golfTrail'),
@@ -1077,9 +1081,9 @@ async function explore(word,fromWord,opts){
   isSearching=true; // 検索中フラグ（モード切替を抑止）
   SE.classList.add('hidden');
   LO.classList.add('visible');
-  // 選択ノードの説明文を1文字ずつ表示する演出（なければ語名にフォールバック）
+  // 選択ノードの説明文を1文字ずつ表示する演出（語そのものも上部に表示）
   const loadingDesc=(opts&&opts.description)?opts.description:`${word} へ`;
-  startLoadingTypewriter(loadingDesc);
+  startLoadingTypewriter(loadingDesc,word);
 
   // Refresh ad during loading (placeholder)
   refreshAd();
@@ -1205,24 +1209,25 @@ function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);retu
 
 // ローディング中の説明文タイプライター演出
 let _typeTimer=null;
-function startLoadingTypewriter(text){
+function startLoadingTypewriter(text,word){
   if(_typeTimer){clearInterval(_typeTimer);_typeTimer=null}
   LT.classList.remove('fading');
+  // 選択した語そのものを上部に表示
+  if(LW){LW.classList.remove('fading');LW.textContent=word||'';}
   LT.textContent='';
   const chars=[...String(text||'')];
   let i=0;
   _typeTimer=setInterval(()=>{
     if(i<chars.length){LT.textContent+=chars[i++];}
     else{
-      // 全部出たらループの先頭でカーソル点滅風に一旦止める。検索完了まで保持
       clearInterval(_typeTimer);_typeTimer=null;
     }
   },55);
 }
 function stopLoadingTypewriter(){
   if(_typeTimer){clearInterval(_typeTimer);_typeTimer=null}
-  // フェードアウトしてから消す
   LT.classList.add('fading');
+  if(LW)LW.classList.add('fading');
 }
 
 // 光の波紋エフェクト（ゴール到達時）
