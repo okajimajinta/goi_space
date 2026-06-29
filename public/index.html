@@ -935,7 +935,7 @@ function setUserPlan(tier){
 async function refreshCredits(){
   if(!premiumEmail)return;
   try{
-    const r=await fetch(`/api/credits?email=${encodeURIComponent(premiumEmail)}`);
+    const r=await fetch(`/api/subscription?credits=1&email=${encodeURIComponent(premiumEmail)}`);
     const d=await r.json();
     userCredits=d.credits||0;localStorage_set('userCredits',String(userCredits));
     updateCreditDisplay();
@@ -1450,7 +1450,7 @@ setInterval(refreshAd,60000);
 
 // ===== LIVE SEARCH POLLING =====
 async function pollLive(){
-  try{const r=await fetch('/api/live');const d=await r.json();liveWords=d.words||[]}catch{liveWords=[]}
+  try{const r=await fetch('/api/usage?live=1');const d=await r.json();liveWords=d.words||[]}catch{liveWords=[]}
 }
 setInterval(pollLive,5000);
 pollLive();
