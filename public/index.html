@@ -234,6 +234,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .cc-disc-value{font-size:13px;color:#dfe5f2;line-height:1.6}
 .cc-disc-more{font-size:10px;color:var(--amber);margin-top:6px;opacity:.85}
 .nv-d-carry{background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.2);border-radius:8px;padding:10px 12px}
+.nv-book-pitch{background:linear-gradient(135deg,rgba(245,166,35,0.14),rgba(224,107,139,0.1));border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.8;color:#ffe9c2;margin-bottom:14px;font-weight:500}
+.nv-book-cta{display:block;text-align:center;background:linear-gradient(135deg,#F5A623,#E0863A);color:#080C18;font-weight:700;font-size:15px;padding:13px;border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(245,166,35,0.4);transition:transform .15s}
+.nv-book-cta:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,166,35,0.55)}
 @media(max-width:600px){.compass-pane{width:100%}}
 .nebula-tooltip{position:absolute;z-index:35;background:rgba(10,16,36,0.96);border:1px solid var(--amber);border-radius:8px;padding:6px 12px;font-family:'Noto Serif JP',serif;font-size:14px;color:#eef2fb;pointer-events:none;display:none;white-space:nowrap;transform:translate(-50%,-130%);backdrop-filter:blur(6px)}
 .nebula-tooltip.visible{display:block}
@@ -297,7 +300,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-tune-reset{background:var(--bg);color:#9aa6c4;border:1px solid var(--border);padding:10px 14px;border-radius:8px;font-size:12px;cursor:pointer}
 #nvTuneBtn{background:rgba(10,16,36,0.9);border:1px solid var(--border);color:var(--amber);border-radius:8px;padding:0 12px;cursor:pointer;font-size:16px}
 /* 詳細オーバーレイ */
-.nv-detail-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.85);z-index:40;backdrop-filter:blur(4px);padding:16px}
+.nv-detail-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.85);z-index:60;backdrop-filter:blur(4px);padding:16px}
 .nv-detail-overlay.visible{display:flex}
 .nv-detail-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:86vh;overflow-y:auto;position:relative}
 .nv-detail-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#9aa6c4;font-size:18px;cursor:pointer}
@@ -584,7 +587,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="nebula-topbar">
         <div class="nebula-modes">
           <button class="nv-mode active" data-nv="explore">🌌 星雲</button>
-          <button class="nv-mode" data-nv="peek">🧭 経路</button>
+          <button class="nv-mode" data-nv="peek">👣 経路</button>
         </div>
         <div class="nebula-bar" id="nebulaBar">
           <input id="nvWordInput" type="text" placeholder="語を入力…" autocomplete="off"/>
@@ -2812,7 +2815,7 @@ function renderNvPeekPanel(word,paths){
       const ar=i<p.words.length-1?'<span class="nv-arrow">→</span>':'';
       return `<span class="${cls}" data-w="${w.replace(/"/g,'&quot;')}">${w}</span>${ar}`;
     }).join('');
-    return `<div class="nv-card"><div class="nv-card-head"><span>🧭 ${p.handle||'名無し'}</span></div><div class="nv-flow">${flow}</div></div>`;
+    return `<div class="nv-card"><div class="nv-card-head"><span>👣 ${p.handle||'名無し'}</span></div><div class="nv-flow">${flow}</div></div>`;
   }).join('');
   panel.querySelectorAll('.nv-w').forEach(el=>el.addEventListener('click',()=>{
     const w=el.dataset.w;exitNebula();
@@ -2871,16 +2874,14 @@ document.getElementById('compassInput').addEventListener('keydown',e=>{if(e.key=
 function renderCompassCards(d){
   const area=document.getElementById('compassCardsArea');
   let html=`<div class="cc-summary"><span class="cc-center">${d.center}</span><span class="cc-sub">${d.summary}</span></div>`;
-  // 最も近い書籍（タップで詳細展開）
+  // 最も近い書籍（タップで詳細オーバーレイ）
   if(d.book&&d.book.title){
     html+=`<div class="cc-book" data-booktitle="${(d.book.title||'').replace(/"/g,'&quot;')}" data-bookauthor="${(d.book.author||'').replace(/"/g,'&quot;')}">
       <div class="cc-book-label">📖 あなたに最も近い一冊</div>
       <div class="cc-book-title">${d.book.title}</div>
       <div class="cc-book-author">${d.book.author||''}</div>
       <div class="cc-book-reason">${d.book.reason||''}</div>
-      <a class="nv-bk-link" href="${amazonLink(d.book.title,d.book.author)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📚 Amazonで探す</a>
-      <div class="cc-book-more">タップであらすじ・推薦理由 ▾</div>
-      <div class="cc-book-detail"></div>
+      <div class="cc-book-more">タップで詳しく ▸</div>
     </div>`;
   }
   // 6視点カード
@@ -2896,36 +2897,42 @@ function renderCompassCards(d){
   area.querySelectorAll('.cc-disc').forEach(card=>{
     card.addEventListener('click',()=>openCompassDetail(card.dataset.disc,card.dataset.domain,card.dataset.color));
   });
-  // 選書カード → あらすじ等を展開
+  // 選書カード → 詳細オーバーレイで表示（別タブ）
   const bookCard=area.querySelector('.cc-book');
   if(bookCard){
-    bookCard.addEventListener('click',()=>toggleBookDetail(bookCard));
+    bookCard.addEventListener('click',()=>openBookDetail(bookCard.dataset.booktitle,bookCard.dataset.bookauthor));
   }
 }
 
-async function toggleBookDetail(card){
-  const det=card.querySelector('.cc-book-detail');
-  const more=card.querySelector('.cc-book-more');
-  if(card.classList.contains('open')){card.classList.remove('open');det.innerHTML='';if(more)more.style.display='block';return}
-  card.classList.add('open');if(more)more.style.display='none';
-  const title=card.dataset.booktitle,author=card.dataset.bookauthor;
+async function openBookDetail(title,author){
+  // 詳細オーバーレイを書籍モードで開く
+  document.getElementById('nvDetailHead').innerHTML=`<span class="nv-disc-tag" style="color:var(--amber)">📖 選書</span>${title}${author?`<div style="font-size:12px;color:#9aa6c4;margin-top:3px">${author}</div>`:''}`;
+  // 書籍には深さ切替は不要 → 非表示
+  const depthRow=document.querySelector('.nv-detail-depth');if(depthRow)depthRow.style.display='none';
+  nvCurrentDetail={book:true};
+  nvDetailOverlay.classList.add('visible');
+  const body=document.getElementById('nvDetailBody');
+  const amazonBtn=`<a class="nv-book-cta" href="${amazonLink(title,author)}" target="_blank" rel="noopener">📚 Amazonでこの本を探す</a>`;
   const key=title+'|'+author;
-  if(compassBookCache[key]){renderBookDetail(det,compassBookCache[key]);return}
-  det.innerHTML='<div class="nv-detail-loading">あらすじを調べています…</div>';
+  if(compassBookCache[key]){renderBookDetailOverlay(compassBookCache[key],amazonBtn);return}
+  body.innerHTML='<div class="nv-detail-loading">📖 あらすじと推薦理由を調べています…</div>';
   try{
     const interests=document.getElementById('compassInput').value.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
     const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({interests,bookDetail:{title,author}})});
     const dd=await r.json();
     compassBookCache[key]=dd;
-    renderBookDetail(det,dd);
-  }catch{det.innerHTML='<div class="nv-detail-loading">取得に失敗しました</div>';}
+    renderBookDetailOverlay(dd,amazonBtn);
+  }catch{body.innerHTML='<div class="nv-detail-loading">取得に失敗しました</div>';}
 }
-function renderBookDetail(det,dd){
-  det.innerHTML=`
-    ${dd.synopsis?`<div class="cc-bd-sec"><div class="cc-bd-h">📘 あらすじ</div><div class="cc-bd-b">${dd.synopsis}</div></div>`:''}
-    ${dd.why?`<div class="cc-bd-sec"><div class="cc-bd-h">💡 なぜあなたに</div><div class="cc-bd-b">${dd.why}</div></div>`:''}
-    ${dd.reader?`<div class="cc-bd-sec"><div class="cc-bd-h">👤 惹かれる人物像</div><div class="cc-bd-b">${dd.reader}</div></div>`:''}
+function renderBookDetailOverlay(dd,amazonBtn){
+  const body=document.getElementById('nvDetailBody');
+  body.innerHTML=`
+    ${dd.pitch?`<div class="nv-book-pitch">🔥 ${dd.pitch}</div>`:''}
+    ${dd.synopsis?`<div class="nv-d-sec"><div class="nv-d-h">📘 あらすじ</div><div class="nv-d-b">${dd.synopsis}</div></div>`:''}
+    ${dd.why?`<div class="nv-d-sec"><div class="nv-d-h">💡 なぜあなたに</div><div class="nv-d-b">${dd.why}</div></div>`:''}
+    ${dd.reader?`<div class="nv-d-sec"><div class="nv-d-h">👤 惹かれる人物像</div><div class="nv-d-b">${dd.reader}</div></div>`:''}
+    <div class="nv-d-sec">${amazonBtn}</div>
   `;
 }
 
@@ -2935,9 +2942,24 @@ let nvCurrentDetail={disc:'',domain:'',color:'',depth:''};
 const nvDetailOverlay=document.getElementById('nvDetailOverlay');
 
 function amazonLink(title,author){
-  const tag=window.AMAZON_TAG||''; // アフィリエイトタグ（後で設定）
-  const q=encodeURIComponent([title,author].filter(Boolean).join(' '));
-  return `https://www.amazon.co.jp/s?k=${q}${tag?`&tag=${tag}`:''}`;
+  const tag=window.AMAZON_TAG||'';
+  // タイトル整形：見つかりやすい形に
+  let t=String(title||'');
+  // 「⇒」「→」「⇨」などの後に別タイトルがあればそちらを優先（該当なし⇒別タイトル対策）
+  const arrow=t.split(/[⇒→⇨›>]+/).map(s=>s.trim()).filter(Boolean);
+  if(arrow.length>1)t=arrow[arrow.length-1];
+  // 括弧内の注記（該当なし・原題・英題など）を除去
+  t=t.replace(/[（(【\[][^）)】\]]*[）)】\]]/g,' ');
+  // 「該当なし」「なし」等の語を除去
+  t=t.replace(/該当(する本)?なし|該当なし|なし/g,' ');
+  // 記号類を空白化
+  t=t.replace(/[「」『』:：;；,，、。・/／\\|]+/g,' ').replace(/\s+/g,' ').trim();
+  // 著者は姓のみ・括弧除去（部分一致しやすく）
+  let a=String(author||'').replace(/[（(【\[][^）)】\]]*[）)】\]]/g,'').trim();
+  if(/不明|未詳|不詳|なし|—|-/.test(a)&&a.length<=6)a='';
+  const q=encodeURIComponent([t,a].filter(Boolean).join(' '));
+  // stripbooks=本カテゴリに限定して精度を上げる
+  return `https://www.amazon.co.jp/s?k=${q}&i=stripbooks${tag?`&tag=${tag}`:''}`;
 }
 
 async function openCompassDetail(disc,domain,color){
@@ -2952,6 +2974,7 @@ async function openCompassDetail(disc,domain,color){
     }
   }
   nvCurrentDetail.summaryHtml=summary;
+  const depthRow=document.querySelector('.nv-detail-depth');if(depthRow)depthRow.style.display='flex';
   document.querySelectorAll('.nv-depth-btn').forEach(b=>b.classList.toggle('active',b.dataset.depth===''));
   nvDetailOverlay.classList.add('visible');
   loadCompassDetail();
@@ -3102,6 +3125,11 @@ function drawNebulaView(dpr){
         NVCX.font=`${10*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(220,200,170,0.7)';
         NVCX.fillText(s.summary,sx,sy+18*dpr);
       }
+      // タップでコンパス誘導（名前が確定したものだけ）
+      if(s.name!=='…'&&s.name!=='？'){
+        NVCX.font=`${9*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(245,166,35,0.75)';
+        NVCX.fillText('🧭 タップでコンパス',sx,sy+34*dpr);
+      }
     }
   });
   // ===== ソナー：育成中の円 =====
@@ -3234,12 +3262,38 @@ function nebulaNodeAt(clientX,clientY){
 }
 function nebulaNodeClicked(clientX,clientY){
   const n=nebulaNodeAt(clientX,clientY);
-  if(!n)return;
-  // 探索モードに切り替えてその語を探索
-  exitNebula();
-  const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
-  WI.value=n.word;explore(n.word,currentCenter());
-  toast(`「${n.word}」を探索します`,'info',1800);
+  if(n){
+    // 探索モードに切り替えてその語を探索
+    exitNebula();
+    const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
+    WI.value=n.word;explore(n.word,currentCenter());
+    toast(`「${n.word}」を探索します`,'info',1800);
+    return;
+  }
+  // ノードでなければ、確定済みソナー領域の内側か判定 → コンパスへ
+  const s=sonarAt(clientX,clientY);
+  if(s){sonarToCompass(s);}
+}
+// クリック位置に確定ソナーがあれば返す（最も内側の小さいものを優先）
+function sonarAt(clientX,clientY){
+  if(!nvSonars.length)return null;
+  const {wx,wy}=nvScreenToWorld(clientX,clientY);
+  let best=null,bestR=Infinity;
+  nvSonars.forEach(s=>{
+    const d=Math.hypot(s.wx-wx, s.wy-wy);
+    if(d<=s.r&&s.r<bestR){bestR=s.r;best=s;}
+  });
+  return best;
+}
+// ソナーで見つけた共通項をコンパスで検索
+function sonarToCompass(s){
+  if(!s||!s.words||!s.words.length)return;
+  // すでに星図内にいるので、そのままコンパスを開いて検索
+  const inp=document.getElementById('compassInput');
+  if(inp)inp.value=s.words.join('、');
+  openCompass();
+  runCompass(true);
+  toast(`🌀「${s.name}」をコンパスで探ります`,'info',2500);
 }
 
 // ===== ソナー：座標変換ヘルパー =====
