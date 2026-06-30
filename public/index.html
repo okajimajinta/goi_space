@@ -187,7 +187,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nebula-modes{display:flex;gap:6px;background:rgba(10,16,36,0.9);border:1px solid var(--border);border-radius:22px;padding:4px;backdrop-filter:blur(8px)}
 .nv-mode{background:none;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;padding:7px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;transition:all .15s}
 .nv-mode.active{background:var(--amber);color:#080C18}
-.nv-reverse.active{background:var(--violet);color:#fff}
+.nv-reverse-btn{position:absolute;bottom:54px;right:12px;z-index:46;background:linear-gradient(135deg,#5B6A8A,#2a3550);color:#fff;border:none;padding:10px 16px;border-radius:22px;font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.4);transition:all .15s;display:none}
+.nv-reverse-btn.visible{display:block}
+.nv-reverse-btn:hover{transform:translateY(-2px)}
+.nv-reverse-btn.active{background:linear-gradient(135deg,#9B72E8,#6B4BC0);box-shadow:0 4px 18px rgba(155,114,232,0.6)}
 .nebula-tooltip{position:absolute;z-index:35;background:rgba(10,16,36,0.96);border:1px solid var(--amber);border-radius:8px;padding:6px 12px;font-family:'Noto Serif JP',serif;font-size:14px;color:#eef2fb;pointer-events:none;display:none;white-space:nowrap;transform:translate(-50%,-130%);backdrop-filter:blur(6px)}
 .nebula-tooltip.visible{display:block}
 .nebula-bar{display:flex;gap:6px;width:100%}
@@ -240,6 +243,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-tune-title{font-family:'Noto Serif JP',serif;font-size:14px;color:#eef2fb;margin-bottom:4px}
 .nv-tune-sub{font-size:11px;color:#9aa6c4;line-height:1.6;margin-bottom:12px}
 .nv-tune-sliders{display:flex;flex-direction:column;gap:10px}
+.nv-tune-axis{display:flex;justify-content:space-between;font-size:10px;color:#7c89a8;padding:0 64px 2px;margin-bottom:2px}
 .nv-tune-row{display:flex;align-items:center;gap:10px}
 .nv-tune-label{font-size:12px;width:64px;flex-shrink:0;font-weight:600}
 .nv-tune-row input[type=range]{flex:1;accent-color:var(--amber)}
@@ -538,7 +542,6 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           <button class="nv-mode active" data-nv="explore">🌌 星雲</button>
           <button class="nv-mode" data-nv="peek">🧭 経路</button>
           <button class="nv-mode" data-nv="compass">🧭 コンパス</button>
-          <button class="nv-mode nv-reverse" id="nvReverseBtn" title="明暗・大小を反転してマイナーな語を浮かび上がらせる">🔄 反転</button>
         </div>
         <div class="nebula-bar" id="nebulaBar">
           <input id="nvWordInput" type="text" placeholder="語を入力…" autocomplete="off"/>
@@ -548,7 +551,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         <!-- チューニングパネル -->
         <div class="nv-tune-panel" id="nvTunePanel">
           <div class="nv-tune-title">ジャンルごとの文化的距離を調整</div>
-          <div class="nv-tune-sub">近い＝親しみ深い領域 / 遠い＝未知の領域。詳しい分野は「遠い」、不慣れな分野は「近い」がおすすめ。</div>
+          <div class="nv-tune-sub">左ほど近い（親しみ・易しい）／右ほど遠い（未知・難解）。詳しい分野は右（遠く）へ、不慣れな分野は左（近く）へ。</div>
           <div class="nv-tune-sliders" id="nvTuneSliders"></div>
           <div class="nv-tune-actions">
             <button id="nvTuneApply" class="nv-tune-apply">この設定で回す</button>
@@ -557,6 +560,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         </div>
       </div>
       <div class="nebula-panel" id="nvPanel"></div>
+      <button class="nv-reverse-btn" id="nvReverseBtn" title="明暗・大小を反転してマイナーな語を浮かび上がらせる">🔄 反転</button>
       <div class="nebula-hint" id="nvHint">星雲をドラッグで移動・ホイールで拡大。明るい星ほど多くの人が辿った語です。</div>
       <div class="nebula-tooltip" id="nvTooltip"></div>
 
@@ -2610,6 +2614,11 @@ let nvOverlay={paths:null,compass:null}; // 重ねるデータ
 let nvView={x:0,y:0,zoom:1,drag:false,lx:0,ly:0};
 let nvReverse=false;   // 反転表示モード
 let nvHoverNode=null;  // ホバー中のノード
+// ソナー機能
+let nvSonars=[];       // 確定したソナー領域 [{wx,wy,r,name,summary}]（ワールド座標）
+let nvSonarActive=null;// 育成中のソナー {wx,wy,r}
+let nvSonarTimer=null; // 長押し判定タイマー
+const SONAR_MAX_WORDS=5;
 let nvRAF=null;
 
 function wordHue(w){let h=0;for(let i=0;i<w.length;i++)h=(h*31+w.charCodeAt(i))%360;return h;}
@@ -2624,6 +2633,7 @@ async function enterNebula(){
 function exitNebula(){
   NV.classList.remove('visible');
   if(nvRAF){cancelAnimationFrame(nvRAF);nvRAF=null}
+  nvSonarActive=null;if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
 }
 async function loadNebulaGraph(){
   try{
@@ -2669,20 +2679,19 @@ function setNvMode(m){
   const tuneBtn=document.getElementById('nvTuneBtn');
   if(tuneBtn)tuneBtn.style.display=(m==='compass')?'block':'none';
   document.getElementById('nvTunePanel').classList.remove('open');
-  // 反転ボタンは星雲モード時のみ表示
+  // 反転ボタンは星雲モード時のみ表示（フローティング）
   const revBtn=document.getElementById('nvReverseBtn');
-  if(revBtn)revBtn.style.display=(m==='explore')?'inline-block':'none';
-  if(m!=='explore'){nvReverse=false;if(revBtn)revBtn.classList.remove('active')}
+  if(revBtn)revBtn.classList.toggle('visible',m==='explore');
+  if(m!=='explore'){nvReverse=false;if(revBtn)revBtn.classList.remove('active');nvSonarActive=null}
   // ヒント文を反転状態で出し分け
   if(m==='explore'){
     const hint=document.getElementById('nvHint');
     hint.textContent=nvReverse
       ?'反転表示：マイナーな語ほど明るく大きく浮かび上がります。ホバーで語を確認できます。'
-      :'星雲をドラッグで移動・ホバーで語を確認。明るい星ほど多くの人が辿った語です。';
+      :'ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。';
   }
 }
 document.querySelectorAll('.nv-mode').forEach(b=>{
-  if(b.id==='nvReverseBtn')return; // 反転ボタンは別処理
   b.addEventListener('click',()=>{setNvMode(b.dataset.nv);if(b.dataset.nv==='explore'){nvOverlay.paths=null;nvOverlay.compass=null}});
 });
 // 反転トグル
@@ -2692,7 +2701,7 @@ document.getElementById('nvReverseBtn').addEventListener('click',()=>{
   const hint=document.getElementById('nvHint');
   hint.textContent=nvReverse
     ?'反転表示：マイナーな語ほど明るく大きく浮かび上がります。ホバーで語を確認できます。'
-    :'星雲をドラッグで移動・ホバーで語を確認。明るい星ほど多くの人が辿った語です。';
+    :'ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。';
 });
 document.getElementById('nvGoBtn').addEventListener('click',runNvQuery);
 document.getElementById('nvWordInput').addEventListener('keydown',e=>{if(e.key==='Enter')runNvQuery()});
@@ -2848,10 +2857,18 @@ const COMPASS_DISCIPLINES=[
   {key:'自然科学',color:'#5B8FDE'},{key:'生物',color:'#4ECBA8'},{key:'社会',color:'#E8C547'},
   {key:'芸術',color:'#9B72E8'},{key:'哲学',color:'#E06B8B'},{key:'数学',color:'#E8EDF5'}
 ];
-function tuneLabel(v){return v<=3?'近い（深掘り）':v>=8?'遠い（入口）':'標準'}
+function tuneLabel(v){
+  // 文化資本の距離：左＝近い（親しみ・易しい）、右＝遠い（未知・難解）
+  if(v<=2)return '近い・易しい';
+  if(v<=4)return 'やや近い';
+  if(v<=6)return '標準';
+  if(v<=8)return 'やや遠い';
+  return '遠い・難解';
+}
 function buildTuneSliders(){
   const wrap=document.getElementById('nvTuneSliders');
-  wrap.innerHTML=COMPASS_DISCIPLINES.map(d=>{
+  const header=`<div class="nv-tune-axis"><span>近い・易しい</span><span>遠い・難解</span></div>`;
+  wrap.innerHTML=header+COMPASS_DISCIPLINES.map(d=>{
     const v=compassTuning[d.key]||5;
     return `<div class="nv-tune-row">
       <span class="nv-tune-label" style="color:${d.color}">${d.key}</span>
@@ -2911,6 +2928,48 @@ function drawNebulaView(dpr){
   }
   const nodes=nebulaGraph.nodes,edges=nebulaGraph.edges||[];
   const maxE=Math.max(1,...edges.map(e=>e.weight));
+
+  // ===== ソナー：確定領域（円＋中心の名前）を背面に描画 =====
+  nvSonars.forEach(s=>{
+    const sx=cx+s.wx*z, sy=cy+s.wy*z, sr=s.r*z;
+    const grad=NVCX.createRadialGradient(sx,sy,0,sx,sy,sr);
+    grad.addColorStop(0,'rgba(245,166,35,0.04)');
+    grad.addColorStop(0.8,'rgba(245,166,35,0.06)');
+    grad.addColorStop(1,'rgba(245,166,35,0.14)');
+    NVCX.fillStyle=grad;NVCX.beginPath();NVCX.arc(sx,sy,sr,0,Math.PI*2);NVCX.fill();
+    NVCX.strokeStyle='rgba(245,166,35,0.35)';NVCX.lineWidth=1.2*dpr;NVCX.beginPath();NVCX.arc(sx,sy,sr,0,Math.PI*2);NVCX.stroke();
+    // 中心の名前
+    if(s.name){
+      NVCX.font=`600 ${15*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(245,200,120,0.95)';
+      NVCX.textAlign='center';NVCX.textBaseline='middle';NVCX.fillText(s.name,sx,sy);
+      if(s.summary){
+        NVCX.font=`${10*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(220,200,170,0.7)';
+        NVCX.fillText(s.summary,sx,sy+18*dpr);
+      }
+    }
+  });
+  // ===== ソナー：育成中の円 =====
+  if(nvSonarActive){
+    const s=nvSonarActive;
+    // 拡大（フレームごと・ズーム非依存のワールド半径で成長）
+    s.r+=2.2;
+    const inside=sonarWordsInside(s);
+    // 一定数に達したら、または最大半径を超えたら自動確定
+    if(inside.length>=SONAR_MAX_WORDS||s.r>600){finalizeSonar();}
+    else{
+      const sx=cx+s.wx*z, sy=cy+s.wy*z, sr=s.r*z;
+      const pulse=0.5+0.5*Math.sin(t*5);
+      NVCX.strokeStyle=`rgba(245,166,35,${0.4+0.4*pulse})`;NVCX.lineWidth=2*dpr;
+      NVCX.beginPath();NVCX.arc(sx,sy,sr,0,Math.PI*2);NVCX.stroke();
+      // 内側の波紋
+      NVCX.strokeStyle=`rgba(245,166,35,0.15)`;NVCX.lineWidth=1*dpr;
+      NVCX.beginPath();NVCX.arc(sx,sy,sr*0.6,0,Math.PI*2);NVCX.stroke();
+      // カウント表示
+      NVCX.font=`${12*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(245,200,120,0.9)';
+      NVCX.textAlign='center';NVCX.fillText(`${inside.length} / ${SONAR_MAX_WORDS}`,sx,sy-sr-8*dpr);
+    }
+  }
+
   edges.forEach(e=>{
     const a=nebulaGraph._map[e.a],b=nebulaGraph._map[e.b];if(!a||!b)return;
     NVCX.beginPath();NVCX.moveTo(cx+a.bx*z,cy+a.by*z);NVCX.lineTo(cx+b.bx*z,cy+b.by*z);
@@ -2997,8 +3056,57 @@ function nebulaNodeClicked(clientX,clientY){
   toast(`「${n.word}」を探索します`,'info',1800);
 }
 
-NVC.addEventListener('mousedown',e=>{nvView.drag=true;nvView.lx=e.clientX;nvView.ly=e.clientY;nvDownPos={x:e.clientX,y:e.clientY};nvMoved=false});
-window.addEventListener('mousemove',e=>{if(nvView.drag){if(nvDownPos&&(Math.abs(e.clientX-nvDownPos.x)>5||Math.abs(e.clientY-nvDownPos.y)>5))nvMoved=true;nvView.x+=e.clientX-nvView.lx;nvView.y+=e.clientY-nvView.ly;nvView.lx=e.clientX;nvView.ly=e.clientY}});
+// ===== ソナー：座標変換ヘルパー =====
+function nvScreenToWorld(clientX,clientY){
+  const rect=NVC.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  const px=(clientX-rect.left)*dpr, py=(clientY-rect.top)*dpr;
+  const cx=NVC.width/2+nvView.x*dpr, cy=NVC.height/2+nvView.y*dpr, z=nvView.zoom*dpr;
+  return {wx:(px-cx)/z, wy:(py-cy)/z};
+}
+// 育成中ソナーの内側にある語を取得（ワールド距離で判定）
+function sonarWordsInside(s){
+  if(!nebulaGraph||!nebulaGraph.nodes)return [];
+  return nebulaGraph.nodes.filter(n=>{
+    const d=Math.hypot(n.bx-s.wx, n.by-s.wy);
+    return d<=s.r;
+  }).map(n=>n.word);
+}
+function startSonar(clientX,clientY){
+  // ノードの上では発動しない（何もない空間のみ）
+  if(nebulaNodeAt(clientX,clientY))return;
+  const {wx,wy}=nvScreenToWorld(clientX,clientY);
+  nvSonarActive={wx,wy,r:6};
+  nvView.drag=false; // パンを止めてソナーに専念
+}
+async function finalizeSonar(){
+  const s=nvSonarActive;nvSonarActive=null;
+  if(!s)return;
+  const words=sonarWordsInside(s);
+  if(words.length<2){
+    toast('円の中に十分な言葉がありませんでした','info',2200);
+    return;
+  }
+  // まず円を残し「探索中…」表示
+  const sonar={wx:s.wx,wy:s.wy,r:s.r,name:'…',summary:'',words:words.slice(0,SONAR_MAX_WORDS)};
+  nvSonars.push(sonar);
+  try{
+    const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sonar:true,words:sonar.words})});
+    const d=await r.json();
+    sonar.name=d.name||'無名の領域';sonar.summary=d.summary||'';
+    toast(`🌀 「${sonar.name}」— ${sonar.summary}`,'success',4500);
+  }catch{sonar.name='？';toast('意味の抽出に失敗しました','error',2500)}
+}
+
+NVC.addEventListener('mousedown',e=>{
+  nvView.drag=true;nvView.lx=e.clientX;nvView.ly=e.clientY;nvDownPos={x:e.clientX,y:e.clientY};nvMoved=false;
+  // 星雲モードで、何もない空間の長押し → ソナー起動
+  if(nvMode==='explore'&&!nebulaNodeAt(e.clientX,e.clientY)){
+    nvSonarTimer=setTimeout(()=>startSonar(e.clientX,e.clientY),300);
+  }
+});
+window.addEventListener('mousemove',e=>{if(nvView.drag){if(nvDownPos&&(Math.abs(e.clientX-nvDownPos.x)>5||Math.abs(e.clientY-nvDownPos.y)>5)){nvMoved=true;if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}}if(!nvSonarActive){nvView.x+=e.clientX-nvView.lx;nvView.y+=e.clientY-nvView.ly}nvView.lx=e.clientX;nvView.ly=e.clientY}});
 // ホバーで語を表示（ドラッグ中は無効）
 NVC.addEventListener('mousemove',e=>{
   if(nvView.drag||!NV.classList.contains('visible')){return}
@@ -3018,15 +3126,27 @@ NVC.addEventListener('mousemove',e=>{
 });
 NVC.addEventListener('mouseleave',()=>{nvHoverNode=null;document.getElementById('nvTooltip').classList.remove('visible')});
 window.addEventListener('mouseup',e=>{
+  if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
+  if(nvSonarActive){finalizeSonar();nvView.drag=false;nvDownPos=null;return}
   if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
     nebulaNodeClicked(e.clientX,e.clientY);
   }
   nvView.drag=false;nvDownPos=null;
 });
 NVC.addEventListener('wheel',e=>{e.preventDefault();nvView.zoom=Math.max(0.3,Math.min(4,nvView.zoom*(e.deltaY<0?1.1:0.9)))},{passive:false});
-NVC.addEventListener('touchstart',e=>{if(e.touches.length===1){nvView.drag=true;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY;nvDownPos={x:e.touches[0].clientX,y:e.touches[0].clientY};nvMoved=false}},{passive:true});
-NVC.addEventListener('touchmove',e=>{if(nvView.drag&&e.touches.length===1){if(nvDownPos&&(Math.abs(e.touches[0].clientX-nvDownPos.x)>6||Math.abs(e.touches[0].clientY-nvDownPos.y)>6))nvMoved=true;nvView.x+=e.touches[0].clientX-nvView.lx;nvView.y+=e.touches[0].clientY-nvView.ly;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
+NVC.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){
+    nvView.drag=true;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY;nvDownPos={x:e.touches[0].clientX,y:e.touches[0].clientY};nvMoved=false;
+    const tx=e.touches[0].clientX,ty=e.touches[0].clientY;
+    if(nvMode==='explore'&&!nebulaNodeAt(tx,ty)){
+      nvSonarTimer=setTimeout(()=>startSonar(tx,ty),300);
+    }
+  }
+},{passive:true});
+NVC.addEventListener('touchmove',e=>{if(nvView.drag&&e.touches.length===1){if(nvDownPos&&(Math.abs(e.touches[0].clientX-nvDownPos.x)>6||Math.abs(e.touches[0].clientY-nvDownPos.y)>6)){nvMoved=true;if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}}if(!nvSonarActive){nvView.x+=e.touches[0].clientX-nvView.lx;nvView.y+=e.touches[0].clientY-nvView.ly}nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
 NVC.addEventListener('touchend',e=>{
+  if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
+  if(nvSonarActive){finalizeSonar();nvView.drag=false;nvDownPos=null;return}
   if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
     nebulaNodeClicked(nvDownPos.x,nvDownPos.y);
   }

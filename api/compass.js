@@ -47,6 +47,28 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // === ソナー：円内に入った語群から共通する意味を抽出して命名 ===
+  if (req.body && req.body.sonar && Array.isArray(req.body.words)) {
+    const words = req.body.words.map(w => String(w || '').slice(0, 50)).filter(Boolean).slice(0, 20);
+    if (words.length < 2) return res.status(200).json({ name: '', summary: '' });
+    const wlist = words.join('、');
+    const prompt = `次の日本語の語の集まりに共通して流れる意味・主題を読み取ってください：
+${wlist}
+
+これらの語が同じ星座のように集まっているとき、その領域に与える「名前」と、共通する意味の説明を作ってください。
+次のJSON形式のみで出力（前後の説明文なし）：
+{"name":"領域の名前（8字以内・詩的でも可）","summary":"共通する意味の説明（40字以内）"}`;
+    try {
+      const parsed = await callClaude(prompt, 300);
+      return res.status(200).json({
+        name: String(parsed.name || '').slice(0, 20),
+        summary: String(parsed.summary || '').slice(0, 80),
+      });
+    } catch {
+      return res.status(502).json({ error: 'sonar failed' });
+    }
+  }
+
   let { interests, detail, tuning, depth } = req.body || {};
   if (!Array.isArray(interests)) interests = [];
   interests = interests.map(w => String(w || '').slice(0, 50)).filter(Boolean).slice(0, 30);
@@ -54,13 +76,15 @@ export default async function handler(req, res) {
 
   const list = interests.join('、');
 
-  // チューニング：各ジャンルの希望文化的距離（1=近い親しみ深い〜10=遠い未知）
-  // { '自然科学': 3, '生物': 8, ... } の形。指定がなければ既定5。
+  // チューニング：各ジャンルで希望する文化的距離（1=近い・易しい〜10=遠い・難解）
+  // ユーザーが「その分野でどれくらい遠い領域を求めるか」を表す。指定なしは既定5。
   const tune = (tuning && typeof tuning === 'object') ? tuning : {};
   const tuneText = (disc) => {
     const v = Math.max(1, Math.min(10, Number(tune[disc]) || 5));
-    if (v <= 3) return `（${disc}には親しみがあるので、より近接・応用的で深掘りした領域を）`;
-    if (v >= 8) return `（${disc}には不慣れなので、入口となる馴染みやすく遠すぎない領域を）`;
+    if (v <= 2) return `（${disc}は最も近接した親しみやすく易しい領域を。文化的距離1〜3程度）`;
+    if (v <= 4) return `（${disc}はやや近い応用的な領域を。文化的距離3〜5程度）`;
+    if (v >= 9) return `（${disc}は最も遠い未知で難解な領域を。文化的距離8〜10程度）`;
+    if (v >= 7) return `（${disc}はやや遠い挑戦的な領域を。文化的距離6〜8程度）`;
     return '';
   };
 
