@@ -55,6 +55,10 @@ export default async function handler(req, res) {
       if (Array.isArray(req.body.routeHistory)) {
         cur.routeHistory = req.body.routeHistory.slice(-500);
       }
+      // コンパスのチューニング（各ジャンルの希望文化的距離）
+      if (req.body.compassTuning && typeof req.body.compassTuning === 'object') {
+        cur.compassTuning = req.body.compassTuning;
+      }
 
       await redis('SET', `userdata:${e}`, JSON.stringify(cur));
       await redis('EXPIRE', `userdata:${e}`, 31536000);

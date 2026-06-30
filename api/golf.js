@@ -120,11 +120,30 @@ JSON形式のみで返答：
 
 語のリスト：${list}
 
-JSON形式のみで返答：
+JSON形式のみで返答（前後に説明文を付けない）：
 {"distances":[{"word":"語","distance":数値,"reason":"一言理由(10字以内)"}]}
 `.trim();
-      const out = await callClaude(prompt, 500, true); // Haiku
-      return res.status(200).json(JSON.parse(out));
+      const out = await callClaude(prompt, 600, true); // Haiku
+      // 頑健なJSON抽出（Haikuが前後に文字を付けても拾う）
+      let parsed;
+      try {
+        parsed = JSON.parse(out);
+      } catch {
+        const s = out.indexOf('{'), e = out.lastIndexOf('}');
+        if (s >= 0 && e > s) {
+          try { parsed = JSON.parse(out.slice(s, e + 1)); } catch {}
+        }
+      }
+      if (!parsed || !Array.isArray(parsed.distances)) {
+        return res.status(200).json({ distances: [], _error: 'parse_failed' });
+      }
+      // 数値を正規化
+      parsed.distances = parsed.distances.map(d => ({
+        word: String(d.word || ''),
+        distance: Math.max(1, Math.min(10, Number(d.distance) || 5)),
+        reason: String(d.reason || '').slice(0, 20),
+      }));
+      return res.status(200).json(parsed);
     }
 
     return res.status(400).json({ error: 'unknown action' });

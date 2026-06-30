@@ -170,6 +170,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 
 /* === CANVAS === */
 .canvas-area{grid-column:1;grid-row:2;position:relative;overflow:hidden}
+/* アフィリエイト表記フッター（控えめな固定バー） */
+.site-footer{position:fixed;bottom:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:4px 12px;background:rgba(8,12,24,0.78);border-top:1px solid var(--border);font-size:10px;color:#7c89a8;backdrop-filter:blur(4px);pointer-events:auto}
+.site-footer a{color:#9aa6c4;text-decoration:none}
+.site-footer a:hover{color:var(--amber)}
+@media(max-width:600px){.site-footer{font-size:9px;padding:3px 8px;gap:8px}}
 #canvas{position:absolute;inset:0;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
 #canvas:active{cursor:grabbing}
 
@@ -186,8 +191,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nebula-bar input{flex:1;background:rgba(10,16,36,0.9);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:10px 15px;border-radius:8px;outline:none;backdrop-filter:blur(8px)}
 .nebula-bar input:focus{border-color:var(--amber)}
 .nebula-bar button{background:var(--amber);color:#080C18;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;white-space:nowrap}
-.nebula-panel{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:32;width:min(560px,94vw);max-height:42vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
-.nebula-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:31;font-size:11px;color:var(--muted);text-align:center;width:94vw;pointer-events:none}
+.nebula-panel{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);z-index:32;width:min(560px,94vw);max-height:42vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.nebula-hint{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:31;font-size:11px;color:var(--muted);text-align:center;width:94vw;pointer-events:none}
 .nv-card{background:rgba(12,18,40,0.92);border:1px solid var(--border);border-radius:10px;padding:10px 13px;backdrop-filter:blur(8px)}
 .nv-card-head{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
 .nv-flow{display:flex;flex-wrap:wrap;gap:3px;align-items:center}
@@ -222,6 +227,48 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-bk-note{font-size:11px;color:var(--muted);margin-top:3px}
 .nv-kw-wrap{display:flex;flex-wrap:wrap;gap:5px}
 .nv-kw{font-size:11px;color:var(--blue);background:rgba(91,143,222,0.12);border:1px solid var(--border);border-radius:12px;padding:3px 9px}
+/* 読みやすさ向上：本文を明るめに */
+.nv-card-value{font-size:13px;color:#dfe5f2;line-height:1.6;margin-top:4px}
+.nv-card-value::before{content:'✨ '}
+.nv-card-reason{font-size:11px;color:#9aa6c4;margin-bottom:4px}
+/* チューニングパネル */
+.nv-tune-panel{display:none;background:rgba(10,16,36,0.96);border:1px solid var(--border);border-radius:12px;padding:14px 16px;backdrop-filter:blur(10px);width:100%;max-height:50vh;overflow-y:auto}
+.nv-tune-panel.open{display:block}
+.nv-tune-title{font-family:'Noto Serif JP',serif;font-size:14px;color:#eef2fb;margin-bottom:4px}
+.nv-tune-sub{font-size:11px;color:#9aa6c4;line-height:1.6;margin-bottom:12px}
+.nv-tune-sliders{display:flex;flex-direction:column;gap:10px}
+.nv-tune-row{display:flex;align-items:center;gap:10px}
+.nv-tune-label{font-size:12px;width:64px;flex-shrink:0;font-weight:600}
+.nv-tune-row input[type=range]{flex:1;accent-color:var(--amber)}
+.nv-tune-val{font-size:11px;color:#9aa6c4;width:64px;text-align:right;flex-shrink:0}
+.nv-tune-actions{display:flex;gap:8px;margin-top:14px}
+.nv-tune-apply{flex:1;background:var(--amber);color:#080C18;border:none;padding:10px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+.nv-tune-reset{background:var(--bg);color:#9aa6c4;border:1px solid var(--border);padding:10px 14px;border-radius:8px;font-size:12px;cursor:pointer}
+#nvTuneBtn{background:rgba(10,16,36,0.9);border:1px solid var(--border);color:var(--amber);border-radius:8px;padding:0 12px;cursor:pointer;font-size:16px}
+/* 詳細オーバーレイ */
+.nv-detail-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.85);z-index:40;backdrop-filter:blur(4px);padding:16px}
+.nv-detail-overlay.visible{display:flex}
+.nv-detail-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:86vh;overflow-y:auto;position:relative}
+.nv-detail-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#9aa6c4;font-size:18px;cursor:pointer}
+.nv-detail-head{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:#eef2fb;margin-bottom:14px;padding-right:30px}
+.nv-detail-head .nv-disc-tag{font-size:12px;margin-right:6px}
+.nv-detail-depth{display:flex;align-items:center;gap:6px;margin-bottom:16px;font-size:12px;color:#9aa6c4}
+.nv-depth-btn{background:var(--bg);border:1px solid var(--border);color:#9aa6c4;padding:5px 12px;border-radius:14px;font-size:12px;cursor:pointer;font-family:'Noto Serif JP',serif}
+.nv-depth-btn.active{border-color:var(--amber);color:var(--amber);background:rgba(245,166,35,0.1)}
+.nv-detail-body .nv-d-sec{margin-bottom:16px}
+.nv-detail-body .nv-d-h{font-size:13px;font-weight:600;color:#eef2fb;margin-bottom:6px}
+.nv-detail-body .nv-d-b{font-size:13px;color:#cfd6e8;line-height:1.8}
+.nv-bk-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.nv-bk-list li{font-size:12px;color:#dfe5f2;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.nv-bk-link{display:inline-block;margin-top:5px;font-size:11px;color:var(--amber);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px}
+.nv-bk-link:hover{border-color:var(--amber)}
+.nv-bk-title{font-weight:600}
+.nv-bk-auth{color:#9aa6c4;font-size:11px}
+.nv-bk-note{font-size:11px;color:#9aa6c4;margin-top:3px}
+.nv-kw-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.nv-kw-click{cursor:pointer;transition:all .15s}
+.nv-kw-click:hover{background:rgba(91,143,222,0.25);border-color:var(--blue)}
+.nv-detail-loading{font-size:13px;color:#9aa6c4;padding:20px;text-align:center}
 
 /* === ADS === */
 .ad-sidebar{grid-column:2;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px}
@@ -312,6 +359,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .comp-title{font-family:'Noto Serif JP',serif;font-size:28px;font-weight:600;color:var(--amber);margin-bottom:4px}
 .comp-grade{font-size:18px;color:var(--green);margin-bottom:16px}
 .comp-path{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin-bottom:20px}
+.comp-dist-status{text-align:center;margin-bottom:14px;min-height:1em}
 .comp-node{text-align:center;padding:10px 15px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:60px}
 .comp-node-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
 .comp-node-dist{font-size:12px;margin-top:2px}
@@ -491,10 +539,36 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         <div class="nebula-bar" id="nebulaBar">
           <input id="nvWordInput" type="text" placeholder="語を入力…" autocomplete="off"/>
           <button id="nvGoBtn">表示</button>
+          <button id="nvTuneBtn" title="ジャンルごとの距離を調整" style="display:none">⚙</button>
+        </div>
+        <!-- チューニングパネル -->
+        <div class="nv-tune-panel" id="nvTunePanel">
+          <div class="nv-tune-title">ジャンルごとの文化的距離を調整</div>
+          <div class="nv-tune-sub">近い＝親しみ深い領域 / 遠い＝未知の領域。詳しい分野は「遠い」、不慣れな分野は「近い」がおすすめ。</div>
+          <div class="nv-tune-sliders" id="nvTuneSliders"></div>
+          <div class="nv-tune-actions">
+            <button id="nvTuneApply" class="nv-tune-apply">この設定で回す</button>
+            <button id="nvTuneReset" class="nv-tune-reset">標準に戻す</button>
+          </div>
         </div>
       </div>
       <div class="nebula-panel" id="nvPanel"></div>
       <div class="nebula-hint" id="nvHint">星雲をドラッグで移動・ホイールで拡大。明るい星ほど多くの人が辿った語です。</div>
+
+      <!-- コンパス詳細オーバーレイ -->
+      <div class="nv-detail-overlay" id="nvDetailOverlay">
+        <div class="nv-detail-card">
+          <button class="nv-detail-close" id="nvDetailClose">✕</button>
+          <div class="nv-detail-head" id="nvDetailHead"></div>
+          <div class="nv-detail-depth">
+            <span>深さ：</span>
+            <button class="nv-depth-btn" data-depth="shallow">やさしく</button>
+            <button class="nv-depth-btn active" data-depth="">標準</button>
+            <button class="nv-depth-btn" data-depth="deep">深く</button>
+          </div>
+          <div class="nv-detail-body" id="nvDetailBody"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Upgrade prompt -->
@@ -693,7 +767,14 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   </div>
 </div>
 
+<footer class="site-footer">
+  <span>当サイトはAmazonアソシエイト・プログラムの参加者です。商品リンクから得た収益はサービス運営に充てられます。</span>
+  <a href="/privacy.html">プライバシー</a>
+</footer>
+
 <script>
+// === Amazonアソシエイト タグ設定 ===
+window.AMAZON_TAG='goispacead-22';
 // ===== DOM =====
 const C=document.getElementById('canvas'),X=C.getContext('2d'),
 CA=document.querySelector('.canvas-area'),
@@ -812,6 +893,11 @@ async function loadUserData(){
         if(seen.has(k))return false;seen.add(k);return true;
       }).sort((a,b)=>a.ts-b.ts).slice(-500);
       try{localStorage_set('routeHistory',JSON.stringify(routeHistory))}catch{}
+    }
+    // コンパスのチューニングを復元
+    if(d.compassTuning&&typeof d.compassTuning==='object'){
+      compassTuning={...compassTuning,...d.compassTuning};
+      try{localStorage_set('compassTuning',JSON.stringify(compassTuning))}catch{}
     }
   }catch{}
 }
@@ -1037,6 +1123,9 @@ function logTransition(from,to){
 // ===== 検索経路の実績（マイページで確認・CSV出力） =====
 let routeHistory=[];
 try{const s=localStorage_get('routeHistory');if(s)routeHistory=JSON.parse(s)}catch{}
+// コンパスのチューニング（ジャンル別 文化的距離）— 早期宣言（loadUserDataより前）
+let compassTuning={};
+try{const s=localStorage_get('compassTuning');if(s)compassTuning=JSON.parse(s)}catch{}
 
 // ===== 探索セッション（経路）を記録：星図の「あの人の語彙モデル」用 =====
 let currentPath=[];      // 今の連続探索の語の列
@@ -1599,11 +1688,11 @@ async function finishGolf(){
     let inner;
     if(isGoal){
       inner='<div class="comp-node-dist" style="color:var(--goal)">GOAL!</div>';
-    }else if(distData){
+    }else if(distData&&distData.length){
       const dist=distData.find(d=>d.word===w);
-      const dNum=dist?dist.distance:'?';
+      const dNum=(dist&&dist.distance!=null)?dist.distance:'?';
       const dReason=dist?dist.reason:'';
-      const col=dNum<=3?'var(--green)':dNum<=6?'var(--amber)':'var(--rose)';
+      const col=dNum==='?'?'var(--muted)':(dNum<=3?'var(--green)':dNum<=6?'var(--amber)':'var(--rose)');
       inner=`<div class="comp-node-dist" style="color:${col}">距離: ${dNum}</div><div class="comp-node-reason">${dReason}</div>`;
     }else{
       inner='<div class="comp-node-dist" style="color:var(--muted);font-size:9px">測定中…</div>';
@@ -1618,27 +1707,42 @@ async function finishGolf(){
     <div class="comp-title">ゴール！🎉</div>
     <div class="comp-grade">${golf.moves}手（パー${par}）— ${grade}</div>
     <div class="comp-path" id="compPath">${buildPathHTML(null)}</div>
+    <div class="comp-dist-status" id="compDistStatus"></div>
     <div class="comp-actions">
       <button class="comp-btn twitter" onclick="shareOnX(\`${shareText.replace(/`/g,"'")}\`)">Xで共有</button>
       <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
     </div>`;
   CO.classList.add('visible');
 
-  // ★距離測定は裏で実行し、完了したら逐次反映（タイムアウトしても経路は表示済み）
-  (async()=>{
+  // ★距離測定（裏で実行・失敗時は再測定ボタンを出す）
+  async function measureDistances(){
+    const status=document.getElementById('compDistStatus');
+    if(status)status.innerHTML='<span style="color:var(--muted);font-size:11px">各語とゴールの距離を測定中…</span>';
     try{
       const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
-        body:JSON.stringify({action:'distance',words:fullPath,goal:golf.goal})});
+        body:JSON.stringify({action:'distance',words:fullPath.filter(w=>w!==golf.goal),goal:golf.goal})});
       const d=await r.json();
       const distData=d.distances||[];
       const el=document.getElementById('compPath');
-      if(el&&CO.classList.contains('visible'))el.innerHTML=buildPathHTML(distData);
+      if(distData.length){
+        if(el&&CO.classList.contains('visible'))el.innerHTML=buildPathHTML(distData);
+        if(status)status.innerHTML='';
+      }else{
+        // 測定失敗 → 再測定ボタン
+        if(status)status.innerHTML='<button class="comp-btn" id="reMeasureBtn" style="font-size:12px">距離の測定に失敗しました。再測定する</button>';
+        bindReMeasure();
+      }
     }catch{
-      // 失敗時は「測定中」を消してそのまま
-      const el=document.getElementById('compPath');
-      if(el)el.innerHTML=buildPathHTML([]);
+      const status2=document.getElementById('compDistStatus');
+      if(status2)status2.innerHTML='<button class="comp-btn" id="reMeasureBtn" style="font-size:12px">距離の測定に失敗しました。再測定する</button>';
+      bindReMeasure();
     }
-  })();
+  }
+  function bindReMeasure(){
+    const btn=document.getElementById('reMeasureBtn');
+    if(btn)btn.addEventListener('click',measureDistances);
+  }
+  measureDistances();
 
   // Daily/Monthly: submit score
   if(golf.daily){
@@ -2554,6 +2658,10 @@ function setNvMode(m){
     const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
     if(top.length&&!inp.value)inp.value=top.join('、');
   }
+  // チューニングボタンはコンパス時のみ
+  const tuneBtn=document.getElementById('nvTuneBtn');
+  if(tuneBtn)tuneBtn.style.display=(m==='compass')?'block':'none';
+  document.getElementById('nvTunePanel').classList.remove('open');
 }
 document.querySelectorAll('.nv-mode').forEach(b=>{
   b.addEventListener('click',()=>{setNvMode(b.dataset.nv);if(b.dataset.nv==='explore'){nvOverlay.paths=null;nvOverlay.compass=null}});
@@ -2578,7 +2686,7 @@ async function runNvQuery(){
     if(interests.length<2){toast('興味を2つ以上入力してください','info',2500);return}
     panel.innerHTML='<div class="nv-card nv-empty">コンパスを回しています…</div>';
     try{
-      const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({interests})});
+      const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({interests,tuning:compassTuning})});
       const d=await r.json();
       nvOverlay.compass=d;
       ensureNebulaWords([d.center]);
@@ -2617,45 +2725,141 @@ function renderNvPeekPanel(word,paths){
 function renderNvCompassPanel(d){
   const panel=document.getElementById('nvPanel');
   if(!d.recommendations||!d.recommendations.length){panel.innerHTML='<div class="nv-card nv-empty">提案を生成できませんでした</div>';return}
-  let html=`<div class="nv-card"><div class="nv-card-head"><span>🧭 ${d.center}</span></div><div style="font-size:12px;color:var(--muted)">${d.summary}</div></div>`;
-  // 最も近い書籍
+  let html=`<div class="nv-card"><div class="nv-card-head"><span>🧭 ${d.center}</span></div><div style="font-size:12px;color:#9aa6c4">${d.summary}</div></div>`;
+  // 最も近い書籍（Amazonリンク）
   if(d.book&&d.book.title){
-    html+=`<div class="nv-card nv-book"><div class="nv-book-label">📖 あなたに最も近い一冊</div><div class="nv-book-title">${d.book.title}</div><div class="nv-book-author">${d.book.author||''}</div><div class="nv-card-value" style="margin-top:4px">${d.book.reason||''}</div></div>`;
+    html+=`<div class="nv-card nv-book"><div class="nv-book-label">📖 あなたに最も近い一冊</div><div class="nv-book-title">${d.book.title}</div><div class="nv-book-author">${d.book.author||''}</div><div class="nv-card-value" style="margin-top:4px">${d.book.reason||''}</div><a class="nv-bk-link" href="${amazonLink(d.book.title,d.book.author)}" target="_blank" rel="noopener">📚 Amazonで探す</a></div>`;
   }
-  // 6視点のカード（学問色つき・クリックで詳細）
-  html+=d.recommendations.map((rec,i)=>{
+  // 6視点のカード（クリックで詳細オーバーレイ）
+  html+=d.recommendations.map(rec=>{
     return `<div class="nv-card nv-disc" data-disc="${rec.discipline}" data-domain="${(rec.domain||'').replace(/"/g,'&quot;')}" style="border-left:4px solid ${rec.color}">
       <div class="nv-card-head"><span class="nv-card-domain"><span class="nv-disc-tag" style="color:${rec.color}">${rec.discipline}</span> ${rec.domain}</span><span>距離 ${rec.distance}/10</span></div>
       <div class="nv-card-reason">${rec.reason}</div>
       <div class="nv-card-value">${rec.value}</div>
-      <div class="nv-disc-more">タップで深く知る ▾</div>
-      <div class="nv-detail" id="nvDetail${i}"></div>
+      <div class="nv-disc-more">タップで詳しく ▸</div>
     </div>`;
   }).join('');
   panel.innerHTML=html;
-  // カードクリック → 詳細を取得して展開
-  panel.querySelectorAll('.nv-disc').forEach((card,i)=>{
-    card.addEventListener('click',async()=>{
-      const det=card.querySelector('.nv-detail');
-      if(card.classList.contains('open')){card.classList.remove('open');det.innerHTML='';return}
-      card.classList.add('open');
-      det.innerHTML='<div class="nv-detail-loading">深く調べています…</div>';
-      try{
-        const interests=document.getElementById('nvWordInput').value.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
-        const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({interests,detail:{discipline:card.dataset.disc,domain:card.dataset.domain}})});
-        const dd=await r.json();
-        const books=(dd.intro_books||[]).map(b=>`<li><span class="nv-bk-title">${b.title}</span>${b.author?` <span class="nv-bk-auth">/ ${b.author}</span>`:''}${b.note?`<div class="nv-bk-note">${b.note}</div>`:''}</li>`).join('');
-        const kws=(dd.keywords||[]).map(k=>`<span class="nv-kw">${k}</span>`).join('');
-        det.innerHTML=`
-          <div class="nv-d-sec"><div class="nv-d-h">🔗 興味との関係</div><div class="nv-d-b">${dd.relationship||''}</div></div>
-          ${books?`<div class="nv-d-sec"><div class="nv-d-h">📚 入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`:''}
-          ${kws?`<div class="nv-d-sec"><div class="nv-d-h">🔑 深く知るためのキーワード</div><div class="nv-kw-wrap">${kws}</div></div>`:''}
-          ${dd.universal_concept?`<div class="nv-d-sec"><div class="nv-d-h">🌌 探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`:''}
-        `;
-      }catch{det.innerHTML='<div class="nv-detail-loading">取得に失敗しました</div>';}
+  panel.querySelectorAll('.nv-disc').forEach(card=>{
+    card.addEventListener('click',()=>openCompassDetail(card.dataset.disc,card.dataset.domain,card.style.borderLeftColor));
+  });
+}
+
+// ===== 詳細オーバーレイ（キャッシュつき・深さ切替・キーワード探索）=====
+const compassDetailCache={}; // セッション中メモリキャッシュ key: disc|domain|depth
+let nvCurrentDetail={disc:'',domain:'',color:'',depth:''};
+const nvDetailOverlay=document.getElementById('nvDetailOverlay');
+
+function amazonLink(title,author){
+  const tag=window.AMAZON_TAG||''; // アフィリエイトタグ（後で設定）
+  const q=encodeURIComponent([title,author].filter(Boolean).join(' '));
+  return `https://www.amazon.co.jp/s?k=${q}${tag?`&tag=${tag}`:''}`;
+}
+
+async function openCompassDetail(disc,domain,color){
+  nvCurrentDetail={disc,domain,color:color||'',depth:''};
+  document.getElementById('nvDetailHead').innerHTML=`<span class="nv-disc-tag" style="color:${color}">${disc}</span>${domain}`;
+  // 深さボタンを標準にリセット
+  document.querySelectorAll('.nv-depth-btn').forEach(b=>b.classList.toggle('active',b.dataset.depth===''));
+  nvDetailOverlay.classList.add('visible');
+  loadCompassDetail();
+}
+
+async function loadCompassDetail(){
+  const {disc,domain,depth}=nvCurrentDetail;
+  const body=document.getElementById('nvDetailBody');
+  const key=`${disc}|${domain}|${depth}`;
+  if(compassDetailCache[key]){renderCompassDetail(compassDetailCache[key]);return}
+  body.innerHTML='<div class="nv-detail-loading">調べています…</div>';
+  try{
+    const interests=document.getElementById('nvWordInput').value.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
+    const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({interests,detail:{discipline:disc,domain},depth:depth||undefined})});
+    const dd=await r.json();
+    compassDetailCache[key]=dd;
+    renderCompassDetail(dd);
+  }catch{body.innerHTML='<div class="nv-detail-loading">取得に失敗しました</div>';}
+}
+
+function renderCompassDetail(dd){
+  const body=document.getElementById('nvDetailBody');
+  const books=(dd.intro_books||[]).map(b=>{
+    const link=amazonLink(b.title,b.author);
+    return `<li><span class="nv-bk-title">${b.title}</span>${b.author?` <span class="nv-bk-auth">/ ${b.author}</span>`:''}${b.note?`<div class="nv-bk-note">${b.note}</div>`:''}<a class="nv-bk-link" href="${link}" target="_blank" rel="noopener">📚 Amazonで探す</a></li>`;
+  }).join('');
+  const kws=(dd.keywords||[]).map(k=>`<span class="nv-kw nv-kw-click" data-kw="${k.replace(/"/g,'&quot;')}">${k}</span>`).join('');
+  body.innerHTML=`
+    <div class="nv-d-sec"><div class="nv-d-h">🔗 興味との関係</div><div class="nv-d-b">${dd.relationship||''}</div></div>
+    ${books?`<div class="nv-d-sec"><div class="nv-d-h">📚 入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`:''}
+    ${kws?`<div class="nv-d-sec"><div class="nv-d-h">🔑 深く知るためのキーワード（タップで探索）</div><div class="nv-kw-wrap">${kws}</div></div>`:''}
+    ${dd.universal_concept?`<div class="nv-d-sec"><div class="nv-d-h">🌌 探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`:''}
+  `;
+  // キーワードクリック → 探索
+  body.querySelectorAll('.nv-kw-click').forEach(el=>el.addEventListener('click',()=>{
+    const w=el.dataset.kw;
+    nvDetailOverlay.classList.remove('visible');exitNebula();
+    const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
+    WI.value=w;explore(w,currentCenter());toast(`「${w}」を探索します`,'info',1800);
+  }));
+}
+
+document.getElementById('nvDetailClose').addEventListener('click',()=>nvDetailOverlay.classList.remove('visible'));
+nvDetailOverlay.addEventListener('click',e=>{if(e.target===nvDetailOverlay)nvDetailOverlay.classList.remove('visible')});
+// 深さ切替
+document.querySelectorAll('.nv-depth-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.nv-depth-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    nvCurrentDetail.depth=b.dataset.depth;
+    loadCompassDetail();
+  });
+});
+
+// ===== コンパスのチューニング（ジャンル別 文化的距離）=====
+const COMPASS_DISCIPLINES=[
+  {key:'自然科学',color:'#5B8FDE'},{key:'生物',color:'#4ECBA8'},{key:'社会',color:'#E8C547'},
+  {key:'芸術',color:'#9B72E8'},{key:'哲学',color:'#E06B8B'},{key:'数学',color:'#E8EDF5'}
+];
+function tuneLabel(v){return v<=3?'近い（深掘り）':v>=8?'遠い（入口）':'標準'}
+function buildTuneSliders(){
+  const wrap=document.getElementById('nvTuneSliders');
+  wrap.innerHTML=COMPASS_DISCIPLINES.map(d=>{
+    const v=compassTuning[d.key]||5;
+    return `<div class="nv-tune-row">
+      <span class="nv-tune-label" style="color:${d.color}">${d.key}</span>
+      <input type="range" min="1" max="10" value="${v}" data-disc="${d.key}"/>
+      <span class="nv-tune-val" data-val="${d.key}">${tuneLabel(v)}</span>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('input[type=range]').forEach(sl=>{
+    sl.addEventListener('input',()=>{
+      const disc=sl.dataset.disc;const v=Number(sl.value);
+      compassTuning[disc]=v;
+      const val=wrap.querySelector(`[data-val="${disc}"]`);if(val)val.textContent=tuneLabel(v);
     });
   });
+}
+document.getElementById('nvTuneBtn').addEventListener('click',()=>{
+  const p=document.getElementById('nvTunePanel');
+  if(p.classList.contains('open')){p.classList.remove('open');return}
+  buildTuneSliders();p.classList.add('open');
+});
+document.getElementById('nvTuneApply').addEventListener('click',()=>{
+  saveCompassTuning();
+  document.getElementById('nvTunePanel').classList.remove('open');
+  runNvQuery(); // 新しいチューニングで回し直す
+});
+document.getElementById('nvTuneReset').addEventListener('click',()=>{
+  compassTuning={};buildTuneSliders();saveCompassTuning();
+  toast('チューニングを標準に戻しました','info',1800);
+});
+function saveCompassTuning(){
+  try{localStorage_set('compassTuning',JSON.stringify(compassTuning))}catch{}
+  // アカウントに紐づけて保存
+  if(premiumEmail){
+    fetch('/api/userdata',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:premiumEmail,compassTuning})}).catch(()=>{});
+  }
 }
 function startNvLoop(){
   if(nvRAF)cancelAnimationFrame(nvRAF);

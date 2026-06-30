@@ -47,20 +47,37 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  let { interests, detail } = req.body || {};
+  let { interests, detail, tuning, depth } = req.body || {};
   if (!Array.isArray(interests)) interests = [];
   interests = interests.map(w => String(w || '').slice(0, 50)).filter(Boolean).slice(0, 30);
   if (interests.length === 0) return res.status(400).json({ error: 'interests required' });
 
   const list = interests.join('、');
 
+  // チューニング：各ジャンルの希望文化的距離（1=近い親しみ深い〜10=遠い未知）
+  // { '自然科学': 3, '生物': 8, ... } の形。指定がなければ既定5。
+  const tune = (tuning && typeof tuning === 'object') ? tuning : {};
+  const tuneText = (disc) => {
+    const v = Math.max(1, Math.min(10, Number(tune[disc]) || 5));
+    if (v <= 3) return `（${disc}には親しみがあるので、より近接・応用的で深掘りした領域を）`;
+    if (v >= 8) return `（${disc}には不慣れなので、入口となる馴染みやすく遠すぎない領域を）`;
+    return '';
+  };
+
   try {
     // === カード詳細（クリック時）===
     if (detail && detail.discipline && detail.domain) {
       const dDisc = String(detail.discipline).slice(0, 20);
       const dDom = String(detail.domain).slice(0, 40);
+      // 深さレベル：'deep'(より専門的) | 'shallow'(より入門的) | 既定(標準)
+      const depthNote = depth === 'deep'
+        ? 'ユーザーはこの分野をさらに深く知りたい。より専門的・先端的な内容、上級者向けの文献を中心に。'
+        : depth === 'shallow'
+        ? 'ユーザーはこの分野の初学者。基礎の基礎から、最も易しい入口を中心に。'
+        : '';
       const prompt = `ユーザーは次の言葉に興味があります：${list}
 「知的コンパス」が、${dDisc}の視点から「${dDom}」という領域を推薦しました。
+${depthNote}
 
 この領域について、ユーザーの興味と結びつけて深く案内してください。次のJSON形式のみで出力（前後の説明文なし）：
 {
@@ -87,11 +104,12 @@ intro_books は2〜3冊。実在する古典・名著を優先。`;
 
     // === メイン提案（6視点）===
     const discList = DISCIPLINES.map(d => d.key).join('、');
+    const tuneLines = DISCIPLINES.map(d => `・${d.key}${tuneText(d.key)}`).join('\n');
     const prompt = `あなたは知的探求を導く「知的コンパス」です。ユーザーは次の言葉に興味を持っています：
 ${list}
 
-次の6つの学問的視点それぞれから、ユーザーの興味と「文化的・知的に離れているが、繋ぐと豊かさが生まれる領域」を1つずつ提案してください：
-${discList}
+次の6つの学問的視点それぞれから、ユーザーの興味と「文化的・知的に離れているが、繋ぐと豊かさが生まれる領域」を1つずつ提案してください。各視点の括弧内に、ユーザーの習熟度に応じた調整指示があれば従ってください：
+${tuneLines}
 
 各視点で、その領域を取り入れることで生まれる価値（新しい視点・創造性・意外な繋がり）を述べてください。文化的距離は1(隣接)〜10(対極)で表します。
 
