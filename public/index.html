@@ -187,6 +187,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nebula-modes{display:flex;gap:6px;background:rgba(10,16,36,0.9);border:1px solid var(--border);border-radius:22px;padding:4px;backdrop-filter:blur(8px)}
 .nv-mode{background:none;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;padding:7px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;transition:all .15s}
 .nv-mode.active{background:var(--amber);color:#080C18}
+.nv-reverse.active{background:var(--violet);color:#fff}
+.nebula-tooltip{position:absolute;z-index:35;background:rgba(10,16,36,0.96);border:1px solid var(--amber);border-radius:8px;padding:6px 12px;font-family:'Noto Serif JP',serif;font-size:14px;color:#eef2fb;pointer-events:none;display:none;white-space:nowrap;transform:translate(-50%,-130%);backdrop-filter:blur(6px)}
+.nebula-tooltip.visible{display:block}
 .nebula-bar{display:flex;gap:6px;width:100%}
 .nebula-bar input{flex:1;background:rgba(10,16,36,0.9);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:10px 15px;border-radius:8px;outline:none;backdrop-filter:blur(8px)}
 .nebula-bar input:focus{border-color:var(--amber)}
@@ -535,6 +538,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           <button class="nv-mode active" data-nv="explore">🌌 星雲</button>
           <button class="nv-mode" data-nv="peek">🧭 経路</button>
           <button class="nv-mode" data-nv="compass">🧭 コンパス</button>
+          <button class="nv-mode nv-reverse" id="nvReverseBtn" title="明暗・大小を反転してマイナーな語を浮かび上がらせる">🔄 反転</button>
         </div>
         <div class="nebula-bar" id="nebulaBar">
           <input id="nvWordInput" type="text" placeholder="語を入力…" autocomplete="off"/>
@@ -554,6 +558,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       </div>
       <div class="nebula-panel" id="nvPanel"></div>
       <div class="nebula-hint" id="nvHint">星雲をドラッグで移動・ホイールで拡大。明るい星ほど多くの人が辿った語です。</div>
+      <div class="nebula-tooltip" id="nvTooltip"></div>
 
       <!-- コンパス詳細オーバーレイ -->
       <div class="nv-detail-overlay" id="nvDetailOverlay">
@@ -2603,6 +2608,8 @@ let nvMode='explore'; // explore(星雲) | peek(経路) | compass
 let nebulaGraph=null;  // 全体星雲データ
 let nvOverlay={paths:null,compass:null}; // 重ねるデータ
 let nvView={x:0,y:0,zoom:1,drag:false,lx:0,ly:0};
+let nvReverse=false;   // 反転表示モード
+let nvHoverNode=null;  // ホバー中のノード
 let nvRAF=null;
 
 function wordHue(w){let h=0;for(let i=0;i<w.length;i++)h=(h*31+w.charCodeAt(i))%360;return h;}
@@ -2662,9 +2669,30 @@ function setNvMode(m){
   const tuneBtn=document.getElementById('nvTuneBtn');
   if(tuneBtn)tuneBtn.style.display=(m==='compass')?'block':'none';
   document.getElementById('nvTunePanel').classList.remove('open');
+  // 反転ボタンは星雲モード時のみ表示
+  const revBtn=document.getElementById('nvReverseBtn');
+  if(revBtn)revBtn.style.display=(m==='explore')?'inline-block':'none';
+  if(m!=='explore'){nvReverse=false;if(revBtn)revBtn.classList.remove('active')}
+  // ヒント文を反転状態で出し分け
+  if(m==='explore'){
+    const hint=document.getElementById('nvHint');
+    hint.textContent=nvReverse
+      ?'反転表示：マイナーな語ほど明るく大きく浮かび上がります。ホバーで語を確認できます。'
+      :'星雲をドラッグで移動・ホバーで語を確認。明るい星ほど多くの人が辿った語です。';
+  }
 }
 document.querySelectorAll('.nv-mode').forEach(b=>{
+  if(b.id==='nvReverseBtn')return; // 反転ボタンは別処理
   b.addEventListener('click',()=>{setNvMode(b.dataset.nv);if(b.dataset.nv==='explore'){nvOverlay.paths=null;nvOverlay.compass=null}});
+});
+// 反転トグル
+document.getElementById('nvReverseBtn').addEventListener('click',()=>{
+  nvReverse=!nvReverse;
+  document.getElementById('nvReverseBtn').classList.toggle('active',nvReverse);
+  const hint=document.getElementById('nvHint');
+  hint.textContent=nvReverse
+    ?'反転表示：マイナーな語ほど明るく大きく浮かび上がります。ホバーで語を確認できます。'
+    :'星雲をドラッグで移動・ホバーで語を確認。明るい星ほど多くの人が辿った語です。';
 });
 document.getElementById('nvGoBtn').addEventListener('click',runNvQuery);
 document.getElementById('nvWordInput').addEventListener('keydown',e=>{if(e.key==='Enter')runNvQuery()});
@@ -2897,16 +2925,30 @@ function drawNebulaView(dpr){
   }
   nodes.forEach((n,i)=>{
     const x=cx+n.bx*z,y=cy+n.by*z;
-    const tw=0.7+0.3*Math.sin(t*2+i);const r=Math.max(1,n.r*z*0.5);
+    const tw=0.7+0.3*Math.sin(t*2+i);
     const isPeekMatch=nvMode==='peek'&&nvOverlay.paths&&nvOverlay.paths.word===n.word;
+    const isHover=n===nvHoverNode;
+    // 反転モード：明るさ・大きさを逆転（norm→1-norm）
+    const eff=(nvReverse&&nvMode==='explore')?(1-n.norm):n.norm;
+    const baseR=4+eff*16;
+    const r=Math.max(1,baseR*z*0.5);
     const g=NVCX.createRadialGradient(x,y,0,x,y,r*3);
     g.addColorStop(0,`hsla(${n.hue},75%,70%,${0.5*tw})`);g.addColorStop(1,`hsla(${n.hue},75%,70%,0)`);
     NVCX.fillStyle=g;NVCX.beginPath();NVCX.arc(x,y,r*3,0,Math.PI*2);NVCX.fill();
-    NVCX.beginPath();NVCX.arc(x,y,isPeekMatch?r*1.6:r,0,Math.PI*2);
-    NVCX.fillStyle=isPeekMatch?'#F5A623':`hsla(${n.hue},80%,${60+n.norm*20}%,${tw})`;NVCX.fill();
-    if(n.norm>0.32||isPeekMatch){
+    NVCX.beginPath();NVCX.arc(x,y,(isPeekMatch||isHover)?r*1.6:r,0,Math.PI*2);
+    NVCX.fillStyle=isPeekMatch?'#F5A623':(isHover?'#F5A623':`hsla(${n.hue},80%,${60+eff*20}%,${tw})`);NVCX.fill();
+    // テキスト表示判定：
+    //  通常モード … メジャー(norm>0.32)を表示
+    //  反転モード … テキスト非表示だったマイナー(norm<=0.32)のうち特に小さいものを表示、メジャーは非表示
+    let showText=false;
+    if(nvMode==='explore'&&nvReverse){
+      showText=(n.norm<=0.32)&&(n.norm<=0.15); // 特にマイナーなものだけ
+    }else{
+      showText=(n.norm>0.32||isPeekMatch);
+    }
+    if(showText&&!isHover){
       NVCX.font=`${(isPeekMatch?12:10)*dpr}px 'Noto Serif JP',serif`;
-      NVCX.fillStyle=`rgba(235,240,255,${0.5+0.5*n.norm})`;NVCX.textAlign='center';
+      NVCX.fillStyle=`rgba(235,240,255,${0.5+0.5*eff})`;NVCX.textAlign='center';
       NVCX.fillText(n.word,x,y-r-4*dpr);
     }
   });
@@ -2957,6 +2999,24 @@ function nebulaNodeClicked(clientX,clientY){
 
 NVC.addEventListener('mousedown',e=>{nvView.drag=true;nvView.lx=e.clientX;nvView.ly=e.clientY;nvDownPos={x:e.clientX,y:e.clientY};nvMoved=false});
 window.addEventListener('mousemove',e=>{if(nvView.drag){if(nvDownPos&&(Math.abs(e.clientX-nvDownPos.x)>5||Math.abs(e.clientY-nvDownPos.y)>5))nvMoved=true;nvView.x+=e.clientX-nvView.lx;nvView.y+=e.clientY-nvView.ly;nvView.lx=e.clientX;nvView.ly=e.clientY}});
+// ホバーで語を表示（ドラッグ中は無効）
+NVC.addEventListener('mousemove',e=>{
+  if(nvView.drag||!NV.classList.contains('visible')){return}
+  const n=nebulaNodeAt(e.clientX,e.clientY);
+  const tip=document.getElementById('nvTooltip');
+  if(n){
+    nvHoverNode=n;NVC.style.cursor='pointer';
+    const rect=NVC.getBoundingClientRect();
+    tip.textContent=n.word;
+    tip.style.left=(e.clientX-rect.left)+'px';
+    tip.style.top=(e.clientY-rect.top)+'px';
+    tip.classList.add('visible');
+  }else{
+    nvHoverNode=null;NVC.style.cursor='grab';
+    tip.classList.remove('visible');
+  }
+});
+NVC.addEventListener('mouseleave',()=>{nvHoverNode=null;document.getElementById('nvTooltip').classList.remove('visible')});
 window.addEventListener('mouseup',e=>{
   if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
     nebulaNodeClicked(e.clientX,e.clientY);
