@@ -89,6 +89,25 @@ ${wlist}
   };
 
   try {
+    // === 選書カードの詳細（あらすじ・推薦根拠・読者像）===
+    if (req.body.bookDetail && req.body.bookDetail.title) {
+      const bt = String(req.body.bookDetail.title).slice(0, 120);
+      const ba = String(req.body.bookDetail.author || '').slice(0, 60);
+      const prompt = `ユーザーは次の言葉に興味があります：${list}
+書籍「${bt}」${ba ? `（${ba}）` : ''}について案内してください。次のJSON形式のみで出力（前後の説明文なし）：
+{
+  "synopsis": "この本の簡単なあらすじ・内容紹介（100字以内）",
+  "why": "なぜこのユーザーの興味にこの本を勧めるのか、その根拠（80字以内）",
+  "reader": "この本に惹かれるのはどのような関心や精神を持つ人物像か（70字以内）"
+}`;
+      const parsed = await callClaude(prompt, 700);
+      return res.status(200).json({
+        synopsis: String(parsed.synopsis || '').slice(0, 240),
+        why: String(parsed.why || '').slice(0, 200),
+        reader: String(parsed.reader || '').slice(0, 180),
+      });
+    }
+
     // === カード詳細（クリック時）===
     if (detail && detail.discipline && detail.domain) {
       const dDisc = String(detail.discipline).slice(0, 20);
