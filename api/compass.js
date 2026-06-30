@@ -1,92 +1,144 @@
 // api/compass.js
-// 知的コンパス：ユーザーの興味（語群）から、文化的に離れた推奨領域と
-// それを取り入れることで生まれる価値を提案する。
+// 知的コンパス：ユーザーの興味（語群）から、6つの学問的視点で離れた領域を提案する。
 //
 //   POST { interests:[...] }
-//     → {
-//         center: "興味の重心の言葉",
-//         summary: "あなたの興味の傾向",
-//         recommendations: [
-//           { domain, distance(1-10), angle(0-360), reason, value }
-//         ]
-//       }
+//     → { center, summary, book, recommendations:[{discipline,color,angle,domain,distance,reason,value}] }
+//   POST { interests:[...], detail:{discipline, domain} }
+//     → { relationship, intro_books:[...], keywords:[...], universal_concept }
 //
-// distance: 文化的距離（1=隣接, 10=対極）
-// angle:    方位（地図配置用・0-360度）
+// 6視点（色・方位固定）:
+//   青=自然科学(0) 緑=生物(60) 黄=社会(120) 紫=芸術(180) 赤=哲学(240) 白=数学(300)
 
 import { setCors } from './_redis.js';
+
+const DISCIPLINES = [
+  { key: '自然科学', color: '#5B8FDE', angle: 0 },
+  { key: '生物',     color: '#4ECBA8', angle: 60 },
+  { key: '社会',     color: '#E8C547', angle: 120 },
+  { key: '芸術',     color: '#9B72E8', angle: 180 },
+  { key: '哲学',     color: '#E06B8B', angle: 240 },
+  { key: '数学',     color: '#E8EDF5', angle: 300 },
+];
+
+async function callClaude(prompt, maxTokens) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  const data = await resp.json();
+  if (!data.content || !Array.isArray(data.content)) throw new Error('bad response');
+  let raw = data.content.map(c => c.text || '').join('');
+  const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+  if (s >= 0 && e > s) raw = raw.slice(s, e + 1);
+  return JSON.parse(raw);
+}
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  let { interests } = req.body || {};
+  let { interests, detail } = req.body || {};
   if (!Array.isArray(interests)) interests = [];
   interests = interests.map(w => String(w || '').slice(0, 50)).filter(Boolean).slice(0, 30);
   if (interests.length === 0) return res.status(400).json({ error: 'interests required' });
 
   const list = interests.join('、');
-  const prompt = `あなたは知的な探求を導く「知的コンパス」です。あるユーザーが次の言葉に興味を持っています：
+
+  try {
+    // === カード詳細（クリック時）===
+    if (detail && detail.discipline && detail.domain) {
+      const dDisc = String(detail.discipline).slice(0, 20);
+      const dDom = String(detail.domain).slice(0, 40);
+      const prompt = `ユーザーは次の言葉に興味があります：${list}
+「知的コンパス」が、${dDisc}の視点から「${dDom}」という領域を推薦しました。
+
+この領域について、ユーザーの興味と結びつけて深く案内してください。次のJSON形式のみで出力（前後の説明文なし）：
+{
+  "relationship": "ユーザーの興味の性向と、この分野・領域がどう関係し、なぜ離れていて、繋ぐと何が生まれるか（150字以内）",
+  "intro_books": [
+    {"title": "入門書・前段に読むべき本や文書（日本語/英語可）", "author": "著者", "note": "なぜ最初に読むべきか30字以内"}
+  ],
+  "keywords": ["より深く知るためのキーワード5〜8個"],
+  "universal_concept": "この領域を深く探求した先にある普遍的概念と、それがユーザーの知にもたらす意味（120字以内）"
+}
+intro_books は2〜3冊。実在する古典・名著を優先。`;
+      const parsed = await callClaude(prompt, 1400);
+      return res.status(200).json({
+        relationship: String(parsed.relationship || '').slice(0, 400),
+        intro_books: (parsed.intro_books || []).slice(0, 4).map(b => ({
+          title: String(b.title || '').slice(0, 120),
+          author: String(b.author || '').slice(0, 60),
+          note: String(b.note || '').slice(0, 80),
+        })),
+        keywords: (parsed.keywords || []).slice(0, 10).map(k => String(k).slice(0, 30)),
+        universal_concept: String(parsed.universal_concept || '').slice(0, 300),
+      });
+    }
+
+    // === メイン提案（6視点）===
+    const discList = DISCIPLINES.map(d => d.key).join('、');
+    const prompt = `あなたは知的探求を導く「知的コンパス」です。ユーザーは次の言葉に興味を持っています：
 ${list}
 
-このユーザーの興味の傾向を分析し、そこから「文化的・知的に離れた領域」を5つ提案してください。それぞれ、その領域を取り入れることでユーザーに生まれる価値（新しい視点・創造性・意外な繋がり）を述べてください。
+次の6つの学問的視点それぞれから、ユーザーの興味と「文化的・知的に離れているが、繋ぐと豊かさが生まれる領域」を1つずつ提案してください：
+${discList}
 
-重要な観点：
-- 単に無関係な領域ではなく、「離れているが繋がると豊かさが生まれる」領域を選ぶ
-- 文化的距離が近いもの（応用・隣接分野）から遠いもの（全く異質な文化・思考様式）まで幅を持たせる
-- 各領域に文化的距離(1=隣接〜10=対極)と、地図上の方位(0-360度、互いに散らばるように)を割り当てる
+各視点で、その領域を取り入れることで生まれる価値（新しい視点・創造性・意外な繋がり）を述べてください。文化的距離は1(隣接)〜10(対極)で表します。
 
-次のJSON形式のみで出力してください（前後の説明文は不要）：
+加えて、ユーザーの興味の組み合わせに最も近い書籍を1冊案内してください（実在する名著・古典を優先）。
+
+次のJSON形式のみで出力（前後の説明文なし）：
 {
   "center": "ユーザーの興味を最も象徴する一語",
   "summary": "興味の傾向を40字以内で要約",
+  "book": {"title": "最も近い書籍", "author": "著者", "reason": "なぜこの本が近いか40字以内"},
   "recommendations": [
-    {"domain": "領域名（短く）", "distance": 数値, "angle": 数値, "reason": "なぜ離れているか30字以内", "value": "取り入れると生まれる価値50字以内"}
+    {"discipline": "自然科学", "domain": "領域名（短く）", "distance": 数値, "reason": "なぜ離れているか30字以内", "value": "取り入れると生まれる価値50字以内"}
   ]
-}`;
+}
+recommendations は上記6視点すべてを ${discList} の順で必ず含めること。`;
 
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-    const data = await resp.json();
-    if (!data.content || !Array.isArray(data.content)) {
-      return res.status(502).json({ error: 'AI応答が不正です' });
-    }
-    let raw = data.content.map(c => c.text || '').join('');
-    const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
-    if (s >= 0 && e > s) raw = raw.slice(s, e + 1);
-    let parsed;
-    try { parsed = JSON.parse(raw); }
-    catch { return res.status(502).json({ error: 'AI応答の解析に失敗しました' }); }
+    const parsed = await callClaude(prompt, 1600);
+    const byKey = {};
+    (parsed.recommendations || []).forEach(r => { if (r.discipline) byKey[r.discipline] = r; });
 
-    // 正規化
-    const recs = (parsed.recommendations || []).slice(0, 6).map((r, i) => ({
-      domain: String(r.domain || '').slice(0, 40),
-      distance: Math.max(1, Math.min(10, Number(r.distance) || 5)),
-      angle: ((Number(r.angle) || (i * 67)) % 360 + 360) % 360,
-      reason: String(r.reason || '').slice(0, 60),
-      value: String(r.value || '').slice(0, 100),
-    })).filter(r => r.domain);
+    const recommendations = DISCIPLINES.map(d => {
+      const r = byKey[d.key] || {};
+      return {
+        discipline: d.key,
+        color: d.color,
+        angle: d.angle,
+        domain: String(r.domain || '').slice(0, 40),
+        distance: Math.max(1, Math.min(10, Number(r.distance) || 5)),
+        reason: String(r.reason || '').slice(0, 60),
+        value: String(r.value || '').slice(0, 100),
+      };
+    }).filter(r => r.domain);
+
+    const book = parsed.book ? {
+      title: String(parsed.book.title || '').slice(0, 120),
+      author: String(parsed.book.author || '').slice(0, 60),
+      reason: String(parsed.book.reason || '').slice(0, 80),
+    } : null;
 
     return res.status(200).json({
       center: String(parsed.center || interests[0]).slice(0, 30),
       summary: String(parsed.summary || '').slice(0, 80),
-      recommendations: recs,
+      book,
+      recommendations,
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Internal error' });
+    return res.status(502).json({ error: 'コンパスの生成に失敗しました' });
   }
 }

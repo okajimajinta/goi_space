@@ -199,6 +199,29 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-card-value{font-size:12px;color:var(--text);line-height:1.5;margin-top:4px}
 .nv-card-value::before{content:'✨ '}
 .nv-empty{text-align:center;color:var(--muted);font-size:12px;padding:16px}
+.nv-book{border-left:3px solid var(--amber)!important}
+.nv-book-label{font-size:11px;color:var(--amber);margin-bottom:4px}
+.nv-book-title{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:var(--text)}
+.nv-book-author{font-size:12px;color:var(--muted)}
+.nv-disc{cursor:pointer;transition:border-color .15s}
+.nv-disc:hover{background:rgba(255,255,255,0.03)}
+.nv-disc-tag{font-size:11px;font-weight:600;margin-right:4px}
+.nv-card-reason{font-size:11px;color:var(--muted);margin-bottom:4px}
+.nv-disc-more{font-size:10px;color:var(--amber);margin-top:6px;opacity:.8}
+.nv-disc.open .nv-disc-more{display:none}
+.nv-detail{margin-top:0;overflow:hidden}
+.nv-disc.open .nv-detail{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.nv-detail-loading{font-size:12px;color:var(--muted);padding:8px 0;text-align:center}
+.nv-d-sec{margin-bottom:12px}
+.nv-d-h{font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px}
+.nv-d-b{font-size:12px;color:var(--muted);line-height:1.7}
+.nv-bk-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.nv-bk-list li{font-size:12px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 10px}
+.nv-bk-title{font-weight:600}
+.nv-bk-auth{color:var(--muted);font-size:11px}
+.nv-bk-note{font-size:11px;color:var(--muted);margin-top:3px}
+.nv-kw-wrap{display:flex;flex-wrap:wrap;gap:5px}
+.nv-kw{font-size:11px;color:var(--blue);background:rgba(91,143,222,0.12);border:1px solid var(--border);border-radius:12px;padding:3px 9px}
 
 /* === ADS === */
 .ad-sidebar{grid-column:2;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px}
@@ -2594,11 +2617,45 @@ function renderNvPeekPanel(word,paths){
 function renderNvCompassPanel(d){
   const panel=document.getElementById('nvPanel');
   if(!d.recommendations||!d.recommendations.length){panel.innerHTML='<div class="nv-card nv-empty">提案を生成できませんでした</div>';return}
-  panel.innerHTML=`<div class="nv-card"><div class="nv-card-head"><span>🧭 ${d.center}</span></div><div style="font-size:12px;color:var(--muted)">${d.summary}</div></div>`+
-    d.recommendations.map(rec=>{
-      const hue=Math.round(rec.angle%360);
-      return `<div class="nv-card" style="border-left:3px solid hsl(${hue},60%,55%)"><div class="nv-card-head"><span class="nv-card-domain">${rec.domain}</span><span>距離 ${rec.distance}/10</span></div><div class="nv-card-value">${rec.value}</div></div>`;
-    }).join('');
+  let html=`<div class="nv-card"><div class="nv-card-head"><span>🧭 ${d.center}</span></div><div style="font-size:12px;color:var(--muted)">${d.summary}</div></div>`;
+  // 最も近い書籍
+  if(d.book&&d.book.title){
+    html+=`<div class="nv-card nv-book"><div class="nv-book-label">📖 あなたに最も近い一冊</div><div class="nv-book-title">${d.book.title}</div><div class="nv-book-author">${d.book.author||''}</div><div class="nv-card-value" style="margin-top:4px">${d.book.reason||''}</div></div>`;
+  }
+  // 6視点のカード（学問色つき・クリックで詳細）
+  html+=d.recommendations.map((rec,i)=>{
+    return `<div class="nv-card nv-disc" data-disc="${rec.discipline}" data-domain="${(rec.domain||'').replace(/"/g,'&quot;')}" style="border-left:4px solid ${rec.color}">
+      <div class="nv-card-head"><span class="nv-card-domain"><span class="nv-disc-tag" style="color:${rec.color}">${rec.discipline}</span> ${rec.domain}</span><span>距離 ${rec.distance}/10</span></div>
+      <div class="nv-card-reason">${rec.reason}</div>
+      <div class="nv-card-value">${rec.value}</div>
+      <div class="nv-disc-more">タップで深く知る ▾</div>
+      <div class="nv-detail" id="nvDetail${i}"></div>
+    </div>`;
+  }).join('');
+  panel.innerHTML=html;
+  // カードクリック → 詳細を取得して展開
+  panel.querySelectorAll('.nv-disc').forEach((card,i)=>{
+    card.addEventListener('click',async()=>{
+      const det=card.querySelector('.nv-detail');
+      if(card.classList.contains('open')){card.classList.remove('open');det.innerHTML='';return}
+      card.classList.add('open');
+      det.innerHTML='<div class="nv-detail-loading">深く調べています…</div>';
+      try{
+        const interests=document.getElementById('nvWordInput').value.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
+        const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({interests,detail:{discipline:card.dataset.disc,domain:card.dataset.domain}})});
+        const dd=await r.json();
+        const books=(dd.intro_books||[]).map(b=>`<li><span class="nv-bk-title">${b.title}</span>${b.author?` <span class="nv-bk-auth">/ ${b.author}</span>`:''}${b.note?`<div class="nv-bk-note">${b.note}</div>`:''}</li>`).join('');
+        const kws=(dd.keywords||[]).map(k=>`<span class="nv-kw">${k}</span>`).join('');
+        det.innerHTML=`
+          <div class="nv-d-sec"><div class="nv-d-h">🔗 興味との関係</div><div class="nv-d-b">${dd.relationship||''}</div></div>
+          ${books?`<div class="nv-d-sec"><div class="nv-d-h">📚 入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`:''}
+          ${kws?`<div class="nv-d-sec"><div class="nv-d-h">🔑 深く知るためのキーワード</div><div class="nv-kw-wrap">${kws}</div></div>`:''}
+          ${dd.universal_concept?`<div class="nv-d-sec"><div class="nv-d-h">🌌 探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`:''}
+        `;
+      }catch{det.innerHTML='<div class="nv-detail-loading">取得に失敗しました</div>';}
+    });
+  });
 }
 function startNvLoop(){
   if(nvRAF)cancelAnimationFrame(nvRAF);
@@ -2654,23 +2711,63 @@ function drawNebulaView(dpr){
     const ox=center?cx+center.bx*z:cx, oy=center?cy+center.by*z:cy;
     nvOverlay.compass.recommendations.forEach(rec=>{
       const ang=(rec.angle-90)*Math.PI/180;const dist=(80+rec.distance*22)*z;
-      const x=ox+Math.cos(ang)*dist,y=oy+Math.sin(ang)*dist;const hue=Math.round(rec.angle%360);
+      const x=ox+Math.cos(ang)*dist,y=oy+Math.sin(ang)*dist;const col=rec.color||'#9aa';
       NVCX.beginPath();NVCX.moveTo(ox,oy);NVCX.lineTo(x,y);
-      NVCX.strokeStyle=`hsla(${hue},65%,60%,0.5)`;NVCX.lineWidth=1.5*dpr;NVCX.setLineDash([4*dpr,4*dpr]);NVCX.stroke();NVCX.setLineDash([]);
-      NVCX.beginPath();NVCX.arc(x,y,7*dpr,0,Math.PI*2);NVCX.fillStyle=`hsl(${hue},65%,60%)`;NVCX.fill();
+      NVCX.strokeStyle=col;NVCX.globalAlpha=0.45;NVCX.lineWidth=1.5*dpr;NVCX.setLineDash([4*dpr,4*dpr]);NVCX.stroke();NVCX.setLineDash([]);NVCX.globalAlpha=1;
+      NVCX.beginPath();NVCX.arc(x,y,7*dpr,0,Math.PI*2);NVCX.fillStyle=col;NVCX.fill();
+      // 学問ラベル＋領域名
+      NVCX.font=`${10*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle=col;
+      NVCX.textAlign=x<ox?'right':'left';NVCX.fillText(rec.discipline,x+(x<ox?-10:10)*dpr,y-7*dpr);
       NVCX.font=`${12*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(235,240,255,0.95)';
-      NVCX.textAlign=x<ox?'right':'left';NVCX.fillText(rec.domain,x+(x<ox?-10:10)*dpr,y);
+      NVCX.fillText(rec.domain,x+(x<ox?-10:10)*dpr,y+6*dpr);
     });
     NVCX.beginPath();NVCX.arc(ox,oy,9*dpr,0,Math.PI*2);NVCX.fillStyle='#F5A623';NVCX.fill();
   }
 }
-NVC.addEventListener('mousedown',e=>{nvView.drag=true;nvView.lx=e.clientX;nvView.ly=e.clientY});
-window.addEventListener('mousemove',e=>{if(nvView.drag){nvView.x+=e.clientX-nvView.lx;nvView.y+=e.clientY-nvView.ly;nvView.lx=e.clientX;nvView.ly=e.clientY}});
-window.addEventListener('mouseup',()=>{nvView.drag=false});
+// 星図上の語ノードのクリック判定（ドラッグと区別）
+let nvDownPos=null,nvMoved=false;
+function nebulaNodeAt(clientX,clientY){
+  if(!nebulaGraph||!nebulaGraph.nodes)return null;
+  const rect=NVC.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  const px=(clientX-rect.left)*dpr, py=(clientY-rect.top)*dpr;
+  const cx=NVC.width/2+nvView.x*dpr, cy=NVC.height/2+nvView.y*dpr, z=nvView.zoom*dpr;
+  let best=null,bestD=Infinity;
+  nebulaGraph.nodes.forEach(n=>{
+    const x=cx+n.bx*z, y=cy+n.by*z;
+    const r=Math.max(8*dpr, n.r*z*0.5+10*dpr); // クリックしやすい当たり半径
+    const d=(x-px)**2+(y-py)**2;
+    if(d<r*r&&d<bestD){bestD=d;best=n;}
+  });
+  return best;
+}
+function nebulaNodeClicked(clientX,clientY){
+  const n=nebulaNodeAt(clientX,clientY);
+  if(!n)return;
+  // 探索モードに切り替えてその語を探索
+  exitNebula();
+  const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
+  WI.value=n.word;explore(n.word,currentCenter());
+  toast(`「${n.word}」を探索します`,'info',1800);
+}
+
+NVC.addEventListener('mousedown',e=>{nvView.drag=true;nvView.lx=e.clientX;nvView.ly=e.clientY;nvDownPos={x:e.clientX,y:e.clientY};nvMoved=false});
+window.addEventListener('mousemove',e=>{if(nvView.drag){if(nvDownPos&&(Math.abs(e.clientX-nvDownPos.x)>5||Math.abs(e.clientY-nvDownPos.y)>5))nvMoved=true;nvView.x+=e.clientX-nvView.lx;nvView.y+=e.clientY-nvView.ly;nvView.lx=e.clientX;nvView.ly=e.clientY}});
+window.addEventListener('mouseup',e=>{
+  if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
+    nebulaNodeClicked(e.clientX,e.clientY);
+  }
+  nvView.drag=false;nvDownPos=null;
+});
 NVC.addEventListener('wheel',e=>{e.preventDefault();nvView.zoom=Math.max(0.3,Math.min(4,nvView.zoom*(e.deltaY<0?1.1:0.9)))},{passive:false});
-NVC.addEventListener('touchstart',e=>{if(e.touches.length===1){nvView.drag=true;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
-NVC.addEventListener('touchmove',e=>{if(nvView.drag&&e.touches.length===1){nvView.x+=e.touches[0].clientX-nvView.lx;nvView.y+=e.touches[0].clientY-nvView.ly;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
-NVC.addEventListener('touchend',()=>{nvView.drag=false});
+NVC.addEventListener('touchstart',e=>{if(e.touches.length===1){nvView.drag=true;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY;nvDownPos={x:e.touches[0].clientX,y:e.touches[0].clientY};nvMoved=false}},{passive:true});
+NVC.addEventListener('touchmove',e=>{if(nvView.drag&&e.touches.length===1){if(nvDownPos&&(Math.abs(e.touches[0].clientX-nvDownPos.x)>6||Math.abs(e.touches[0].clientY-nvDownPos.y)>6))nvMoved=true;nvView.x+=e.touches[0].clientX-nvView.lx;nvView.y+=e.touches[0].clientY-nvView.ly;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
+NVC.addEventListener('touchend',e=>{
+  if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
+    nebulaNodeClicked(nvDownPos.x,nvDownPos.y);
+  }
+  nvView.drag=false;nvDownPos=null;
+});
 
 draw();
 </script>
