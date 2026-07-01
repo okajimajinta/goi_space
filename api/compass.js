@@ -124,27 +124,42 @@ ${wlist}
         : depth === 'shallow'
         ? 'ユーザーはこの分野の初学者。基礎の基礎から、最も易しい入口を中心に。'
         : '';
+      // 深さに応じて「読むべきもの」の性質とラベルを変える
+      const readingLabel = depth === 'deep'
+        ? '理解を深めるための本・文献'
+        : depth === 'shallow'
+        ? '最初の一歩となる易しい入門書'
+        : '入門・前段に読むべき本や文書';
+      const readingInstruction = depth === 'deep'
+        ? 'この領域を既にある程度知っている人が、理解をさらに深めるための本や文献を挙げてください。専門書・古典的名著に加え、最先端の学術論文やレビュー論文を含めても構いません（論文の場合は著者名と発表年、可能なら掲載誌を明記）。'
+        : depth === 'shallow'
+        ? 'この分野に初めて触れる人向けに、最も易しく取っつきやすい入門書を挙げてください。'
+        : '前段として読むべき入門書・古典を挙げてください。';
       const prompt = `ユーザーは次の言葉に興味があります：${list}
 「知的コンパス」が、${dDisc}の視点から「${dDom}」という領域を推薦しました。
 ${depthNote}
 
-この領域について、ユーザーの興味と結びつけて具体的に案内してください。抽象的な美辞麗句ではなく、実際の概念名・人物・事例に触れて書くこと。次のJSON形式のみで出力（前後の説明文なし）：
+この領域について、ユーザーの興味と結びつけて具体的に案内してください。抽象的な美辞麗句ではなく、実際の概念名・人物・事例に触れて書くこと。
+読むべきもの（intro_books）については：${readingInstruction}
+次のJSON形式のみで出力（前後の説明文なし）：
 {
   "relationship": "ユーザーの興味と、この分野・領域が具体的にどこで交差し、なぜ離れて見えるのか。実際の概念や事例に触れて（150字以内）",
   "intro_books": [
-    {"title": "入門書・前段に読むべき本や文書（日本語/英語可）", "author": "著者", "note": "何が書かれているか30字以内"}
+    {"title": "本や論文のタイトル（日本語/英語可）", "author": "著者（論文なら発表年・掲載誌も）", "note": "何が書かれているか30字以内", "type": "book または paper"}
   ],
   "keywords": ["この領域を掘るための具体的なキーワード5〜8個"],
   "universal_concept": "この領域を掘り下げた先で立ち上がる、分野を横断する具体的な概念とその中身（120字以内）"
 }
-intro_books は2〜3冊。実在する古典・名著を優先。`;
+intro_books は2〜3冊（点）。実在するものを優先。`;
       const parsed = await callClaude(prompt, 1400);
       return res.status(200).json({
+        reading_label: readingLabel,
         relationship: String(parsed.relationship || '').slice(0, 400),
         intro_books: (parsed.intro_books || []).slice(0, 4).map(b => ({
           title: String(b.title || '').slice(0, 120),
-          author: String(b.author || '').slice(0, 60),
+          author: String(b.author || '').slice(0, 80),
           note: String(b.note || '').slice(0, 80),
+          type: (String(b.type || 'book').toLowerCase().includes('paper')) ? 'paper' : 'book',
         })),
         keywords: (parsed.keywords || []).slice(0, 10).map(k => String(k).slice(0, 30)),
         universal_concept: String(parsed.universal_concept || '').slice(0, 300),

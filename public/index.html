@@ -324,6 +324,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-bk-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
 .nv-bk-list li{font-size:12px;color:#dfe5f2;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
 .nv-bk-link{display:inline-block;margin-top:5px;font-size:11px;color:var(--amber);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px}
+.nv-bk-badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:5px;margin-right:6px;vertical-align:middle}
+.nv-bk-badge.paper{background:rgba(91,143,222,0.18);color:#9ec1f5;border:1px solid rgba(91,143,222,0.4)}
 .nv-bk-link:hover{border-color:var(--amber)}
 .nv-bk-title{font-weight:600}
 .nv-bk-auth{color:#9aa6c4;font-size:11px}
@@ -925,7 +927,7 @@ const stars=Array.from({length:200},()=>({
 // Golf state
 const golf={active:false,start:'',goal:'',par:0,moves:0,path:[],
   daily:false,dailyIdx:0,dailyPeriod:'daily',
-  undoUsed:false,prevState:null};
+  undoUsed:false,prevState:null,distMap:{}};
 
 // Daily/Monthly state
 const daily={period:'daily',date:'',puzzles:[],current:0,results:{}};
@@ -1745,8 +1747,27 @@ function handleGolfMove(word){
   if(word===golf.goal)return; // ゴールはselectNodeで処理済み
   golf.moves++;golf.path.push(word);
   GM.textContent=golf.moves;renderTrail();
+  // ★語を選んだ瞬間に、その語とゴールの距離を測定して保存しておく
+  //   （完了時の一括測定をやめ、逐次測定・保存することで失敗を防ぐ）
+  measureMoveDistance(word);
   // ブラインドモード：移動のたびにゴールまでの距離を測定して提示
   if(golf.blind)measureBlindDistance(word);
+}
+// 1語ずつゴールとの距離を測って golf.distMap に保存（バックグラウンド）
+async function measureMoveDistance(word){
+  if(!word||word===golf.goal)return;
+  if(golf.distMap[word])return; // 測定済みならスキップ
+  const goalAtCall=golf.goal;
+  try{
+    const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({action:'distance',words:[word],goal:goalAtCall})});
+    const d=await r.json();
+    const hit=(d.distances||[]).find(x=>x.word===word)||(d.distances||[])[0];
+    // ゴールが変わっていなければ保存（別ゲーム開始時の混線防止）
+    if(hit&&golf.goal===goalAtCall){
+      golf.distMap[word]={distance:hit.distance,reason:hit.reason};
+    }
+  }catch{/* 失敗しても完了時に補完測定するので無視 */}
 }
 let trailExpanded=false;
 function renderTrail(){
@@ -1808,7 +1829,11 @@ async function finishGolf(){
 
   const periodLabel=golf.daily?(golf.dailyPeriod==='monthly'?'マンスリー':'デイリー'):'';
   const who=handleName?`${handleName} さんの記録\n`:'';
-  const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${who}${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
+  // 共有文面：経路（A→…→B）は長くなりすぎるので入れず、
+  // 抽象化結果（●●と●●を繋いだもの）が出たらそれを載せる。
+  const shareHead=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${who}${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}`;
+  golf._shareText=shareHead; // 抽象化が出たら差し替える
+  window.__golfShare=()=>shareOnX(golf._shareText||shareHead);
 
   // ★まず経路を即座に表示（距離は「測定中」プレースホルダー）
   const buildPathHTML=(distData)=>fullPath.map((w,i)=>{
@@ -1838,7 +1863,7 @@ async function finishGolf(){
     <div class="comp-dist-status" id="compDistStatus"></div>
     <div class="comp-connection" id="compConnection"></div>
     <div class="comp-actions">
-      <button class="comp-btn twitter" onclick="shareOnX(\`${shareText.replace(/`/g,"'")}\`)">Xで共有</button>
+      <button class="comp-btn twitter" onclick="window.__golfShare&&window.__golfShare()">Xで共有</button>
       <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
     </div>`;
   CO.classList.add('visible');
@@ -1861,6 +1886,9 @@ async function finishGolf(){
             ${d.narrative?`<div class="comp-conn-narrative">${d.narrative}</div>`:''}
             ${d.pivot?`<div class="comp-conn-pivot">転換点：<span>${d.pivot}</span></div>`:''}
           </div>`;
+        // 共有文面に抽象化結果を反映（経路の代わりに「繋いだもの」を載せる）
+        const bridgeLine=d.bridge?`\n${golf.start}と${golf.goal}を繋いだもの：${d.bridge}`:'';
+        golf._shareText=shareHead+bridgeLine;
       }else{el.innerHTML='';}
     }catch{
       const el2=document.getElementById('compConnection');
@@ -1870,28 +1898,41 @@ async function finishGolf(){
   }
   loadConnection();
 
-  // ★距離測定（裏で実行・失敗時は再測定ボタンを出す）
+  // ★距離測定：各語は選択時に測定済み（golf.distMap）。ここでは集約するだけ。
+  //   もし未測定の語が残っていれば、その語だけ補完測定する。
+  const distSnapshot={...golf.distMap};
+  function distMapToArray(){
+    return fullPath.filter(w=>w!==golf.goal).map(w=>{
+      const d=distSnapshot[w];
+      return d?{word:w,distance:d.distance,reason:d.reason}:null;
+    }).filter(Boolean);
+  }
   async function measureDistances(){
     const status=document.getElementById('compDistStatus');
-    if(status)status.innerHTML='<span style="color:var(--muted);font-size:11px">各語とゴールの距離を測定中…</span>';
+    // まず測定済みのぶんを即描画
+    let arr=distMapToArray();
+    const el0=document.getElementById('compPath');
+    if(arr.length&&el0&&CO.classList.contains('visible'))el0.innerHTML=buildPathHTML(arr);
+    // 未測定の語を洗い出す
+    const measured=new Set(arr.map(a=>a.word));
+    const missing=fullPath.filter(w=>w!==golf.goal&&!measured.has(w));
+    if(missing.length===0){if(status)status.innerHTML='';return}
+    if(status)status.innerHTML='<span style="color:var(--muted);font-size:11px">残りの距離を測定中…</span>';
     try{
       const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
-        body:JSON.stringify({action:'distance',words:fullPath.filter(w=>w!==golf.goal),goal:golf.goal})});
+        body:JSON.stringify({action:'distance',words:missing,goal:golf.goal})});
       const d=await r.json();
-      const distData=d.distances||[];
+      (d.distances||[]).forEach(x=>{distSnapshot[x.word]={distance:x.distance,reason:x.reason};});
+      arr=distMapToArray();
       const el=document.getElementById('compPath');
-      if(distData.length){
-        if(el&&CO.classList.contains('visible'))el.innerHTML=buildPathHTML(distData);
-        if(status)status.innerHTML='';
-      }else{
-        // 測定失敗 → 再測定ボタン
-        if(status)status.innerHTML='<button class="comp-btn" id="reMeasureBtn" style="font-size:12px">距離の測定に失敗しました。再測定する</button>';
-        bindReMeasure();
-      }
+      if(arr.length&&el&&CO.classList.contains('visible'))el.innerHTML=buildPathHTML(arr);
+      // まだ埋まらない語があれば再測定ボタン
+      const still=fullPath.filter(w=>w!==golf.goal&&!arr.find(a=>a.word===w));
+      if(still.length&&status){status.innerHTML='<button class="comp-btn" id="reMeasureBtn" style="font-size:12px">一部の距離が測れませんでした。再測定する</button>';bindReMeasure();}
+      else if(status)status.innerHTML='';
     }catch{
       const status2=document.getElementById('compDistStatus');
-      if(status2)status2.innerHTML='<button class="comp-btn" id="reMeasureBtn" style="font-size:12px">距離の測定に失敗しました。再測定する</button>';
-      bindReMeasure();
+      if(status2){status2.innerHTML='<button class="comp-btn" id="reMeasureBtn" style="font-size:12px">距離の測定に失敗しました。再測定する</button>';bindReMeasure();}
     }
   }
   function bindReMeasure(){
@@ -1970,10 +2011,11 @@ async function startGolf(custom){
       if(r.ok){const d=await r.json();if(d.par)par=d.par}
     }catch{}
     golf.active=true;golf.start=custom.start;golf.goal=custom.goal;golf.par=par;
-    golf.moves=0;golf.path=[custom.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;golf.blind=false;
+    golf.moves=0;golf.path=[custom.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;golf.blind=false;golf.distMap={};
     GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
     GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');GP.classList.remove('blind');renderTrail();
     WI.value=golf.start;explore(golf.start);
+    measureMoveDistance(golf.start); // スタート語も測定
     toast(`「${golf.start}」→「${golf.goal}」`,'success');
     return;
   }
@@ -1985,10 +2027,11 @@ async function startGolf(custom){
     if(r.status===429){const d=await r.json();toast(d.message||'ゴルフ上限到達','error',3000);return}
     const d=await r.json();
     golf.active=true;golf.start=d.start;golf.goal=d.goal;golf.par=d.par||5;
-    golf.moves=0;golf.path=[d.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;golf.blind=blind;
+    golf.moves=0;golf.path=[d.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;golf.blind=blind;golf.distMap={};
     golf.lastDist=null;
     GS.textContent=golf.start;GPR.textContent=golf.par;GM.textContent='0';
     GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');renderTrail();
+    measureMoveDistance(golf.start); // スタート語も測定
     if(blind){
       GG.textContent='？？？';GP.classList.add('blind');
       WI.value=golf.start;explore(golf.start);
@@ -2089,11 +2132,12 @@ function startDailyPuzzle(idx){
   DP.classList.remove('visible');
   savedSessions[daily.period]=null; // パネルから新規開始したら中断状態を破棄
   golf.active=true;golf.start=p.start;golf.goal=p.goal;golf.par=p.par||5;
-  golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;
+  golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;golf.distMap={};
   golf.daily=true;golf.dailyIdx=idx;golf.dailyPeriod=daily.period;
   GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
   GU.disabled=false;GP.classList.add('visible');renderTrail();
   WI.value=golf.start;explore(golf.start);
+  measureMoveDistance(golf.start); // スタート語も測定
   toast(`${daily.period==='monthly'?'マンスリー':''}第${idx+1}問`,  'success');
 }
 async function loadBoard(pi){
@@ -2179,6 +2223,7 @@ function snapshotGolf(){
     prevState:golf.prevState?{...golf.prevState,path:[...golf.prevState.path]}:null,
     daily:golf.daily,dailyIdx:golf.dailyIdx,dailyPeriod:golf.dailyPeriod,
     blind:golf.blind,lastDist:golf.lastDist,
+    distMap:{...golf.distMap},
     centerWord:currentCenter(),
   };
 }
@@ -2188,6 +2233,7 @@ function restoreGolf(s){
   golf.moves=s.moves;golf.path=[...s.path];golf.undoUsed=s.undoUsed;
   golf.prevState=s.prevState;golf.daily=s.daily;golf.dailyIdx=s.dailyIdx;golf.dailyPeriod=s.dailyPeriod;
   golf.blind=s.blind||false;golf.lastDist=s.lastDist!=null?s.lastDist:null;
+  golf.distMap=s.distMap?{...s.distMap}:{};
   GS.textContent=golf.start;GPR.textContent=golf.par;GM.textContent=golf.moves;
   GG.textContent=golf.blind?'？？？':golf.goal;
   GP.classList.toggle('blind',golf.blind);
@@ -3186,7 +3232,7 @@ async function loadCompassDetail(){
   const key=`${disc}|${domain}|${depth}`;
   if(compassDetailCache[key]){renderCompassDetail(compassDetailCache[key]);return}
   // まず概要を即表示し、その下で「読み込み中」を出す（検索中に読めるものを）
-  body.innerHTML=(summaryHtml||'')+'<div class="nv-detail-loading">入門書・キーワード・普遍的概念を調べています…</div>';
+  body.innerHTML=(summaryHtml||'')+'<div class="nv-detail-loading">読むべきもの・キーワード・普遍的概念を調べています…</div>';
   try{
     const interests=document.getElementById('compassInput').value.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
     const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -3201,14 +3247,21 @@ function renderCompassDetail(dd){
   const body=document.getElementById('nvDetailBody');
   const summaryHtml=nvCurrentDetail.summaryHtml||'';
   const books=(dd.intro_books||[]).map(b=>{
-    const link=amazonLink(b.title,b.author);
-    return `<li><span class="nv-bk-title">${b.title}</span>${b.author?` <span class="nv-bk-auth">/ ${b.author}</span>`:''}${b.note?`<div class="nv-bk-note">${b.note}</div>`:''}<a class="nv-bk-link" href="${link}" target="_blank" rel="noopener">📚 Amazonで探す</a></li>`;
+    const isPaper=b.type==='paper';
+    // 論文はGoogle Scholar、書籍はAmazon（アフィリエイト）へ
+    const link=isPaper
+      ? `https://scholar.google.com/scholar?q=${encodeURIComponent([b.title,b.author].filter(Boolean).join(' '))}`
+      : amazonLink(b.title,b.author);
+    const linkLabel=isPaper?'🔎 論文を探す':'📚 Amazonで探す';
+    const badge=isPaper?'<span class="nv-bk-badge paper">論文</span>':'';
+    return `<li>${badge}<span class="nv-bk-title">${b.title}</span>${b.author?` <span class="nv-bk-auth">/ ${b.author}</span>`:''}${b.note?`<div class="nv-bk-note">${b.note}</div>`:''}<a class="nv-bk-link" href="${link}" target="_blank" rel="noopener">${linkLabel}</a></li>`;
   }).join('');
   const kws=(dd.keywords||[]).map(k=>`<span class="nv-kw nv-kw-click" data-kw="${k.replace(/"/g,'&quot;')}">${k}</span>`).join('');
+  const readingLabel=dd.reading_label||'入門・前段に読むべきもの';
   // 各項目を順番に表示（読めるものから逐次フェードイン）
   const sections=[];
   if(dd.relationship)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">興味との関係</div><div class="nv-d-b">${dd.relationship}</div></div>`);
-  if(books)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`);
+  if(books)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">${readingLabel}</div><ul class="nv-bk-list">${books}</ul></div>`);
   if(kws)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">深く知るためのキーワード（タップで探索）</div><div class="nv-kw-wrap">${kws}</div></div>`);
   if(dd.universal_concept)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`);
   body.innerHTML=summaryHtml;
