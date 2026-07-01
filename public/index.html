@@ -121,7 +121,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .compass-card-dist{font-size:11px;color:var(--muted)}
 .compass-card-reason{font-size:12px;color:var(--muted);margin-bottom:6px}
 .compass-card-value{font-size:13px;color:var(--text);line-height:1.6}
-.compass-card-value::before{content:'✨ ';}
+
 .mypage-card{max-width:480px;width:92%;max-height:88vh;overflow-y:auto}
 .mypage-header{text-align:center;margin-bottom:16px}
 .mypage-tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border)}
@@ -243,7 +243,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-d-carry{background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.2);border-radius:8px;padding:10px 12px}
 .nv-d-reveal{opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
 .nv-d-reveal.shown{opacity:1;transform:none}
-.nv-book-pitch{background:linear-gradient(135deg,rgba(245,166,35,0.14),rgba(224,107,139,0.1));border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.8;color:#ffe9c2;margin-bottom:14px;font-weight:500}
+.nv-book-pitch{background:rgba(245,166,35,0.06);border-left:2px solid rgba(245,166,35,0.5);border-radius:6px;padding:12px 14px;font-size:14px;line-height:1.9;color:#e8ecf5;margin-bottom:14px}
 .nv-book-cta{display:block;text-align:center;background:linear-gradient(135deg,#F5A623,#E0863A);color:#080C18;font-weight:700;font-size:15px;padding:13px;border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(245,166,35,0.4);transition:transform .15s}
 .nv-book-cta:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,166,35,0.55)}
 @media(max-width:600px){.compass-pane{width:100%}}
@@ -264,7 +264,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-arrow{color:var(--muted);font-size:10px}
 .nv-card-domain{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:var(--text)}
 .nv-card-value{font-size:12px;color:var(--text);line-height:1.5;margin-top:4px}
-.nv-card-value::before{content:'✨ '}
+
 .nv-empty{text-align:center;color:var(--muted);font-size:12px;padding:16px}
 .nv-book{border-left:3px solid var(--amber)!important}
 .nv-book-label{font-size:11px;color:var(--amber);margin-bottom:4px}
@@ -291,7 +291,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-kw{font-size:11px;color:var(--blue);background:rgba(91,143,222,0.12);border:1px solid var(--border);border-radius:12px;padding:3px 9px}
 /* 読みやすさ向上：本文を明るめに */
 .nv-card-value{font-size:13px;color:#dfe5f2;line-height:1.6;margin-top:4px}
-.nv-card-value::before{content:'✨ '}
+
 .nv-card-reason{font-size:11px;color:#9aa6c4;margin-bottom:4px}
 /* チューニングパネル */
 .nv-tune-panel{display:none;background:rgba(10,16,36,0.96);border:1px solid var(--border);border-radius:12px;padding:14px 16px;backdrop-filter:blur(10px);width:100%;max-height:50vh;overflow-y:auto}
@@ -393,11 +393,13 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === GOLF SETUP === */
 .golf-setup-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:70;backdrop-filter:blur(6px)}
 .golf-setup-overlay.visible{display:flex}
-.golf-setup-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px 34px;text-align:center;max-width:420px;width:90%}
+.golf-setup-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px 30px;text-align:center;max-width:460px;width:92%}
 .golf-setup-title{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:600;color:var(--text);margin-bottom:8px}
 .golf-setup-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
-.golf-setup-modes{display:flex;gap:10px;margin-bottom:18px}
-.golf-setup-mode{flex:1;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--muted);font-family:'Noto Serif JP',serif;font-size:15px;cursor:pointer;transition:all .15s}
+.golf-setup-modes{display:flex;gap:8px;margin-bottom:18px}
+.golf-setup-mode{flex:1;padding:12px 6px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--muted);font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:5px}
+.gsm-ico{font-size:20px;line-height:1}
+.gsm-label{white-space:nowrap}
 .golf-setup-mode:hover{border-color:var(--blue)}
 .golf-setup-mode.active{border-color:var(--blue);color:var(--blue);background:rgba(91,143,222,0.1)}
 .golf-setup-blind-desc{font-size:12px;color:var(--muted);line-height:1.7;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:18px}
@@ -626,7 +628,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <span class="compass-pane-title">🧭 知的コンパス</span>
             <button class="compass-pane-close" id="compassPaneClose">✕</button>
           </div>
-          <div class="compass-pane-sub">あなたの興味から、文化的に離れた領域とその価値を指し示します。</div>
+          <div class="compass-pane-sub">興味を入れると、そこから離れた6つの分野の領域を返します。</div>
           <div class="compass-input-row">
             <input id="compassInput" type="text" placeholder="興味を入力（読点区切り・例：宇宙、詩、孤独）" autocomplete="off"/>
             <button id="compassTuneFab" title="ジャンルごとの距離を調整">⚙</button>
@@ -802,9 +804,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         <div class="golf-setup-title">🏌️ ワードゴルフ</div>
         <div class="golf-setup-sub">お題の決め方を選んでください</div>
         <div class="golf-setup-modes">
-          <button class="golf-setup-mode active" id="golfModeRandom" data-mode="random">🎲 ランダム</button>
-          <button class="golf-setup-mode" id="golfModeCustom" data-mode="custom">✏️ 自分で設定</button>
-          <button class="golf-setup-mode" id="golfModeBlind" data-mode="blind">🌑 ブラインド</button>
+          <button class="golf-setup-mode active" id="golfModeRandom" data-mode="random"><span class="gsm-ico">🎲</span><span class="gsm-label">ランダム</span></button>
+          <button class="golf-setup-mode" id="golfModeCustom" data-mode="custom"><span class="gsm-ico">✏️</span><span class="gsm-label">自分で設定</span></button>
+          <button class="golf-setup-mode" id="golfModeBlind" data-mode="blind"><span class="gsm-ico">🌑</span><span class="gsm-label">ブラインド</span></button>
         </div>
         <div class="golf-setup-blind-desc" id="golfBlindDesc" style="display:none">ゴールは見えません。語を選ぶたびに「ゴールまでの距離」だけが手がかり。近づいているか、遠ざかっているかを頼りに探り当てましょう。</div>
         <div class="golf-setup-custom" id="golfCustomFields" style="display:none">
@@ -1845,7 +1847,7 @@ async function finishGolf(){
   async function loadConnection(){
     const el=document.getElementById('compConnection');
     if(!el)return;
-    el.innerHTML='<div class="comp-conn-loading">この旅路を読み解いています…</div>';
+    el.innerHTML='<div class="comp-conn-loading">経路を読み解いています…</div>';
     try{
       const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
         body:JSON.stringify({action:'connection',path:fullPath,start:golf.start,goal:golf.goal})});
@@ -1854,7 +1856,7 @@ async function finishGolf(){
       if(d.bridge||d.narrative){
         el.innerHTML=`
           <div class="comp-conn-card">
-            <div class="comp-conn-label">🌉 ${golf.start} と ${golf.goal} を繋いだもの</div>
+            <div class="comp-conn-label">${golf.start} と ${golf.goal} を繋いだもの</div>
             ${d.bridge?`<div class="comp-conn-bridge">${d.bridge}</div>`:''}
             ${d.narrative?`<div class="comp-conn-narrative">${d.narrative}</div>`:''}
             ${d.pivot?`<div class="comp-conn-pivot">転換点：<span>${d.pivot}</span></div>`:''}
@@ -1862,7 +1864,7 @@ async function finishGolf(){
       }else{el.innerHTML='';}
     }catch{
       const el2=document.getElementById('compConnection');
-      if(el2)el2.innerHTML='<button class="comp-btn" id="reConnBtn" style="font-size:12px">接続の読み解きに失敗しました。再試行</button>';
+      if(el2)el2.innerHTML='<button class="comp-btn" id="reConnBtn" style="font-size:12px">読み解きに失敗しました。再試行</button>';
       const b=document.getElementById('reConnBtn');if(b)b.addEventListener('click',loadConnection);
     }
   }
@@ -2374,7 +2376,7 @@ async function runEnchant(randomWord){
       }
     });
     initPhysics();if(animFrame)cancelAnimationFrame(animFrame);loop();
-    toast(`✨ ${d.words.length}個のコンテキストが出現！`,'success',2500);
+    toast(`${d.words.length}個のコンテキストが出現`,'success',2500);
   }catch{toast('エンチャントに失敗しました','error',2500)}
 }
 
@@ -3074,7 +3076,7 @@ function renderCompassCards(d){
   // 最も近い書籍（タップで詳細オーバーレイ）
   if(d.book&&d.book.title){
     html+=`<div class="cc-book" data-booktitle="${(d.book.title||'').replace(/"/g,'&quot;')}" data-bookauthor="${(d.book.author||'').replace(/"/g,'&quot;')}" data-bookreason="${(d.book.reason||'').replace(/"/g,'&quot;')}">
-      <div class="cc-book-label">📖 あなたに最も近い一冊</div>
+      <div class="cc-book-label">あなたに最も近い一冊</div>
       <div class="cc-book-title">${d.book.title}</div>
       <div class="cc-book-author">${d.book.author||''}</div>
       <div class="cc-book-reason">${d.book.reason||''}</div>
@@ -3086,7 +3088,7 @@ function renderCompassCards(d){
     <div class="cc-disc" data-disc="${rec.discipline}" data-domain="${(rec.domain||'').replace(/"/g,'&quot;')}" data-color="${rec.color}" style="border-left:4px solid ${rec.color}">
       <div class="cc-disc-head"><span class="cc-disc-domain"><span class="cc-disc-tag" style="color:${rec.color}">${rec.discipline}</span> ${rec.domain}</span><span class="cc-disc-dist">距離 ${rec.distance}/10</span></div>
       <div class="cc-disc-reason">${rec.reason}</div>
-      <div class="cc-disc-value">✨ ${rec.value}</div>
+      <div class="cc-disc-value">${rec.value}</div>
       <div class="cc-disc-more">タップで詳しく ▸</div>
     </div>`).join('');
   area.innerHTML=html;
@@ -3126,10 +3128,10 @@ async function openBookDetail(title,author,reason){
 function renderBookDetailOverlay(dd,amazonBtn,carry){
   const body=document.getElementById('nvDetailBody');
   body.innerHTML=(carry||'')+`
-    ${dd.pitch?`<div class="nv-book-pitch">🔥 ${dd.pitch}</div>`:''}
-    ${dd.synopsis?`<div class="nv-d-sec"><div class="nv-d-h">📘 あらすじ</div><div class="nv-d-b">${dd.synopsis}</div></div>`:''}
-    ${dd.why?`<div class="nv-d-sec"><div class="nv-d-h">💡 なぜあなたに</div><div class="nv-d-b">${dd.why}</div></div>`:''}
-    ${dd.reader?`<div class="nv-d-sec"><div class="nv-d-h">👤 惹かれる人物像</div><div class="nv-d-b">${dd.reader}</div></div>`:''}
+    ${dd.pitch?`<div class="nv-book-pitch">${dd.pitch}</div>`:''}
+    ${dd.synopsis?`<div class="nv-d-sec"><div class="nv-d-h">あらすじ</div><div class="nv-d-b">${dd.synopsis}</div></div>`:''}
+    ${dd.why?`<div class="nv-d-sec"><div class="nv-d-h">なぜあなたに</div><div class="nv-d-b">${dd.why}</div></div>`:''}
+    ${dd.reader?`<div class="nv-d-sec"><div class="nv-d-h">惹かれる人物像</div><div class="nv-d-b">${dd.reader}</div></div>`:''}
     <div class="nv-d-sec">${amazonBtn}</div>
   `;
 }
@@ -3168,7 +3170,7 @@ async function openCompassDetail(disc,domain,color){
   if(compassData&&compassData.recommendations){
     const rec=compassData.recommendations.find(r=>r.discipline===disc&&r.domain===domain);
     if(rec){
-      summary=`<div class="nv-d-sec nv-d-carry"><div class="nv-d-b">${rec.reason||''}</div><div class="nv-d-b" style="color:#dfe5f2;margin-top:6px">✨ ${rec.value||''}</div></div>`;
+      summary=`<div class="nv-d-sec nv-d-carry"><div class="nv-d-b">${rec.reason||''}</div><div class="nv-d-b" style="color:#dfe5f2;margin-top:6px">${rec.value||''}</div></div>`;
     }
   }
   nvCurrentDetail.summaryHtml=summary;
@@ -3184,7 +3186,7 @@ async function loadCompassDetail(){
   const key=`${disc}|${domain}|${depth}`;
   if(compassDetailCache[key]){renderCompassDetail(compassDetailCache[key]);return}
   // まず概要を即表示し、その下で「読み込み中」を出す（検索中に読めるものを）
-  body.innerHTML=(summaryHtml||'')+'<div class="nv-detail-loading">📚 入門書・キーワード・普遍的概念を調べています…</div>';
+  body.innerHTML=(summaryHtml||'')+'<div class="nv-detail-loading">入門書・キーワード・普遍的概念を調べています…</div>';
   try{
     const interests=document.getElementById('compassInput').value.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
     const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -3205,10 +3207,10 @@ function renderCompassDetail(dd){
   const kws=(dd.keywords||[]).map(k=>`<span class="nv-kw nv-kw-click" data-kw="${k.replace(/"/g,'&quot;')}">${k}</span>`).join('');
   // 各項目を順番に表示（読めるものから逐次フェードイン）
   const sections=[];
-  if(dd.relationship)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">🔗 興味との関係</div><div class="nv-d-b">${dd.relationship}</div></div>`);
-  if(books)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">📚 入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`);
-  if(kws)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">🔑 深く知るためのキーワード（タップで探索）</div><div class="nv-kw-wrap">${kws}</div></div>`);
-  if(dd.universal_concept)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">🌌 探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`);
+  if(dd.relationship)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">興味との関係</div><div class="nv-d-b">${dd.relationship}</div></div>`);
+  if(books)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`);
+  if(kws)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">深く知るためのキーワード（タップで探索）</div><div class="nv-kw-wrap">${kws}</div></div>`);
+  if(dd.universal_concept)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`);
   body.innerHTML=summaryHtml;
   // 1つずつ追加してフェードイン
   sections.forEach((html,idx)=>{
