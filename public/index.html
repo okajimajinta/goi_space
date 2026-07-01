@@ -425,6 +425,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .completion.visible{display:flex}
 .comp-title{font-family:'Noto Serif JP',serif;font-size:28px;font-weight:600;color:var(--amber);margin-bottom:4px}
 .comp-grade{font-size:18px;color:var(--green);margin-bottom:16px}
+.comp-giveup-note{font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:20px}
 .comp-path{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin-bottom:20px}
 .comp-dist-status{text-align:center;margin-bottom:14px;min-height:1em}
 .comp-connection{margin-bottom:18px}
@@ -795,6 +796,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="golf-actions">
         <button class="golf-btn" id="golfUndoBtn" disabled>↩ 戻る</button>
         <button class="golf-btn" id="golfHintBtn">ヒント</button>
+        <button class="golf-btn" id="golfGiveupBtn" style="display:none">答え合わせ</button>
         <button class="golf-btn" id="golfNewBtn">新しいお題</button>
       </div>
     </div>
@@ -2014,6 +2016,7 @@ async function startGolf(custom){
     golf.moves=0;golf.path=[custom.start];golf.undoUsed=false;golf.prevState=null;golf.daily=false;golf.blind=false;golf.distMap={};
     GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
     GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');GP.classList.remove('blind');renderTrail();
+    document.getElementById('golfGiveupBtn').style.display='none';
     WI.value=golf.start;explore(golf.start);
     measureMoveDistance(golf.start); // スタート語も測定
     toast(`「${golf.start}」→「${golf.goal}」`,'success');
@@ -2031,6 +2034,7 @@ async function startGolf(custom){
     golf.lastDist=null;
     GS.textContent=golf.start;GPR.textContent=golf.par;GM.textContent='0';
     GU.disabled=false;GP.classList.add('visible');SE.classList.add('hidden');renderTrail();
+    document.getElementById('golfGiveupBtn').style.display=blind?'inline-block':'none';
     measureMoveDistance(golf.start); // スタート語も測定
     if(blind){
       GG.textContent='？？？';GP.classList.add('blind');
@@ -2091,6 +2095,34 @@ GH.addEventListener('click',async()=>{
 });
 GN.addEventListener('click',()=>{savedSessions.golf=null;showGolfSetup()});
 
+// 答え合わせ（ギブアップ）— ブラインド専用
+document.getElementById('golfGiveupBtn').addEventListener('click',()=>{
+  if(!golf.active||!golf.blind)return;
+  const goal=golf.goal;
+  // ゴールを公開して盤面をリセット扱いに
+  golf.blind=false;golf.active=false;
+  GP.classList.remove('blind');GG.textContent=goal;
+  document.getElementById('golfGiveupBtn').style.display='none';
+  if(GDIST)GDIST.innerHTML=`<span style="color:var(--amber)">答え合わせ：ゴールは「${goal}」でした</span>`;
+  // 答えの語を盤面で探索して意味を見せる（クリア記録は残さない）
+  WI.value=goal;explore(goal);
+  showGiveupOverlay(goal);
+});
+
+function showGiveupOverlay(goal){
+  CO.innerHTML=`
+    <div class="comp-title" style="color:var(--amber)">答え合わせ</div>
+    <div class="comp-grade">ゴールは「${goal}」でした</div>
+    <div class="comp-giveup-note">今回は ${golf.moves} 手まで探索しました。<br>ゴールの語を盤面に表示したので、どんな意味の場所だったのか眺めてみてください。</div>
+    <div class="comp-actions">
+      <button class="comp-btn twitter" id="giveupRetryBtn">もう一度挑戦</button>
+      <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
+    </div>`;
+  CO.classList.add('visible');
+  const rb=document.getElementById('giveupRetryBtn');
+  if(rb)rb.addEventListener('click',()=>{CO.classList.remove('visible');savedSessions.golf=null;showGolfSetup();});
+}
+
 // ===== DAILY/MONTHLY =====
 function resultKey(p,i){return p+':'+daily.date+':'+i}
 async function openChallenge(period){
@@ -2132,10 +2164,11 @@ function startDailyPuzzle(idx){
   DP.classList.remove('visible');
   savedSessions[daily.period]=null; // パネルから新規開始したら中断状態を破棄
   golf.active=true;golf.start=p.start;golf.goal=p.goal;golf.par=p.par||5;
-  golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;golf.distMap={};
+  golf.moves=0;golf.path=[p.start];golf.undoUsed=false;golf.prevState=null;golf.distMap={};golf.blind=false;
   golf.daily=true;golf.dailyIdx=idx;golf.dailyPeriod=daily.period;
   GS.textContent=golf.start;GG.textContent=golf.goal;GPR.textContent=golf.par;GM.textContent='0';
-  GU.disabled=false;GP.classList.add('visible');renderTrail();
+  GU.disabled=false;GP.classList.add('visible');GP.classList.remove('blind');renderTrail();
+  document.getElementById('golfGiveupBtn').style.display='none';
   WI.value=golf.start;explore(golf.start);
   measureMoveDistance(golf.start); // スタート語も測定
   toast(`${daily.period==='monthly'?'マンスリー':''}第${idx+1}問`,  'success');
@@ -2238,6 +2271,7 @@ function restoreGolf(s){
   GG.textContent=golf.blind?'？？？':golf.goal;
   GP.classList.toggle('blind',golf.blind);
   GU.disabled=golf.undoUsed;GP.classList.add('visible');renderTrail();
+  document.getElementById('golfGiveupBtn').style.display=golf.blind?'inline-block':'none';
   if(golf.blind&&golf.lastDist!=null)updateBlindMeter(golf.lastDist);
   SE.classList.add('hidden');// 再開時は初期ステータスを隠す
   toast('続きから再開しました','info',1800);
@@ -2788,6 +2822,15 @@ async function handleCheckoutReturn(){
     toast('決済はキャンセルされました','info',2500);
     history.replaceState({},'',location.pathname);
   }
+  // SEOページ（/word/孤独）からの流入：?q=語 で自動探索
+  const q=params.get('q');
+  if(q&&q.trim()){
+    const word=q.trim().slice(0,40);
+    if(typeof WI!=='undefined'&&WI)WI.value=word;
+    if(typeof centerInput!=='undefined'&&centerInput)centerInput.value=word;
+    setTimeout(()=>{try{explore(word)}catch{}},300);
+    history.replaceState({},'',location.pathname);
+  }
 }
 
 // 起動時に残り回数を取得
@@ -2837,6 +2880,8 @@ let nvConstel=false;   // 星座モード（自分の探索語だけ光らせる
 let myWordSet=new Set();      // 自分が探索した語
 let myConstelPairs=[];        // 自分の連続探索ペア（星座の線）
 let nvHoverNode=null;  // ホバー中のノード
+let nvSelectedNode=null;      // クリックで選択中のノード（1クリック目で選択・発光）
+let nvSelectedNeighbors=new Set(); // 選択語とつながった語の集合
 // ソナー機能
 let nvSonars=[];       // 確定したソナー領域 [{wx,wy,r,name,summary}]（ワールド座標）
 let nvSonarActive=null;// 育成中のソナー {wx,wy,r}
@@ -2870,6 +2915,7 @@ function buildMyConstellation(){
 }
 function exitNebula(){
   NV.classList.remove('visible');
+  nvSelectedNode=null;nvSelectedNeighbors=new Set();
   if(nvRAF){cancelAnimationFrame(nvRAF);nvRAF=null}
   nvSonarActive=null;if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
   if(typeof closeCompass==='function')closeCompass();
@@ -2974,6 +3020,7 @@ function setNvMode(m){
   if(constelBtn)constelBtn.classList.toggle('visible',m==='explore');
   if(m!=='explore'){nvReverse=false;if(revBtn)revBtn.classList.remove('active');nvConstel=false;if(constelBtn)constelBtn.classList.remove('active');nvSonarActive=null}
   if(m!=='peek')nvRipples=[];
+  nvSelectedNode=null;nvSelectedNeighbors=new Set();
   // ヒント文を反転状態で出し分け
   if(m==='explore'){
     hint.textContent=nvConstel
@@ -3432,11 +3479,19 @@ function drawNebulaView(dpr){
   }
 
   const edgeDim=(nvConstel&&nvMode==='explore')?0.15:1;
+  const selWord=nvSelectedNode?nvSelectedNode.word:null;
   edges.forEach(e=>{
     const a=nebulaGraph._map[e.a],b=nebulaGraph._map[e.b];if(!a||!b)return;
+    const touchesSel=selWord&&(e.a===selWord||e.b===selWord);
     NVCX.beginPath();NVCX.moveTo(a._px,a._py);NVCX.lineTo(b._px,b._py);
     const dep=1-((a._pd+b._pd)/2)*0.6; // 奥のエッジは薄く
-    NVCX.strokeStyle=`rgba(140,170,255,${(0.04+0.4*(e.weight/maxE))*dep*edgeDim})`;NVCX.lineWidth=(0.4+1.2*(e.weight/maxE))*((a._ps+b._ps)/2);NVCX.stroke();
+    if(touchesSel){
+      const pulse=0.6+0.4*Math.sin(t*3);
+      NVCX.strokeStyle=`rgba(245,200,120,${0.55*pulse})`;NVCX.lineWidth=(1.4+1.4*(e.weight/maxE))*((a._ps+b._ps)/2);NVCX.stroke();
+    }else{
+      const fade=selWord?0.3:1; // 選択中は他のエッジを控えめに
+      NVCX.strokeStyle=`rgba(140,170,255,${(0.04+0.4*(e.weight/maxE))*dep*edgeDim*fade})`;NVCX.lineWidth=(0.4+1.2*(e.weight/maxE))*((a._ps+b._ps)/2);NVCX.stroke();
+    }
   });
   if(nvMode==='peek'&&nvOverlay.paths){
     nvOverlay.paths.paths.slice(0,6).forEach((p,pi)=>{
@@ -3469,19 +3524,30 @@ function drawNebulaView(dpr){
     const baseR=4+eff*16;
     let r=Math.max(0.8,baseR*z*0.5*ps); // 奥ほど小さく
     let dim=1-depth*0.45;               // 奥ほど暗く（大気遠近）
-    // 星座モード：自分の語は明るく大きく、それ以外は大きく減光
+    // 星座モード：自分の語は明るく（サイズは変えず、明るさだけで区別）
     const isMine=constelOn&&myWordSet.has(n.word);
     if(constelOn){
-      if(isMine){dim=1.15;r*=1.35;}
+      if(isMine){dim=1.15;}
       else{dim*=0.16;}
     }
-    const g=NVCX.createRadialGradient(x,y,0,x,y,r*3);
-    g.addColorStop(0,`hsla(${n.hue},75%,70%,${0.5*tw*dim})`);g.addColorStop(1,`hsla(${n.hue},75%,70%,0)`);
-    NVCX.fillStyle=g;NVCX.beginPath();NVCX.arc(x,y,r*3,0,Math.PI*2);NVCX.fill();
-    NVCX.beginPath();NVCX.arc(x,y,(isPeekMatch||isHover||isMine)?r*1.5:r,0,Math.PI*2);
-    NVCX.fillStyle=isPeekMatch?'#F5A623':(isHover?'#F5A623':isMine?'#F5DC8C':`hsla(${n.hue},80%,${(60+eff*20)}%,${tw*dim})`);NVCX.fill();
+    // 選択中の発光：選択語・つながった語を明るく、それ以外を減光
+    const isSelected=nvSelectedNode&&n===nvSelectedNode;
+    const isNeighbor=nvSelectedNode&&nvSelectedNeighbors.has(n.word);
+    if(nvSelectedNode&&!constelOn){
+      if(isSelected){dim=1.3;}
+      else if(isNeighbor){dim=1.05;}
+      else{dim*=0.2;}
+    }
+    const selPulse=isSelected?(0.7+0.3*Math.sin(t*3)):1;
+    const g=NVCX.createRadialGradient(x,y,0,x,y,r*3*(isSelected?1.8:1));
+    g.addColorStop(0,`hsla(${n.hue},75%,70%,${0.5*tw*dim*selPulse})`);g.addColorStop(1,`hsla(${n.hue},75%,70%,0)`);
+    NVCX.fillStyle=g;NVCX.beginPath();NVCX.arc(x,y,r*3*(isSelected?1.8:1),0,Math.PI*2);NVCX.fill();
+    NVCX.beginPath();NVCX.arc(x,y,(isPeekMatch||isHover||isSelected)?r*1.5:r,0,Math.PI*2);
+    NVCX.fillStyle=isSelected?'#FFD97A':isNeighbor?'#F5C86E':isPeekMatch?'#F5A623':(isHover?'#F5A623':isMine?'#F5DC8C':`hsla(${n.hue},80%,${(60+eff*20)}%,${tw*dim})`);NVCX.fill();
     let showText=false;
-    if(constelOn){
+    if(nvSelectedNode&&!constelOn){
+      showText=isSelected||isNeighbor; // 選択中は選択語とつながった語を表示
+    }else if(constelOn){
       showText=isMine; // 星座モードでは自分の語だけラベル表示
     }else if(nvMode==='explore'&&nvReverse){
       showText=(n.norm<=0.32)&&(n.norm<=0.15);
@@ -3489,8 +3555,8 @@ function drawNebulaView(dpr){
       showText=(n.norm>0.32||isPeekMatch);
     }
     if(showText&&!isHover){
-      NVCX.font=`${(isPeekMatch||isMine?12:10)*dpr*ps}px 'Noto Serif JP',serif`;
-      NVCX.fillStyle=isMine?`rgba(255,240,190,0.95)`:`rgba(235,240,255,${(0.5+0.5*eff)*dim})`;NVCX.textAlign='center';
+      NVCX.font=`${(isPeekMatch||isMine||isSelected?12:10)*dpr*ps}px 'Noto Serif JP',serif`;
+      NVCX.fillStyle=isSelected?'rgba(255,235,180,1)':isMine?`rgba(255,240,190,0.95)`:`rgba(235,240,255,${(0.5+0.5*eff)*dim})`;NVCX.textAlign='center';
       NVCX.fillText(n.word,x,y-r-4*dpr);
     }
   });
@@ -3586,16 +3652,34 @@ function nebulaNodeAt(clientX,clientY){
 function nebulaNodeClicked(clientX,clientY){
   const n=nebulaNodeAt(clientX,clientY);
   if(n){
-    // 探索モードに切り替えてその語を探索
-    exitNebula();
-    const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
-    WI.value=n.word;explore(n.word,currentCenter());
-    toast(`「${n.word}」を探索します`,'info',1800);
+    if(nvSelectedNode===n){
+      // 2クリック目（同じ語）→ 探索へ
+      nvSelectedNode=null;nvSelectedNeighbors=new Set();
+      exitNebula();
+      const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
+      WI.value=n.word;explore(n.word,currentCenter());
+      toast(`「${n.word}」を探索します`,'info',1800);
+      return;
+    }
+    // 1クリック目 → 選択して発光。つながった語・経路を光らせる
+    selectNebulaNode(n);
     return;
   }
-  // ノードでなければ、確定済みソナー領域の内側か判定 → コンパスへ
+  // 何もない所をクリック → 選択解除。ソナー領域ならコンパスへ
   const s=sonarAt(clientX,clientY);
-  if(s){sonarToCompass(s);}
+  if(s){nvSelectedNode=null;nvSelectedNeighbors=new Set();sonarToCompass(s);return;}
+  nvSelectedNode=null;nvSelectedNeighbors=new Set();
+}
+// ノードを選択し、つながった語の集合を作る（発光表示用）
+function selectNebulaNode(n){
+  nvSelectedNode=n;
+  nvSelectedNeighbors=new Set();
+  (nebulaGraph.edges||[]).forEach(e=>{
+    if(e.a===n.word)nvSelectedNeighbors.add(e.b);
+    else if(e.b===n.word)nvSelectedNeighbors.add(e.a);
+  });
+  const hint=document.getElementById('nvHint');
+  if(hint)hint.textContent=`「${n.word}」を選択中。つながった語が光っています。もう一度タップで探索します。`;
 }
 // クリック位置に確定ソナーがあれば返す（最も内側の小さいものを優先）
 function sonarAt(clientX,clientY){

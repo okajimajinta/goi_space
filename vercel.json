@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/word/(.*)", "destination": "/api/word?w=$1" },
+    { "source": "/sitemap.xml", "destination": "/api/word?sitemap=1" },
     { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
