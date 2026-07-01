@@ -146,6 +146,42 @@ JSON形式のみで返答（前後に説明文を付けない）：
       return res.status(200).json(parsed);
     }
 
+    // --- 経路の抽象化：A→Bを何が接続していたか ---
+    if (action === 'connection') {
+      const { path, start, goal } = req.body;
+      if (!Array.isArray(path) || path.length < 2) {
+        return res.status(400).json({ error: 'path required' });
+      }
+      const route = path.slice(0, 30).join(' → ');
+      const s = String(start || path[0]).slice(0, 50);
+      const g = String(goal || path[path.length - 1]).slice(0, 50);
+      const prompt = `語彙の連想ゲームで、ある人が「${s}」から「${g}」へ次の経路で辿り着きました：
+${route}
+
+この旅路を振り返り、出発点と終点の間に「何が橋を架けていたのか」を抽象的に読み解いてください。
+個々の語ではなく、経路全体に通底するテーマ・転換点・意味の流れに注目してください。
+
+次のJSON形式のみで出力（前後の説明文なし）：
+{
+  "bridge": "「${s}」と「${g}」の間を接続していた概念・テーマを一言で（15字以内）",
+  "narrative": "どんな意味の流れでA地点からB地点へ辿り着いたのか、その物語（90字以内）",
+  "pivot": "経路の中で最も重要だった転換点となる語"
+}`;
+      const out = await callClaude(prompt, 500, false); // Sonnetで質を確保
+      let parsed;
+      try { parsed = JSON.parse(out); }
+      catch {
+        const a = out.indexOf('{'), b = out.lastIndexOf('}');
+        if (a >= 0 && b > a) { try { parsed = JSON.parse(out.slice(a, b + 1)); } catch {} }
+      }
+      if (!parsed) return res.status(200).json({ bridge: '', narrative: '', pivot: '' });
+      return res.status(200).json({
+        bridge: String(parsed.bridge || '').slice(0, 40),
+        narrative: String(parsed.narrative || '').slice(0, 200),
+        pivot: String(parsed.pivot || '').slice(0, 50),
+      });
+    }
+
     return res.status(400).json({ error: 'unknown action' });
   } catch (err) {
     console.error(err);

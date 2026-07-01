@@ -59,6 +59,10 @@ export default async function handler(req, res) {
       if (req.body.compassTuning && typeof req.body.compassTuning === 'object') {
         cur.compassTuning = req.body.compassTuning;
       }
+      // チャレンジのクリア実績
+      if (Array.isArray(req.body.clearRecords)) {
+        cur.clearRecords = req.body.clearRecords.slice(-300);
+      }
 
       await redis('SET', `userdata:${e}`, JSON.stringify(cur));
       await redis('EXPIRE', `userdata:${e}`, 31536000);

@@ -132,6 +132,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .mypage-section.active{display:block}
 .mypage-note{font-size:12px;color:var(--muted);margin:8px 0 16px;text-align:center}
 .history-summary{font-size:13px;color:var(--muted);margin-bottom:12px;text-align:center}
+.history-filter{display:flex;gap:6px;margin-bottom:12px;justify-content:center}
+.hist-filter-btn{background:var(--bg);border:1px solid var(--border);color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;padding:7px 14px;border-radius:16px;cursor:pointer}
+.hist-filter-btn.active{border-color:var(--amber);color:var(--amber);background:rgba(245,166,35,0.08)}
 .history-list{max-height:300px;overflow-y:auto;margin-bottom:16px;display:flex;flex-direction:column;gap:6px}
 .history-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px}
 .history-row .h-from{color:var(--muted)}
@@ -181,7 +184,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === NEBULA VIEW (全画面星図) === */
 .nebula-view{position:absolute;inset:0;display:none;background:radial-gradient(ellipse at center,#0a1024 0%,#05080f 100%);z-index:30}
 .nebula-view.visible{display:block}
-.nebula-view #nebulaCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+.nebula-view #nebulaCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
 .nebula-view #nebulaCanvas:active{cursor:grabbing}
 .nebula-topbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:32;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(560px,94vw)}
 .nebula-modes{display:flex;gap:6px;background:rgba(10,16,36,0.9);border:1px solid var(--border);border-radius:22px;padding:4px;backdrop-filter:blur(8px)}
@@ -191,8 +194,12 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-reverse-btn.visible{display:block}
 .nv-reverse-btn:hover{transform:translateY(-2px)}
 .nv-reverse-btn.active{background:linear-gradient(135deg,#9B72E8,#6B4BC0);box-shadow:0 4px 18px rgba(155,114,232,0.6)}
+.nv-constel-btn{position:absolute;bottom:96px;right:12px;z-index:46;background:linear-gradient(135deg,#5B6A8A,#2a3550);color:#fff;border:none;padding:10px 16px;border-radius:22px;font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.4);transition:all .15s;display:none}
+.nv-constel-btn.visible{display:block}
+.nv-constel-btn:hover{transform:translateY(-2px)}
+.nv-constel-btn.active{background:linear-gradient(135deg,#F5C842,#E0863A);color:#080C18;box-shadow:0 4px 18px rgba(245,200,66,0.6)}
 /* コンパス起動ボタン（右上・丸形）*/
-.nv-compass-fab{position:absolute;top:14px;right:14px;z-index:46;width:52px;height:52px;border-radius:50%;border:1px solid rgba(245,166,35,0.5);background:radial-gradient(circle at 35% 30%,#2a3550,#0c1228);color:#F5A623;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.45);transition:all .2s;display:flex;align-items:center;justify-content:center}
+.nv-compass-fab{position:absolute;top:14px;right:14px;z-index:46;width:63px;height:63px;border-radius:50%;border:2px solid rgba(245,166,35,0.6);background:radial-gradient(circle at 35% 30%,#2a3550,#0c1228);color:#F5A623;font-size:29px;cursor:pointer;box-shadow:0 4px 20px rgba(245,166,35,0.25);transition:all .2s;display:flex;align-items:center;justify-content:center}
 .nv-compass-fab:hover{transform:rotate(30deg) scale(1.08);box-shadow:0 6px 22px rgba(245,166,35,0.4)}
 .nv-compass-fab.active{background:radial-gradient(circle at 35% 30%,#5a4a20,#2a1f08);border-color:var(--amber)}
 /* コンパス・パネル */
@@ -234,6 +241,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .cc-disc-value{font-size:13px;color:#dfe5f2;line-height:1.6}
 .cc-disc-more{font-size:10px;color:var(--amber);margin-top:6px;opacity:.85}
 .nv-d-carry{background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.2);border-radius:8px;padding:10px 12px}
+.nv-d-reveal{opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
+.nv-d-reveal.shown{opacity:1;transform:none}
 .nv-book-pitch{background:linear-gradient(135deg,rgba(245,166,35,0.14),rgba(224,107,139,0.1));border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.8;color:#ffe9c2;margin-bottom:14px;font-weight:500}
 .nv-book-cta{display:block;text-align:center;background:linear-gradient(135deg,#F5A623,#E0863A);color:#080C18;font-weight:700;font-size:15px;padding:13px;border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(245,166,35,0.4);transition:transform .15s}
 .nv-book-cta:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,166,35,0.55)}
@@ -359,9 +368,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === GOLF PANEL === */
 .golf-panel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:none;align-items:center;gap:14px;z-index:50;backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw}
 .golf-panel.visible{display:flex}
-.golf-leg{text-align:center}
+.golf-leg{text-align:center;white-space:nowrap}
 .golf-leg-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
-.golf-leg-word{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600}
+.golf-leg-word{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:600;white-space:nowrap}
 .golf-start .golf-leg-word{color:var(--blue)}
 .golf-goal .golf-leg-word{color:var(--goal)}
 .golf-panel.blind .golf-goal .golf-leg-word{color:var(--muted);letter-spacing:0.15em}
@@ -378,7 +387,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .golf-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber)}
 
 /* === GOLF TRAIL === */
-.golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;z-index:40}
+.golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:96vw;z-index:40}
 .golf-trail.visible{display:flex}
 
 /* === GOLF SETUP === */
@@ -398,7 +407,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .golf-setup-arrow{color:var(--muted);font-size:18px}
 .golf-setup-start{width:100%;padding:14px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:16px;font-weight:500;cursor:pointer;transition:opacity .15s}
 .golf-setup-start:hover{opacity:.85}
-.trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px;cursor:pointer;transition:all .15s}
+.trail-word{font-family:'Noto Serif JP',serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .trail-word[data-trail-word]:hover{border-color:var(--amber);color:var(--amber)}
 .trail-word.start{border-color:var(--blue);color:var(--blue)}
 .trail-word.goal{border-color:var(--goal);color:var(--goal)}
@@ -414,10 +423,18 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .comp-grade{font-size:18px;color:var(--green);margin-bottom:16px}
 .comp-path{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin-bottom:20px}
 .comp-dist-status{text-align:center;margin-bottom:14px;min-height:1em}
+.comp-connection{margin-bottom:18px}
+.comp-conn-loading{text-align:center;font-size:12px;color:var(--muted);padding:10px}
+.comp-conn-card{background:linear-gradient(135deg,rgba(91,143,222,0.1),rgba(155,114,232,0.08));border:1px solid rgba(155,114,232,0.3);border-radius:12px;padding:16px 18px;text-align:center}
+.comp-conn-label{font-size:12px;color:#9aa6c4;margin-bottom:8px}
+.comp-conn-bridge{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:#c9b3f0;margin-bottom:10px;letter-spacing:.04em}
+.comp-conn-narrative{font-size:13px;color:#dfe5f2;line-height:1.8;margin-bottom:8px}
+.comp-conn-pivot{font-size:11px;color:#9aa6c4}
+.comp-conn-pivot span{color:var(--amber);font-weight:600}
 .comp-node{text-align:center;padding:10px 15px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:60px}
-.comp-node-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text)}
-.comp-node-dist{font-size:12px;margin-top:2px}
-.comp-node-reason{font-size:11px;color:var(--muted)}
+.comp-node-word{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--text);white-space:nowrap}
+.comp-node-dist{font-size:12px;margin-top:2px;white-space:nowrap}
+.comp-node-reason{font-size:11px;color:var(--muted);white-space:nowrap}
 .comp-arrow{color:var(--muted);font-size:18px}
 .comp-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
 .comp-btn{padding:12px 22px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .15s}
@@ -596,6 +613,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       </div>
       <div class="nebula-panel" id="nvPanel"></div>
       <button class="nv-reverse-btn" id="nvReverseBtn" title="明暗・大小を反転してマイナーな語を浮かび上がらせる">🔄 反転</button>
+      <button class="nv-constel-btn" id="nvConstelBtn" title="自分の探索した語だけを星座として光らせる">✦ 星座</button>
       <!-- コンパス起動ボタン（右上・丸形）-->
       <button class="nv-compass-fab" id="nvCompassFab" title="知的コンパスを開く">🧭</button>
       <div class="nebula-hint" id="nvHint">星雲をドラッグで移動・ホイールで拡大。明るい星ほど多くの人が辿った語です。</div>
@@ -738,8 +756,12 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           </div>
         </div>
 
-        <!-- 探索の実績（経路履歴 + CSV出力） -->
+        <!-- 実績（探索経路 と チャレンジのクリア実績を分けて表示）-->
         <div class="mypage-section" id="mySectionHistory">
+          <div class="history-filter">
+            <button class="hist-filter-btn active" data-hfilter="explore">🔭 探索の実績</button>
+            <button class="hist-filter-btn" data-hfilter="challenge">🏆 クリア実績</button>
+          </div>
           <div class="history-summary" id="historySummary">まだ探索の記録がありません</div>
           <div class="history-list" id="historyList"></div>
           <div class="account-actions">
@@ -974,6 +996,14 @@ async function loadUserData(){
       compassTuning={...compassTuning,...d.compassTuning};
       try{localStorage_set('compassTuning',JSON.stringify(compassTuning))}catch{}
     }
+    // クリア実績を復元（マージ・重複排除）
+    if(Array.isArray(d.clearRecords)&&d.clearRecords.length){
+      const merged=[...clearRecords,...d.clearRecords];
+      const seen=new Set();
+      clearRecords=merged.filter(c=>{const k=`${c.ts}|${c.start}|${c.goal}`;if(seen.has(k))return false;seen.add(k);return true;})
+        .sort((a,b)=>a.ts-b.ts).slice(-300);
+      try{localStorage_set('clearRecords',JSON.stringify(clearRecords))}catch{}
+    }
   }catch{}
 }
 
@@ -1198,6 +1228,9 @@ function logTransition(from,to){
 // ===== 検索経路の実績（マイページで確認・CSV出力） =====
 let routeHistory=[];
 try{const s=localStorage_get('routeHistory');if(s)routeHistory=JSON.parse(s)}catch{}
+// ===== チャレンジのクリア実績（探索とは別に永続保存）=====
+let clearRecords=[];
+try{const s=localStorage_get('clearRecords');if(s)clearRecords=JSON.parse(s)}catch{}
 // コンパスのチューニング（ジャンル別 文化的距離）— 早期宣言（loadUserDataより前）
 let compassTuning={};
 try{const s=localStorage_get('compassTuning');if(s)compassTuning=JSON.parse(s)}catch{}
@@ -1264,8 +1297,8 @@ async function explore(word,fromWord,opts){
   // Game protection: block explore from history during golf
   if(golf.active&&fromWord==='__history__')return;
   if(fromWord&&fromWord!=='__history__')logTransition(fromWord,word);
-  // 経路実績を記録（全モード・履歴クリックは除外）
-  if(fromWord!=='__history__'){
+  // 経路実績を記録（探索モードのみ・履歴クリックは除外。ゴルフ等のクリアは別管理）
+  if(fromWord!=='__history__'&&currentMode==='explore'){
     recordRoute(fromWord,word,currentMode);
   }
 
@@ -1758,6 +1791,19 @@ async function finishGolf(){
   golf.active=false;
   const fullPath=[...golf.path];
 
+  // クリア実績を記録（探索履歴とは別管理）
+  const clearMode=golf.daily?(golf.dailyPeriod||'daily'):'golf';
+  clearRecords.push({
+    mode:clearMode,start:golf.start,goal:golf.goal,moves:golf.moves,par:par,
+    grade:grade.replace('！',''),date:daily.date||'',ts:Date.now(),path:fullPath
+  });
+  if(clearRecords.length>300)clearRecords=clearRecords.slice(-300);
+  try{localStorage_set('clearRecords',JSON.stringify(clearRecords))}catch{}
+  if(premiumEmail){
+    fetch('/api/userdata',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:premiumEmail,clearRecords})}).catch(()=>{});
+  }
+
   const periodLabel=golf.daily?(golf.dailyPeriod==='monthly'?'マンスリー':'デイリー'):'';
   const who=handleName?`${handleName} さんの記録\n`:'';
   const shareText=`語彙ゴルフ${periodLabel?' '+periodLabel:''} 🏌️${daily.date?' '+daily.date:''}\n${who}${golf.start} → ${golf.goal}\n${golf.moves}手（パー${par}）${grade}\n${fullPath.join('→')}`;
@@ -1788,11 +1834,39 @@ async function finishGolf(){
     <div class="comp-grade">${golf.moves}手（パー${par}）— ${grade}</div>
     <div class="comp-path" id="compPath">${buildPathHTML(null)}</div>
     <div class="comp-dist-status" id="compDistStatus"></div>
+    <div class="comp-connection" id="compConnection"></div>
     <div class="comp-actions">
       <button class="comp-btn twitter" onclick="shareOnX(\`${shareText.replace(/`/g,"'")}\`)">Xで共有</button>
       <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
     </div>`;
   CO.classList.add('visible');
+
+  // ★経路の抽象化：A→Bを何が接続していたか
+  async function loadConnection(){
+    const el=document.getElementById('compConnection');
+    if(!el)return;
+    el.innerHTML='<div class="comp-conn-loading">この旅路を読み解いています…</div>';
+    try{
+      const r=await fetch('/api/golf',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({action:'connection',path:fullPath,start:golf.start,goal:golf.goal})});
+      const d=await r.json();
+      if(!CO.classList.contains('visible'))return;
+      if(d.bridge||d.narrative){
+        el.innerHTML=`
+          <div class="comp-conn-card">
+            <div class="comp-conn-label">🌉 ${golf.start} と ${golf.goal} を繋いだもの</div>
+            ${d.bridge?`<div class="comp-conn-bridge">${d.bridge}</div>`:''}
+            ${d.narrative?`<div class="comp-conn-narrative">${d.narrative}</div>`:''}
+            ${d.pivot?`<div class="comp-conn-pivot">転換点：<span>${d.pivot}</span></div>`:''}
+          </div>`;
+      }else{el.innerHTML='';}
+    }catch{
+      const el2=document.getElementById('compConnection');
+      if(el2)el2.innerHTML='<button class="comp-btn" id="reConnBtn" style="font-size:12px">接続の読み解きに失敗しました。再試行</button>';
+      const b=document.getElementById('reConnBtn');if(b)b.addEventListener('click',loadConnection);
+    }
+  }
+  loadConnection();
 
   // ★距離測定（裏で実行・失敗時は再測定ボタンを出す）
   async function measureDistances(){
@@ -2426,15 +2500,35 @@ async function openMyPage(){
 }
 
 // 探索の実績（経路履歴）を表示
+let historyFilter='explore';
 function renderHistory(){
   const summary=document.getElementById('historySummary');
   const list=document.getElementById('historyList');
+  if(historyFilter==='challenge'){
+    // クリア実績
+    if(!clearRecords.length){summary.textContent='まだチャレンジのクリア記録がありません';list.innerHTML='';return}
+    summary.textContent=`クリア実績：${clearRecords.length}件`;
+    const modeLabel={golf:'ゴルフ',daily:'デイリー',monthly:'マンスリー'};
+    const recent=[...clearRecords].reverse().slice(0,100);
+    list.innerHTML=recent.map(c=>{
+      const t=new Date(c.ts);
+      const time=`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+      const diff=c.moves-(c.par||0);const cls=diff<=0?'good':diff<=1?'ok':'over';
+      return `<div class="history-row">
+        <span class="h-mode">${modeLabel[c.mode]||c.mode}</span>
+        <span class="h-from">${c.start}</span><span class="h-arrow">→</span><span class="h-to">${c.goal}</span>
+        <span class="puzzle-result ${cls}" style="margin:0 0 0 auto">🏆${c.moves}手（${c.grade}）</span>
+        <span class="h-time">${time}</span>
+      </div>`;
+    }).join('');
+    return;
+  }
+  // 探索の実績（自由探索のみ）
   if(!routeHistory.length){
     summary.textContent='まだ探索の記録がありません';
     list.innerHTML='';return;
   }
   summary.textContent=`これまでの探索：${routeHistory.length}件`;
-  // 新しい順に最大100件表示
   const recent=[...routeHistory].reverse().slice(0,100);
   const modeLabel={explore:'探索',golf:'ゴルフ',daily:'デイリー',monthly:'マンスリー'};
   list.innerHTML=recent.map(h=>{
@@ -2448,6 +2542,13 @@ function renderHistory(){
     </div>`;
   }).join('');
 }
+// フィルタ切替
+document.querySelectorAll('.hist-filter-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.hist-filter-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');historyFilter=b.dataset.hfilter;renderHistory();
+  });
+});
 
 // CSV書き出し
 document.getElementById('exportCsvBtn').addEventListener('click',()=>{
@@ -2684,6 +2785,9 @@ let nebulaGraph=null;  // 全体星雲データ
 let nvOverlay={paths:null,compass:null}; // 重ねるデータ
 let nvView={x:0,y:0,zoom:1,drag:false,lx:0,ly:0};
 let nvReverse=false;   // 反転表示モード
+let nvConstel=false;   // 星座モード（自分の探索語だけ光らせる）
+let myWordSet=new Set();      // 自分が探索した語
+let myConstelPairs=[];        // 自分の連続探索ペア（星座の線）
 let nvHoverNode=null;  // ホバー中のノード
 // ソナー機能
 let nvSonars=[];       // 確定したソナー領域 [{wx,wy,r,name,summary}]（ワールド座標）
@@ -2698,12 +2802,23 @@ function wordHue(w){let h=0;for(let i=0;i<w.length;i++)h=(h*31+w.charCodeAt(i))%
 
 async function enterNebula(){
   flushPath(); // 直近の探索経路を保存してから（経路検索で見つかるように）
+  buildMyConstellation();
   NV.classList.add('visible');
   document.getElementById('nvWordInput').value='';
   setNvMode('explore');
   // 星雲データは毎回最新を取得（新しい探索を反映）
   await loadNebulaGraph();
   startNvLoop();
+}
+// 自分の探索履歴から「星座」データ（語の集合＋連続ペア）を作る
+function buildMyConstellation(){
+  myWordSet=new Set();
+  myConstelPairs=[];
+  routeHistory.forEach(h=>{
+    if(h.to)myWordSet.add(h.to);
+    if(h.from)myWordSet.add(h.from);
+    if(h.from&&h.to&&h.from!==h.to)myConstelPairs.push([h.from,h.to]);
+  });
 }
 function exitNebula(){
   NV.classList.remove('visible');
@@ -2720,15 +2835,75 @@ async function loadNebulaGraph(){
 }
 function layoutNebulaGraph(){
   const nodes=nebulaGraph.nodes||[];
+  const edges=nebulaGraph.edges||[];
   const maxW=Math.max(1,...nodes.map(n=>n.weight));
+  // 接続数（次数）を数える → 多くの語と繋がるハブ＝抽象的とみなす
+  const degree={};
+  edges.forEach(e=>{degree[e.a]=(degree[e.a]||0)+1;degree[e.b]=(degree[e.b]||0)+1;});
+  const maxDeg=Math.max(1,...Object.values(degree),1);
+  // 初期配置：重み順に中心から外へ、円状にばらまく（ハッシュで初期角度）
   nodes.forEach((n,i)=>{
     const norm=n.weight/maxW;
-    const radius=40+(1-norm)*240+(i%9)*5;
-    const ang=(wordHue(n.word)/360)*Math.PI*2+i*0.13;
+    const radius=40+(1-norm)*220+(i%9)*6;
+    const ang=(wordHue(n.word)/360)*Math.PI*2+i*0.37;
     n.bx=Math.cos(ang)*radius;n.by=Math.sin(ang)*radius;
     n.r=4+norm*16;n.hue=wordHue(n.word);n.norm=norm;
+    n.vx=0;n.vy=0;
+    // 抽象度：接続数を0〜1に正規化（奥ほど抽象的）
+    n.abstract=(degree[n.word]||0)/maxDeg;
+    n.deg=degree[n.word]||0;
   });
-  nebulaGraph._map={};nodes.forEach(n=>nebulaGraph._map[n.word]=n);
+  const map={};nodes.forEach(n=>map[n.word]=n);
+  nebulaGraph._map=map;
+  const maxE=Math.max(1,...edges.map(e=>e.weight));
+
+  // ===== フォースレイアウト（力学的クラスタリング）=====
+  // つながりの強い語ほど引き合い、全ノードは反発する → 自然にクラスターが生まれる
+  const ITER=140;
+  const REPULSE=4200;   // 反発の強さ
+  const CENTER_PULL=0.012; // 中心へ緩く引く（発散防止）
+  for(let it=0;it<ITER;it++){
+    const cool=1-it/ITER; // 徐々に沈静化
+    // 反発（全ペア。ノード数は最大120程度なのでO(n^2)で許容）
+    for(let a=0;a<nodes.length;a++){
+      const na=nodes[a];
+      for(let b=a+1;b<nodes.length;b++){
+        const nb=nodes[b];
+        let dx=na.bx-nb.bx, dy=na.by-nb.by;
+        let d2=dx*dx+dy*dy;if(d2<1)d2=1;
+        const d=Math.sqrt(d2);
+        const f=REPULSE/d2;
+        const fx=(dx/d)*f, fy=(dy/d)*f;
+        na.vx+=fx;na.vy+=fy;nb.vx-=fx;nb.vy-=fy;
+      }
+    }
+    // 引力（edge＝バネ）：重みが強いほど近づける
+    edges.forEach(e=>{
+      const a=map[e.a],b=map[e.b];if(!a||!b)return;
+      const w=e.weight/maxE;
+      let dx=b.bx-a.bx, dy=b.by-a.by;
+      const d=Math.sqrt(dx*dx+dy*dy)||1;
+      const rest=60+ (1-w)*140; // 強いつながりほど自然長を短く
+      const f=(d-rest)*0.02*(0.4+w);
+      const fx=(dx/d)*f, fy=(dy/d)*f;
+      a.vx+=fx;a.vy+=fy;b.vx-=fx;b.vy-=fy;
+    });
+    // 中心引力＋速度適用＋減衰
+    nodes.forEach(n=>{
+      n.vx-=n.bx*CENTER_PULL;n.vy-=n.by*CENTER_PULL;
+      n.bx+=n.vx*cool*0.5;n.by+=n.vy*cool*0.5;
+      n.vx*=0.82;n.vy*=0.82;
+    });
+  }
+  // 位置を正規化（中心化）
+  let mx=0,my=0;nodes.forEach(n=>{mx+=n.bx;my+=n.by});
+  mx/=(nodes.length||1);my/=(nodes.length||1);
+  nodes.forEach(n=>{n.bx-=mx;n.by-=my;});
+  // 色を最終位置の方角から決める（同じクラスター＝近い色相に）
+  nodes.forEach(n=>{
+    const ang=Math.atan2(n.by,n.bx); // -π〜π
+    n.hue=Math.round(((ang+Math.PI)/(2*Math.PI))*360);
+  });
 }
 function setNvMode(m){
   nvMode=m;
@@ -2747,13 +2922,17 @@ function setNvMode(m){
   // 反転ボタンは星雲モード時のみ表示（フローティング）
   const revBtn=document.getElementById('nvReverseBtn');
   if(revBtn)revBtn.classList.toggle('visible',m==='explore');
-  if(m!=='explore'){nvReverse=false;if(revBtn)revBtn.classList.remove('active');nvSonarActive=null}
+  const constelBtn=document.getElementById('nvConstelBtn');
+  if(constelBtn)constelBtn.classList.toggle('visible',m==='explore');
+  if(m!=='explore'){nvReverse=false;if(revBtn)revBtn.classList.remove('active');nvConstel=false;if(constelBtn)constelBtn.classList.remove('active');nvSonarActive=null}
   if(m!=='peek')nvRipples=[];
   // ヒント文を反転状態で出し分け
   if(m==='explore'){
-    hint.textContent=nvReverse
+    hint.textContent=nvConstel
+      ?'✦ 星座モード：あなたが探索した語だけが輝いています。線はあなたの辿った道です。'
+      :nvReverse
       ?'反転表示：マイナーな語ほど明るく大きく浮かび上がります。ホバーで語を確認できます。'
-      :'ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。';
+      :'ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。奥（小さく暗い星）ほど抽象的な語です。';
   }
 }
 document.querySelectorAll('.nv-mode').forEach(b=>{
@@ -2766,7 +2945,25 @@ document.getElementById('nvReverseBtn').addEventListener('click',()=>{
   const hint=document.getElementById('nvHint');
   hint.textContent=nvReverse
     ?'反転表示：マイナーな語ほど明るく大きく浮かび上がります。ホバーで語を確認できます。'
-    :'ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。';
+    :'ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。奥（小さく暗い星）ほど抽象的な語です。';
+});
+document.getElementById('nvConstelBtn').addEventListener('click',()=>{
+  nvConstel=!nvConstel;
+  document.getElementById('nvConstelBtn').classList.toggle('active',nvConstel);
+  const hint=document.getElementById('nvHint');
+  if(nvConstel){
+    buildMyConstellation();
+    // 自分の語が星雲に無ければ追加してプロット
+    ensureNebulaWords([...myWordSet]);
+    if(myWordSet.size===0){
+      toast('まだ探索の記録がありません。探索すると星座が生まれます','info',3000);
+    }else{
+      toast(`✦ あなたの星座：${myWordSet.size}個の星`,'success',2500);
+    }
+    hint.textContent='✦ 星座モード：あなたが探索した語だけが輝いています。線はあなたの辿った道です。';
+  }else{
+    hint.textContent='ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。奥（小さく暗い星）ほど抽象的な語です。';
+  }
 });
 document.getElementById('nvGoBtn').addEventListener('click',runNvQuery);
 document.getElementById('nvWordInput').addEventListener('keydown',e=>{if(e.key==='Enter')runNvQuery()});
@@ -2801,7 +2998,7 @@ function ensureNebulaWords(words){
     if(w&&!nebulaGraph._map[w]){
       const i=Object.keys(nebulaGraph._map).length;
       const ang=(wordHue(w)/360)*Math.PI*2+i*0.13;const radius=120+(i%9)*8;
-      const n={word:w,weight:1,bx:Math.cos(ang)*radius,by:Math.sin(ang)*radius,r:5,hue:wordHue(w),norm:0.25};
+      const n={word:w,weight:1,bx:Math.cos(ang)*radius,by:Math.sin(ang)*radius,r:5,hue:wordHue(w),norm:0.25,abstract:0.2,deg:0};
       nebulaGraph.nodes.push(n);nebulaGraph._map[w]=n;
     }
   });
@@ -2876,7 +3073,7 @@ function renderCompassCards(d){
   let html=`<div class="cc-summary"><span class="cc-center">${d.center}</span><span class="cc-sub">${d.summary}</span></div>`;
   // 最も近い書籍（タップで詳細オーバーレイ）
   if(d.book&&d.book.title){
-    html+=`<div class="cc-book" data-booktitle="${(d.book.title||'').replace(/"/g,'&quot;')}" data-bookauthor="${(d.book.author||'').replace(/"/g,'&quot;')}">
+    html+=`<div class="cc-book" data-booktitle="${(d.book.title||'').replace(/"/g,'&quot;')}" data-bookauthor="${(d.book.author||'').replace(/"/g,'&quot;')}" data-bookreason="${(d.book.reason||'').replace(/"/g,'&quot;')}">
       <div class="cc-book-label">📖 あなたに最も近い一冊</div>
       <div class="cc-book-title">${d.book.title}</div>
       <div class="cc-book-author">${d.book.author||''}</div>
@@ -2900,34 +3097,35 @@ function renderCompassCards(d){
   // 選書カード → 詳細オーバーレイで表示（別タブ）
   const bookCard=area.querySelector('.cc-book');
   if(bookCard){
-    bookCard.addEventListener('click',()=>openBookDetail(bookCard.dataset.booktitle,bookCard.dataset.bookauthor));
+    bookCard.addEventListener('click',()=>openBookDetail(bookCard.dataset.booktitle,bookCard.dataset.bookauthor,bookCard.dataset.bookreason));
   }
 }
 
-async function openBookDetail(title,author){
+async function openBookDetail(title,author,reason){
   // 詳細オーバーレイを書籍モードで開く
   document.getElementById('nvDetailHead').innerHTML=`<span class="nv-disc-tag" style="color:var(--amber)">📖 選書</span>${title}${author?`<div style="font-size:12px;color:#9aa6c4;margin-top:3px">${author}</div>`:''}`;
-  // 書籍には深さ切替は不要 → 非表示
   const depthRow=document.querySelector('.nv-detail-depth');if(depthRow)depthRow.style.display='none';
   nvCurrentDetail={book:true};
   nvDetailOverlay.classList.add('visible');
   const body=document.getElementById('nvDetailBody');
   const amazonBtn=`<a class="nv-book-cta" href="${amazonLink(title,author)}" target="_blank" rel="noopener">📚 Amazonでこの本を探す</a>`;
+  // 元カードで表示していた「近い理由」を引き継いで即表示
+  const carry=reason?`<div class="nv-d-sec nv-d-carry"><div class="nv-d-b">${reason}</div></div>`:'';
   const key=title+'|'+author;
-  if(compassBookCache[key]){renderBookDetailOverlay(compassBookCache[key],amazonBtn);return}
-  body.innerHTML='<div class="nv-detail-loading">📖 あらすじと推薦理由を調べています…</div>';
+  if(compassBookCache[key]){renderBookDetailOverlay(compassBookCache[key],amazonBtn,carry);return}
+  body.innerHTML=carry+'<div class="nv-detail-loading">📖 あらすじと推薦理由を調べています…</div>';
   try{
     const interests=document.getElementById('compassInput').value.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean);
     const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({interests,bookDetail:{title,author}})});
     const dd=await r.json();
     compassBookCache[key]=dd;
-    renderBookDetailOverlay(dd,amazonBtn);
-  }catch{body.innerHTML='<div class="nv-detail-loading">取得に失敗しました</div>';}
+    renderBookDetailOverlay(dd,amazonBtn,carry);
+  }catch{body.innerHTML=carry+'<div class="nv-detail-loading">取得に失敗しました</div>';}
 }
-function renderBookDetailOverlay(dd,amazonBtn){
+function renderBookDetailOverlay(dd,amazonBtn,carry){
   const body=document.getElementById('nvDetailBody');
-  body.innerHTML=`
+  body.innerHTML=(carry||'')+`
     ${dd.pitch?`<div class="nv-book-pitch">🔥 ${dd.pitch}</div>`:''}
     ${dd.synopsis?`<div class="nv-d-sec"><div class="nv-d-h">📘 あらすじ</div><div class="nv-d-b">${dd.synopsis}</div></div>`:''}
     ${dd.why?`<div class="nv-d-sec"><div class="nv-d-h">💡 なぜあなたに</div><div class="nv-d-b">${dd.why}</div></div>`:''}
@@ -3005,18 +3203,29 @@ function renderCompassDetail(dd){
     return `<li><span class="nv-bk-title">${b.title}</span>${b.author?` <span class="nv-bk-auth">/ ${b.author}</span>`:''}${b.note?`<div class="nv-bk-note">${b.note}</div>`:''}<a class="nv-bk-link" href="${link}" target="_blank" rel="noopener">📚 Amazonで探す</a></li>`;
   }).join('');
   const kws=(dd.keywords||[]).map(k=>`<span class="nv-kw nv-kw-click" data-kw="${k.replace(/"/g,'&quot;')}">${k}</span>`).join('');
-  body.innerHTML=summaryHtml+`
-    <div class="nv-d-sec"><div class="nv-d-h">🔗 興味との関係</div><div class="nv-d-b">${dd.relationship||''}</div></div>
-    ${books?`<div class="nv-d-sec"><div class="nv-d-h">📚 入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`:''}
-    ${kws?`<div class="nv-d-sec"><div class="nv-d-h">🔑 深く知るためのキーワード（タップで探索）</div><div class="nv-kw-wrap">${kws}</div></div>`:''}
-    ${dd.universal_concept?`<div class="nv-d-sec"><div class="nv-d-h">🌌 探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`:''}
-  `;
-  body.querySelectorAll('.nv-kw-click').forEach(el=>el.addEventListener('click',()=>{
-    const w=el.dataset.kw;
-    nvDetailOverlay.classList.remove('visible');closeCompass();exitNebula();
-    const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
-    WI.value=w;explore(w,currentCenter());toast(`「${w}」を探索します`,'info',1800);
-  }));
+  // 各項目を順番に表示（読めるものから逐次フェードイン）
+  const sections=[];
+  if(dd.relationship)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">🔗 興味との関係</div><div class="nv-d-b">${dd.relationship}</div></div>`);
+  if(books)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">📚 入門・前段に読むべきもの</div><ul class="nv-bk-list">${books}</ul></div>`);
+  if(kws)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">🔑 深く知るためのキーワード（タップで探索）</div><div class="nv-kw-wrap">${kws}</div></div>`);
+  if(dd.universal_concept)sections.push(`<div class="nv-d-sec nv-d-reveal"><div class="nv-d-h">🌌 探求の先にある普遍的概念</div><div class="nv-d-b">${dd.universal_concept}</div></div>`);
+  body.innerHTML=summaryHtml;
+  // 1つずつ追加してフェードイン
+  sections.forEach((html,idx)=>{
+    setTimeout(()=>{
+      if(!nvDetailOverlay.classList.contains('visible'))return;
+      const wrap=document.createElement('div');wrap.innerHTML=html;
+      const el=wrap.firstChild;body.appendChild(el);
+      requestAnimationFrame(()=>el.classList.add('shown'));
+      // キーワードクリックを配線
+      el.querySelectorAll('.nv-kw-click').forEach(k=>k.addEventListener('click',()=>{
+        const w=k.dataset.kw;
+        nvDetailOverlay.classList.remove('visible');closeCompass();exitNebula();
+        const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
+        WI.value=w;explore(w,currentCenter());toast(`「${w}」を探索します`,'info',1800);
+      }));
+    },idx*280);
+  });
 }
 
 document.getElementById('nvDetailClose').addEventListener('click',()=>nvDetailOverlay.classList.remove('visible'));
@@ -3108,6 +3317,19 @@ function drawNebulaView(dpr){
   const nodes=nebulaGraph.nodes,edges=nebulaGraph.edges||[];
   const maxE=Math.max(1,...edges.map(e=>e.weight));
 
+  // ===== 擬似3D投影 =====
+  // 抽象度 abstract(0=手前/具体〜1=奥/抽象) を奥行きに。奥ほど中心へ寄り小さく暗くなる。
+  const DEPTH=0.55; // 奥行きの強さ
+  function proj(n){
+    const depth=n.abstract||0;
+    const persp=1-DEPTH*depth;            // 奥ほど縮む（0.45〜1）
+    const px=cx + n.bx*z*persp;           // 消失点(cx,cy)へ収束
+    const py=cy + n.by*z*persp - depth*40*z*0.15; // 奥ほど僅かに上へ（俯瞰感）
+    return {x:px,y:py,persp,depth};
+  }
+  // 各ノードに投影結果をキャッシュ
+  nodes.forEach(n=>{const p=proj(n);n._px=p.x;n._py=p.y;n._ps=p.persp;n._pd=p.depth;});
+
   // ===== ソナー：確定領域（円＋中心の名前）を背面に描画 =====
   nvSonars.forEach(s=>{
     const sx=cx+s.wx*z, sy=cy+s.wy*z, sr=s.r*z;
@@ -3154,44 +3376,66 @@ function drawNebulaView(dpr){
     }
   }
 
+  const edgeDim=(nvConstel&&nvMode==='explore')?0.15:1;
   edges.forEach(e=>{
     const a=nebulaGraph._map[e.a],b=nebulaGraph._map[e.b];if(!a||!b)return;
-    NVCX.beginPath();NVCX.moveTo(cx+a.bx*z,cy+a.by*z);NVCX.lineTo(cx+b.bx*z,cy+b.by*z);
-    NVCX.strokeStyle=`rgba(140,170,255,${0.04+0.4*(e.weight/maxE)})`;NVCX.lineWidth=0.4+1.2*(e.weight/maxE);NVCX.stroke();
+    NVCX.beginPath();NVCX.moveTo(a._px,a._py);NVCX.lineTo(b._px,b._py);
+    const dep=1-((a._pd+b._pd)/2)*0.6; // 奥のエッジは薄く
+    NVCX.strokeStyle=`rgba(140,170,255,${(0.04+0.4*(e.weight/maxE))*dep*edgeDim})`;NVCX.lineWidth=(0.4+1.2*(e.weight/maxE))*((a._ps+b._ps)/2);NVCX.stroke();
   });
   if(nvMode==='peek'&&nvOverlay.paths){
     nvOverlay.paths.paths.slice(0,6).forEach((p,pi)=>{
       NVCX.beginPath();let started=false;
-      p.words.forEach(w=>{const n=nebulaGraph._map[w];if(n){const x=cx+n.bx*z,y=cy+n.by*z;if(!started){NVCX.moveTo(x,y);started=true}else NVCX.lineTo(x,y)}});
+      p.words.forEach(w=>{const n=nebulaGraph._map[w];if(n){if(!started){NVCX.moveTo(n._px,n._py);started=true}else NVCX.lineTo(n._px,n._py)}});
       const hue=(pi*53)%360;NVCX.strokeStyle=`hsla(${hue},80%,65%,0.8)`;NVCX.lineWidth=2*dpr;NVCX.stroke();
     });
   }
-  nodes.forEach((n,i)=>{
-    const x=cx+n.bx*z,y=cy+n.by*z;
+  // 星座モード：自分の探索語の集合（線描画のため先に定義）
+  const constelOn=(nvConstel&&nvMode==='explore');
+
+  // 星座の線（自分の辿った道）を背面に描画
+  if(constelOn&&myConstelPairs.length){
+    myConstelPairs.forEach(([a,b])=>{
+      const na=nebulaGraph._map[a],nb=nebulaGraph._map[b];if(!na||!nb)return;
+      const pulse=0.5+0.5*Math.sin(t*1.5);
+      NVCX.beginPath();NVCX.moveTo(na._px,na._py);NVCX.lineTo(nb._px,nb._py);
+      NVCX.strokeStyle=`rgba(245,220,140,${0.25+0.25*pulse})`;NVCX.lineWidth=1.2*dpr;NVCX.stroke();
+    });
+  }
+
+  // 奥（抽象的）から手前（具体的）へ描画（painter's algorithm）
+  const order=nodes.map((n,i)=>({n,i})).sort((a,b)=>(b.n._pd)-(a.n._pd));
+  order.forEach(({n,i})=>{
+    const x=n._px,y=n._py,ps=n._ps,depth=n._pd;
     const tw=0.7+0.3*Math.sin(t*2+i);
     const isPeekMatch=nvMode==='peek'&&nvOverlay.paths&&nvOverlay.paths.word===n.word;
     const isHover=n===nvHoverNode;
-    // 反転モード：明るさ・大きさを逆転（norm→1-norm）
     const eff=(nvReverse&&nvMode==='explore')?(1-n.norm):n.norm;
     const baseR=4+eff*16;
-    const r=Math.max(1,baseR*z*0.5);
+    let r=Math.max(0.8,baseR*z*0.5*ps); // 奥ほど小さく
+    let dim=1-depth*0.45;               // 奥ほど暗く（大気遠近）
+    // 星座モード：自分の語は明るく大きく、それ以外は大きく減光
+    const isMine=constelOn&&myWordSet.has(n.word);
+    if(constelOn){
+      if(isMine){dim=1.15;r*=1.35;}
+      else{dim*=0.16;}
+    }
     const g=NVCX.createRadialGradient(x,y,0,x,y,r*3);
-    g.addColorStop(0,`hsla(${n.hue},75%,70%,${0.5*tw})`);g.addColorStop(1,`hsla(${n.hue},75%,70%,0)`);
+    g.addColorStop(0,`hsla(${n.hue},75%,70%,${0.5*tw*dim})`);g.addColorStop(1,`hsla(${n.hue},75%,70%,0)`);
     NVCX.fillStyle=g;NVCX.beginPath();NVCX.arc(x,y,r*3,0,Math.PI*2);NVCX.fill();
-    NVCX.beginPath();NVCX.arc(x,y,(isPeekMatch||isHover)?r*1.6:r,0,Math.PI*2);
-    NVCX.fillStyle=isPeekMatch?'#F5A623':(isHover?'#F5A623':`hsla(${n.hue},80%,${60+eff*20}%,${tw})`);NVCX.fill();
-    // テキスト表示判定：
-    //  通常モード … メジャー(norm>0.32)を表示
-    //  反転モード … テキスト非表示だったマイナー(norm<=0.32)のうち特に小さいものを表示、メジャーは非表示
+    NVCX.beginPath();NVCX.arc(x,y,(isPeekMatch||isHover||isMine)?r*1.5:r,0,Math.PI*2);
+    NVCX.fillStyle=isPeekMatch?'#F5A623':(isHover?'#F5A623':isMine?'#F5DC8C':`hsla(${n.hue},80%,${(60+eff*20)}%,${tw*dim})`);NVCX.fill();
     let showText=false;
-    if(nvMode==='explore'&&nvReverse){
-      showText=(n.norm<=0.32)&&(n.norm<=0.15); // 特にマイナーなものだけ
+    if(constelOn){
+      showText=isMine; // 星座モードでは自分の語だけラベル表示
+    }else if(nvMode==='explore'&&nvReverse){
+      showText=(n.norm<=0.32)&&(n.norm<=0.15);
     }else{
       showText=(n.norm>0.32||isPeekMatch);
     }
     if(showText&&!isHover){
-      NVCX.font=`${(isPeekMatch?12:10)*dpr}px 'Noto Serif JP',serif`;
-      NVCX.fillStyle=`rgba(235,240,255,${0.5+0.5*eff})`;NVCX.textAlign='center';
+      NVCX.font=`${(isPeekMatch||isMine?12:10)*dpr*ps}px 'Noto Serif JP',serif`;
+      NVCX.fillStyle=isMine?`rgba(255,240,190,0.95)`:`rgba(235,240,255,${(0.5+0.5*eff)*dim})`;NVCX.textAlign='center';
       NVCX.fillText(n.word,x,y-r-4*dpr);
     }
   });
@@ -3203,7 +3447,7 @@ function drawNebulaView(dpr){
     nvRipples.forEach(rp=>{
       const n=nebulaGraph._map[rp.word];if(!n)return;
       const age=now-rp.startTs;if(age<0)return;
-      const x=cx+n.bx*z,y=cy+n.by*z;
+      const x=n._px,y=n._py;
       const prog=Math.min(1,age/DUR);
       // 発光（語の芯を明るく）
       const glow=1-prog;
@@ -3227,14 +3471,36 @@ function drawNebulaView(dpr){
   }
   if(nvMode==='explore'&&nvOverlay.compass){
     const center=nebulaGraph._map[nvOverlay.compass.center];
-    const ox=center?cx+center.bx*z:cx, oy=center?cy+center.by*z:cy;
+    const cwx=center?center.bx:0, cwy=center?center.by:0;
+    const ox=center&&center._px!=null?center._px:(cx+cwx*z), oy=center&&center._py!=null?center._py:(cy+cwy*z);
     nvOverlay.compass.recommendations.forEach(rec=>{
-      const ang=(rec.angle-90)*Math.PI/180;const dist=(80+rec.distance*22)*z;
-      const x=ox+Math.cos(ang)*dist,y=oy+Math.sin(ang)*dist;const col=rec.color||'#9aa';
+      const baseAng=(rec.angle-90)*Math.PI/180;
+      // その方角±35°にある実ノードを探し、クラスターの重心へ吸着させる
+      let sumX=0,sumY=0,wsum=0;
+      nebulaGraph.nodes.forEach(n=>{
+        const dx=n.bx-cwx, dy=n.by-cwy;const d=Math.hypot(dx,dy);if(d<20)return;
+        let na=Math.atan2(dy,dx)-baseAng;
+        while(na>Math.PI)na-=2*Math.PI;while(na<-Math.PI)na+=2*Math.PI;
+        if(Math.abs(na)<0.6){ // ±約35°
+          const wgt=(1-Math.abs(na)/0.6)*(0.4+n.norm);
+          sumX+=dx*wgt;sumY+=dy*wgt;wsum+=wgt;
+        }
+      });
+      let tx,ty;
+      if(wsum>0){
+        // クラスター重心方向へ（距離感はrec.distanceで調整）
+        const gx=sumX/wsum, gy=sumY/wsum;const gd=Math.hypot(gx,gy)||1;
+        const reach=Math.min(1.15,0.5+rec.distance/12);
+        tx=cwx+gx*reach;ty=cwy+gy*reach;
+      }else{
+        // その方角に実ノードが無ければ従来通り固定角度で外側へ
+        const dist=(80+rec.distance*22)/z;
+        tx=cwx+Math.cos(baseAng)*dist;ty=cwy+Math.sin(baseAng)*dist;
+      }
+      const x=cx+tx*z,y=cy+ty*z;const col=rec.color||'#9aa';
       NVCX.beginPath();NVCX.moveTo(ox,oy);NVCX.lineTo(x,y);
       NVCX.strokeStyle=col;NVCX.globalAlpha=0.45;NVCX.lineWidth=1.5*dpr;NVCX.setLineDash([4*dpr,4*dpr]);NVCX.stroke();NVCX.setLineDash([]);NVCX.globalAlpha=1;
       NVCX.beginPath();NVCX.arc(x,y,7*dpr,0,Math.PI*2);NVCX.fillStyle=col;NVCX.fill();
-      // 学問ラベル＋領域名
       NVCX.font=`${10*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle=col;
       NVCX.textAlign=x<ox?'right':'left';NVCX.fillText(rec.discipline,x+(x<ox?-10:10)*dpr,y-7*dpr);
       NVCX.font=`${12*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(235,240,255,0.95)';
@@ -3250,11 +3516,13 @@ function nebulaNodeAt(clientX,clientY){
   const rect=NVC.getBoundingClientRect();
   const dpr=window.devicePixelRatio||1;
   const px=(clientX-rect.left)*dpr, py=(clientY-rect.top)*dpr;
-  const cx=NVC.width/2+nvView.x*dpr, cy=NVC.height/2+nvView.y*dpr, z=nvView.zoom*dpr;
+  const z=nvView.zoom*dpr;
   let best=null,bestD=Infinity;
   nebulaGraph.nodes.forEach(n=>{
-    const x=cx+n.bx*z, y=cy+n.by*z;
-    const r=Math.max(8*dpr, n.r*z*0.5+10*dpr); // クリックしやすい当たり半径
+    // 描画ループがキャッシュした投影座標を使う（擬似3Dと一致）
+    if(n._px==null)return;
+    const x=n._px, y=n._py;
+    const r=Math.max(8*dpr, n.r*z*0.5*(n._ps||1)+10*dpr);
     const d=(x-px)**2+(y-py)**2;
     if(d<r*r&&d<bestD){bestD=d;best=n;}
   });
@@ -3288,9 +3556,12 @@ function sonarAt(clientX,clientY){
 // ソナーで見つけた共通項をコンパスで検索
 function sonarToCompass(s){
   if(!s||!s.words||!s.words.length)return;
-  // すでに星図内にいるので、そのままコンパスを開いて検索
+  // ソナー結果の内容そのまま（名前＋囲んだ語）を興味として検索
+  const parts=[];
+  if(s.name&&s.name!=='…'&&s.name!=='？')parts.push(s.name);
+  s.words.forEach(w=>{if(!parts.includes(w))parts.push(w);});
   const inp=document.getElementById('compassInput');
-  if(inp)inp.value=s.words.join('、');
+  if(inp)inp.value=parts.join('、');
   openCompass();
   runCompass(true);
   toast(`🌀「${s.name}」をコンパスで探ります`,'info',2500);
@@ -3374,18 +3645,62 @@ window.addEventListener('mouseup',e=>{
   nvView.drag=false;nvDownPos=null;
 });
 NVC.addEventListener('wheel',e=>{e.preventDefault();nvView.zoom=Math.max(0.3,Math.min(4,nvView.zoom*(e.deltaY<0?1.1:0.9)))},{passive:false});
+let nvPinch=null; // {dist, zoom0}
+let nvLongPressTimer=null;
 NVC.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    // ピンチ開始
+    if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
+    if(nvLongPressTimer){clearTimeout(nvLongPressTimer);nvLongPressTimer=null}
+    nvView.drag=false;nvSonarActive=null;
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    nvPinch={dist:Math.hypot(dx,dy),zoom0:nvView.zoom};
+    return;
+  }
   if(e.touches.length===1){
     nvView.drag=true;nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY;nvDownPos={x:e.touches[0].clientX,y:e.touches[0].clientY};nvMoved=false;
     const tx=e.touches[0].clientX,ty=e.touches[0].clientY;
-    if(nvMode==='explore'&&!nebulaNodeAt(tx,ty)){
+    const nodeHere=nebulaNodeAt(tx,ty);
+    if(nvMode==='explore'&&!nodeHere){
+      // 何もない空間の長押し → ソナー
       nvSonarTimer=setTimeout(()=>startSonar(tx,ty),300);
+    }else if(nodeHere){
+      // ノードの長押し → 語をツールチップ表示（ホバー代替）
+      nvLongPressTimer=setTimeout(()=>{
+        const tip=document.getElementById('nvTooltip');const rect=NVC.getBoundingClientRect();
+        nvHoverNode=nodeHere;tip.textContent=nodeHere.word;
+        tip.style.left=(tx-rect.left)+'px';tip.style.top=(ty-rect.top)+'px';
+        tip.classList.add('visible');nvMoved=true; // 長押し後はクリック探索を抑止
+      },350);
     }
   }
 },{passive:true});
-NVC.addEventListener('touchmove',e=>{if(nvView.drag&&e.touches.length===1){if(nvDownPos&&(Math.abs(e.touches[0].clientX-nvDownPos.x)>6||Math.abs(e.touches[0].clientY-nvDownPos.y)>6)){nvMoved=true;if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}}if(!nvSonarActive){nvView.x+=e.touches[0].clientX-nvView.lx;nvView.y+=e.touches[0].clientY-nvView.ly}nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY}},{passive:true});
+NVC.addEventListener('touchmove',e=>{
+  if(nvPinch&&e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.hypot(dx,dy);
+    nvView.zoom=Math.max(0.3,Math.min(4,nvPinch.zoom0*(dist/nvPinch.dist)));
+    return;
+  }
+  if(nvView.drag&&e.touches.length===1){
+    if(nvDownPos&&(Math.abs(e.touches[0].clientX-nvDownPos.x)>6||Math.abs(e.touches[0].clientY-nvDownPos.y)>6)){
+      nvMoved=true;
+      if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
+      if(nvLongPressTimer){clearTimeout(nvLongPressTimer);nvLongPressTimer=null}
+    }
+    if(!nvSonarActive){nvView.x+=e.touches[0].clientX-nvView.lx;nvView.y+=e.touches[0].clientY-nvView.ly}
+    nvView.lx=e.touches[0].clientX;nvView.ly=e.touches[0].clientY;
+  }
+},{passive:true});
 NVC.addEventListener('touchend',e=>{
   if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
+  if(nvLongPressTimer){clearTimeout(nvLongPressTimer);nvLongPressTimer=null}
+  // ツールチップを少し残して消す
+  const tip=document.getElementById('nvTooltip');
+  if(nvHoverNode){setTimeout(()=>{nvHoverNode=null;tip.classList.remove('visible')},1200);}
+  if(nvPinch){nvPinch=null;nvView.drag=false;nvDownPos=null;return}
   if(nvSonarActive){finalizeSonar();nvView.drag=false;nvDownPos=null;return}
   if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
     nebulaNodeClicked(nvDownPos.x,nvDownPos.y);
