@@ -209,8 +209,9 @@ erDiagram
         zset edge_WORD "語 と 隣接語の重み(双方向)"
     }
     ROUTE {
-        json path_ID "探索経路 words handle ts"
-        zset pathword_WORD "語を含む経路の索引"
+        json path_ID "探索経路 w t h（圧縮・永続）"
+        zset pathword_WORD "語ごとの表示索引（最新200件）"
+        list pathlog "全経路の分析用台帳（永続）"
     }
     USERDATA {
         json userdata_EMAIL "handle results routeHistory compassTuning clearRecords"

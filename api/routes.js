@@ -3,17 +3,20 @@
 // コンセプト：憧れの人の語彙空間モデルを覗く。
 // ある語を検索すると、その語を経路・目的地として通った人たちの「経路全体」を複数表示する。
 //
+// 【保存方針】経路ログは行動経済学的な価値を持つため永続保存する。
+//   ただし容量効率のため、キー名を短縮した圧縮形式で保存し、
+//   表示用の索引と分析用の全ログを分離する。
+//
 // データ構造（Redis）:
-//   STRING "path:{id}" = JSON { words:[...], ts, handle }   個々の経路（TTL 90日）
-//   ZSET   "pathword:{word}" member={pathId} score=ts       語ごとに、その語を含む経路IDの索引
-//   STRING "pathseq"  = 連番（経路IDの採番）
+//   STRING "path:{id}"       = 圧縮JSON {w:[...], t, h}   個々の経路（永続）
+//   ZSET   "pathword:{word}" member={pathId} score=ts     語ごとの索引（表示用・各語最新200件）
+//   LIST   "pathlog"         = pathId を追記（分析用・全経路の永続台帳）
+//   STRING "pathseq"         = 連番（経路IDの採番）
 //
 //   POST { words:[...], handle? }     → 経路を保存し、各語に索引を張る
 //   GET  /api/routes?word=海&limit=8  → その語を含む経路を最大limit件返す
 
 import { redis, setCors } from './_redis.js';
-
-const PATH_TTL = 7776000; // 90日
 
 export default async function handler(req, res) {
   setCors(res);
@@ -34,17 +37,21 @@ export default async function handler(req, res) {
       const id = await redis('INCR', 'pathseq');
       const pathId = `p${id}`;
       const ts = Date.now();
-      const rec = { words, ts, handle: String(handle || '名無し').slice(0, 16) };
+      // 圧縮形式：キー名を短縮（words→w, ts→t, handle→h）してJSONサイズを削減
+      const rec = { w: words, t: ts, h: String(handle || '名無し').slice(0, 16) };
 
+      // 経路本体：永続保存（TTLなし）
       await redis('SET', `path:${pathId}`, JSON.stringify(rec));
-      await redis('EXPIRE', `path:${pathId}`, PATH_TTL);
 
-      // 各語に索引を張る（ユニークな語のみ）
+      // 分析用の全経路台帳に追記（永続・全件・順序保持）
+      await redis('RPUSH', 'pathlog', pathId);
+
+      // 各語に索引を張る（表示用・ユニークな語のみ）
       const uniq = [...new Set(words)];
       for (const w of uniq) {
         await redis('ZADD', `pathword:${w}`, ts, pathId);
-        await redis('EXPIRE', `pathword:${w}`, PATH_TTL);
-        // 索引肥大を防ぐため、各語あたり最新200経路に制限
+        // 表示索引の肥大を防ぐため、各語あたり最新200経路に制限
+        // （索引から外れても経路本体・pathlog には永続的に残る）
         await redis('ZREMRANGEBYRANK', `pathword:${w}`, 0, -201);
       }
 
@@ -69,10 +76,13 @@ export default async function handler(req, res) {
           const raw = await redis('GET', `path:${pid}`);
           if (!raw) continue;
           const rec = JSON.parse(raw);
-          const key = rec.words.join('>');
+          // 圧縮形式（w/t/h）を従来形式（words/ts/handle）に復元して返す
+          const words = rec.w || rec.words || [];
+          const out = { words, ts: rec.t || rec.ts, handle: rec.h || rec.handle || '名無し' };
+          const key = words.join('>');
           if (seen.has(key)) continue;
           seen.add(key);
-          paths.push(rec);
+          paths.push(out);
         } catch {}
       }
 

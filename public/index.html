@@ -133,6 +133,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .mypage-note{font-size:12px;color:var(--muted);margin:8px 0 16px;text-align:center}
 .history-summary{font-size:13px;color:var(--muted);margin-bottom:12px;text-align:center}
 .history-filter{display:flex;gap:6px;margin-bottom:12px;justify-content:center}
+.history-note{font-size:11px;color:var(--muted);line-height:1.6;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 11px;margin-bottom:12px}
 .hist-filter-btn{background:var(--bg);border:1px solid var(--border);color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;padding:7px 14px;border-radius:16px;cursor:pointer}
 .hist-filter-btn.active{border-color:var(--amber);color:var(--amber);background:rgba(245,166,35,0.08)}
 .history-list{max-height:300px;overflow-y:auto;margin-bottom:16px;display:flex;flex-direction:column;gap:6px}
@@ -272,6 +273,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-card-value{font-size:12px;color:var(--text);line-height:1.5;margin-top:4px}
 
 .nv-empty{text-align:center;color:var(--muted);font-size:12px;padding:16px}
+.nv-peek-notice{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:8px;padding:9px 12px;font-size:12px;color:#e8d3a8;line-height:1.6;margin-bottom:8px}
 .nv-book{border-left:3px solid var(--amber)!important}
 .nv-book-label{font-size:11px;color:var(--amber);margin-bottom:4px}
 .nv-book-title{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:var(--text)}
@@ -775,6 +777,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <button class="hist-filter-btn" data-hfilter="challenge">🏆 クリア実績</button>
           </div>
           <div class="history-summary" id="historySummary">まだ探索の記録がありません</div>
+          <div class="history-note" id="historyNote"></div>
           <div class="history-list" id="historyList"></div>
           <div class="account-actions">
             <button class="account-btn" id="exportCsvBtn">📥 CSVで書き出す</button>
@@ -2595,8 +2598,10 @@ let historyFilter='explore';
 function renderHistory(){
   const summary=document.getElementById('historySummary');
   const list=document.getElementById('historyList');
+  const note=document.getElementById('historyNote');
   if(historyFilter==='challenge'){
     // クリア実績
+    if(note)note.textContent='クリア実績はこの端末に保存され、アカウント（復元コード）があれば端末をまたいで引き継げます。';
     if(!clearRecords.length){summary.textContent='まだチャレンジのクリア記録がありません';list.innerHTML='';return}
     summary.textContent=`クリア実績：${clearRecords.length}件`;
     const modeLabel={golf:'ゴルフ',daily:'デイリー',monthly:'マンスリー'};
@@ -2615,6 +2620,7 @@ function renderHistory(){
     return;
   }
   // 探索の実績（自由探索のみ）
+  if(note)note.textContent='探索の履歴はこの端末に最新500件まで保存され、それを超えると古いものから消えます。大切な記録はCSVで書き出して保存できます。';
   if(!routeHistory.length){
     summary.textContent='まだ探索の記録がありません';
     list.innerHTML='';return;
@@ -3081,21 +3087,51 @@ async function runNvQuery(){
     try{
       const r=await fetch(`/api/routes?word=${encodeURIComponent(val)}&limit=8`);
       const d=await r.json();
-      nvOverlay.paths={word:val,paths:d.paths||[]};
-      renderNvPeekPanel(val,d.paths||[]);
-      ensureNebulaWords((d.paths||[]).flatMap(p=>p.words));
+      let paths=d.paths||[];
+      let shownWord=val;
+      let viaSynonym=null;
+      // 経路が見つからなければ、類語を辿って近い語の経路を探す
+      if(!paths.length){
+        panel.innerHTML=`<div class="nv-card nv-empty">「${val}」の経路が見つかりません。近い語を探しています…</div>`;
+        const alt=await findRouteViaSynonym(val);
+        if(alt){paths=alt.paths;shownWord=alt.word;viaSynonym=val;}
+      }
+      nvOverlay.paths={word:shownWord,paths};
+      renderNvPeekPanel(shownWord,paths,viaSynonym);
+      ensureNebulaWords(paths.flatMap(p=>p.words));
       // ヒットした語に発光波紋を起こす（検索語＋経路に出る語）
-      if(d.paths&&d.paths.length){
+      if(paths.length){
         const now=Date.now();
-        nvRipples=[{word:val,startTs:now}];
-        // 経路中の各語にも少し遅延して波紋
-        const allWords=[...new Set(d.paths.flatMap(p=>p.words))];
+        nvRipples=[{word:shownWord,startTs:now}];
+        const allWords=[...new Set(paths.flatMap(p=>p.words))];
         allWords.slice(0,30).forEach((w,k)=>{
-          if(w!==val)nvRipples.push({word:w,startTs:now+k*60});
+          if(w!==shownWord)nvRipples.push({word:w,startTs:now+k*60});
         });
       }
     }catch{panel.innerHTML='<div class="nv-card nv-empty">読み込み失敗</div>'}
   }
+}
+// 類語を取得し、経路が存在する近い語を探す
+async function findRouteViaSynonym(word){
+  let candidates=[];
+  try{
+    const r=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({word,fast:true})});
+    const d=await r.json();
+    // 類語・関連語を優先的に候補へ（近い順）
+    const words=(d.words||[]).map(w=>w.word).filter(Boolean);
+    candidates=[...new Set(words)].slice(0,8);
+  }catch{return null}
+  // 候補を順に経路検索し、最初に見つかったものを返す
+  for(const c of candidates){
+    if(!c||c===word)continue;
+    try{
+      const r=await fetch(`/api/routes?word=${encodeURIComponent(c)}&limit=8`);
+      const d=await r.json();
+      if(d.paths&&d.paths.length)return {word:c,paths:d.paths};
+    }catch{}
+  }
+  return null;
 }
 function ensureNebulaWords(words){
   if(!nebulaGraph)return;
@@ -3108,10 +3144,18 @@ function ensureNebulaWords(words){
     }
   });
 }
-function renderNvPeekPanel(word,paths){
+function renderNvPeekPanel(word,paths,viaSynonym){
   const panel=document.getElementById('nvPanel');
-  if(!paths.length){panel.innerHTML=`<div class="nv-card nv-empty">「${word}」を含む経路はまだありません</div>`;return}
-  panel.innerHTML=paths.slice(0,6).map(p=>{
+  if(!paths.length){
+    panel.innerHTML=viaSynonym
+      ?`<div class="nv-card nv-empty">「${esc(viaSynonym)}」とその類語の経路はまだありません</div>`
+      :`<div class="nv-card nv-empty">「${esc(word)}」を含む経路はまだありません</div>`;
+    return;
+  }
+  const notice=viaSynonym
+    ?`<div class="nv-peek-notice">「${esc(viaSynonym)}」の経路が見つからなかったので、近い語「${esc(word)}」の経路を表示しています。</div>`
+    :'';
+  panel.innerHTML=notice+paths.slice(0,6).map(p=>{
     const flow=p.words.map((w,i)=>{
       const cls=w===word?'nv-w match':'nv-w';
       const ar=i<p.words.length-1?'<span class="nv-arrow">→</span>':'';
@@ -3572,7 +3616,12 @@ function drawNebulaView(dpr){
       showText=(n.norm>0.32||isPeekMatch);
     }
     if(showText&&!isHover){
-      NVCX.font=`${(isPeekMatch||isMine||isSelected?12:10)*dpr*ps}px 'Noto Serif JP',serif`;
+      // 基本サイズを少し大きめに（可読性）＋ズームに応じて最大3倍まで拡大
+      //   ズーム1倍で等倍、最大ズーム(4)で3倍へ線形補間。1倍未満は縮めない。
+      const zoomForText=Math.max(1,Math.min(4,nvView.zoom));
+      const textZoom=1+((zoomForText-1)/3)*2; // 1〜3倍
+      const baseSize=(isPeekMatch||isMine||isSelected)?13:11.5;
+      NVCX.font=`${baseSize*dpr*ps*textZoom}px 'Noto Serif JP',serif`;
       NVCX.fillStyle=isSelected?'rgba(255,235,180,1)':isMine?`rgba(255,240,190,0.95)`:`rgba(235,240,255,${(0.5+0.5*eff)*dim})`;NVCX.textAlign='center';
       NVCX.fillText(n.word,x,y-r-4*dpr);
     }
@@ -3702,10 +3751,16 @@ function selectNebulaNode(n){
 function sonarAt(clientX,clientY){
   if(!nvSonars.length)return null;
   const {wx,wy}=nvScreenToWorld(clientX,clientY);
-  let best=null,bestR=Infinity;
+  const z=nvView.zoom||1;
+  // 円全体ではなく、中心の名前ラベル付近をタップしたときだけ反応させる
+  // （円内をうっかりタップしてコンパスが開く誤発火を防ぐ）
+  const hitR=48/z; // 画面上で約48pxぶんの当たり判定（ズーム補正）
+  let best=null,bestD=Infinity;
   nvSonars.forEach(s=>{
+    // 命名が確定したソナーのみ対象
+    if(!s.name||s.name==='…'||s.name==='？')return;
     const d=Math.hypot(s.wx-wx, s.wy-wy);
-    if(d<=s.r&&s.r<bestR){bestR=s.r;best=s;}
+    if(d<=hitR&&d<bestD){bestD=d;best=s;}
   });
   return best;
 }
