@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         if (raw) cur = { handle: '', results: {}, routeHistory: [], ...JSON.parse(raw) };
       } catch {}
 
-      if (typeof handle === 'string') cur.handle = handle.slice(0, 16);
+      if (typeof handle === 'string') cur.handle = handle.replace(/[<>"'&`]/g, '').slice(0, 16);
       if (results && typeof results === 'object') {
         cur.results = { ...cur.results, ...results };
         const keys = Object.keys(cur.results);

@@ -186,7 +186,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nebula-view.visible{display:block}
 .nebula-view #nebulaCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
 .nebula-view #nebulaCanvas:active{cursor:grabbing}
-.nebula-topbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:32;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(560px,94vw)}
+.nebula-topbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:32;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(560px,94vw);pointer-events:none}
+.nebula-topbar>*{pointer-events:auto}
 .nebula-modes{display:flex;gap:6px;background:rgba(10,16,36,0.9);border:1px solid var(--border);border-radius:22px;padding:4px;backdrop-filter:blur(8px)}
 .nv-mode{background:none;border:none;color:var(--muted);font-family:'Noto Serif JP',serif;font-size:13px;padding:7px 14px;border-radius:18px;cursor:pointer;white-space:nowrap;transition:all .15s}
 .nv-mode.active{background:var(--amber);color:#080C18}
@@ -214,7 +215,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .compass-input-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:10px 12px;border-radius:8px;outline:none}
 .compass-input-row input:focus{border-color:var(--amber)}
 .compass-input-row #compassTuneFab{background:var(--bg);border:1px solid var(--border);color:var(--amber);border-radius:8px;padding:0 12px;cursor:pointer;font-size:15px}
-.compass-input-row #compassRun{background:var(--amber);color:#080C18;border:none;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.compass-input-row #compassRun{background:var(--amber);color:#080C18;border:none;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;justify-content:center;min-width:78px}
+.compass-input-row #compassRun.loading{background:#3a4258;color:#9aa6c4;cursor:wait}
+.compass-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(154,166,196,0.35);border-top-color:#cfd6e8;border-radius:50%;animation:compassSpin .7s linear infinite}
+.compass-spinner.big{width:26px;height:26px;border-width:3px;border-top-color:var(--amber);margin-bottom:6px}
+@keyframes compassSpin{to{transform:rotate(360deg)}}
 .compass-cards-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px}
 .compass-placeholder{text-align:center;color:#7c89a8;font-size:12px;padding:40px 16px;line-height:1.8}
 .cc-summary{text-align:center;padding:8px 0 4px}
@@ -253,7 +258,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nebula-bar input{flex:1;background:rgba(10,16,36,0.9);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:15px;padding:10px 15px;border-radius:8px;outline:none;backdrop-filter:blur(8px)}
 .nebula-bar input:focus{border-color:var(--amber)}
 .nebula-bar button{background:var(--amber);color:#080C18;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;white-space:nowrap}
-.nebula-panel{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);z-index:32;width:min(560px,94vw);max-height:42vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.nebula-panel{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);z-index:32;width:min(560px,94vw);max-height:42vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.nebula-panel>*{pointer-events:auto}
 .nebula-hint{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:31;font-size:11px;color:var(--muted);text-align:center;width:94vw;pointer-events:none}
 .nv-card{background:rgba(12,18,40,0.92);border:1px solid var(--border);border-radius:10px;padding:10px 13px;backdrop-filter:blur(8px)}
 .nv-card-head{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
@@ -376,7 +382,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .golf-start .golf-leg-word{color:var(--blue)}
 .golf-goal .golf-leg-word{color:var(--goal)}
 .golf-panel.blind .golf-goal .golf-leg-word{color:var(--muted);letter-spacing:0.15em}
-.golf-dist{position:absolute;top:90px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--amber);border-radius:20px;padding:8px 18px;font-family:'Noto Serif JP',serif;font-size:14px;z-index:51;backdrop-filter:blur(8px);display:none;white-space:nowrap;max-width:94vw;text-align:center}
+.golf-dist{position:absolute;top:90px;left:50%;transform:translateX(-50%);background:rgba(17,23,38,0.96);border:1px solid var(--amber);border-radius:20px;padding:8px 18px;font-family:'Noto Serif JP',serif;font-size:14px;z-index:51;backdrop-filter:blur(8px);display:none;white-space:nowrap;max-width:94vw;text-align:center;pointer-events:none}
 .golf-dist.visible{display:block}
 .golf-arrow{color:var(--muted);font-size:15px}
 .golf-stat{text-align:center}
@@ -389,7 +395,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .golf-btn.primary{background:var(--amber);color:#080C18;border-color:var(--amber)}
 
 /* === GOLF TRAIL === */
-.golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:96vw;z-index:40}
+.golf-trail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:96vw;z-index:40;pointer-events:none}
+.golf-trail>*{pointer-events:auto}
 .golf-trail.visible{display:flex}
 
 /* === GOLF SETUP === */
@@ -949,7 +956,7 @@ let handleName=localStorage_get('handleName')||'';
 HN.value=handleName;
 // ハンドルネームを一元管理（複数の入力欄を同期）
 function setHandleName(v){
-  handleName=String(v||'').trim();
+  handleName=String(v||'').trim().replace(/[<>"'&`]/g,'').slice(0,30);
   localStorage_set('handleName',handleName);
   if(HN.value!==handleName)HN.value=handleName;
   const hp=document.getElementById('handlePanelInput');
@@ -1716,6 +1723,8 @@ function toast(msg,type='info',ms=2600){
   TE.textContent=msg;TE.className='toast visible '+type;
   if(toastT)clearTimeout(toastT);toastT=setTimeout(()=>TE.classList.remove('visible'),ms);
 }
+// ユーザー入力の語からHTML特殊文字を除去（XSS対策・語に記号は不要）
+function sanitizeWord(s){return String(s||'').replace(/[<>"'&`]/g,'').slice(0,40);}
 
 // ===== X (TWITTER) SHARE =====
 const SITE_URL='https://goispace.app';
@@ -1987,8 +1996,8 @@ document.querySelectorAll('.golf-setup-mode').forEach(btn=>{
 });
 document.getElementById('golfSetupStart').addEventListener('click',()=>{
   if(golfSetupMode==='custom'){
-    const s=document.getElementById('golfStartInput').value.trim();
-    const g=document.getElementById('golfGoalInput').value.trim();
+    const s=sanitizeWord(document.getElementById('golfStartInput').value.trim());
+    const g=sanitizeWord(document.getElementById('golfGoalInput').value.trim());
     if(!s||!g){toast('スタートとゴールの両方を入力してください','info',2500);return}
     if(s===g){toast('スタートとゴールは別の言葉にしてください','info',2500);return}
     golfSetupOverlay.classList.remove('visible');
@@ -2882,6 +2891,7 @@ let myConstelPairs=[];        // 自分の連続探索ペア（星座の線）
 let nvHoverNode=null;  // ホバー中のノード
 let nvSelectedNode=null;      // クリックで選択中のノード（1クリック目で選択・発光）
 let nvSelectedNeighbors=new Set(); // 選択語とつながった語の集合
+let nvLastTouch=0;            // 最後にタッチした時刻（合成マウスイベント抑止用）
 // ソナー機能
 let nvSonars=[];       // 確定したソナー領域 [{wx,wy,r,name,summary}]（ワールド座標）
 let nvSonarActive=null;// 育成中のソナー {wx,wy,r}
@@ -3105,9 +3115,9 @@ function renderNvPeekPanel(word,paths){
     const flow=p.words.map((w,i)=>{
       const cls=w===word?'nv-w match':'nv-w';
       const ar=i<p.words.length-1?'<span class="nv-arrow">→</span>':'';
-      return `<span class="${cls}" data-w="${w.replace(/"/g,'&quot;')}">${w}</span>${ar}`;
+      return `<span class="${cls}" data-w="${esc(w)}">${esc(w)}</span>${ar}`;
     }).join('');
-    return `<div class="nv-card"><div class="nv-card-head"><span>👣 ${p.handle||'名無し'}</span></div><div class="nv-flow">${flow}</div></div>`;
+    return `<div class="nv-card"><div class="nv-card-head"><span>👣 ${esc(p.handle||'名無し')}</span></div><div class="nv-flow">${flow}</div></div>`;
   }).join('');
   panel.querySelectorAll('.nv-w').forEach(el=>el.addEventListener('click',()=>{
     const w=el.dataset.w;exitNebula();
@@ -3148,8 +3158,12 @@ async function runCompass(force){
   if(!force&&sig===compassLastQuery&&compassData){
     toast('同じ内容です。結果はそのまま表示しています','info',2000);return;
   }
+  const runBtn=document.getElementById('compassRun');
   const area=document.getElementById('compassCardsArea');
-  area.innerHTML='<div class="compass-placeholder">🧭 コンパスを回しています…</div>';
+  // ボタンを検索中の見た目に（灰色＋回転スピナー）
+  runBtn.disabled=true;runBtn.classList.add('loading');
+  runBtn.innerHTML='<span class="compass-spinner"></span>検索中';
+  area.innerHTML='<div class="compass-placeholder"><span class="compass-spinner big"></span><br>コンパスを回しています…</div>';
   try{
     const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({interests,tuning:compassTuning})});
     const d=await r.json();
@@ -3159,6 +3173,9 @@ async function runCompass(force){
     nvOverlay.compass=d;ensureNebulaWords([d.center]);
     renderCompassCards(d);
   }catch{area.innerHTML='<div class="compass-placeholder">エラーが発生しました。もう一度お試しください。</div>';}
+  finally{
+    runBtn.disabled=false;runBtn.classList.remove('loading');runBtn.textContent='回す';
+  }
 }
 document.getElementById('compassRun').addEventListener('click',()=>runCompass(false));
 document.getElementById('compassInput').addEventListener('keydown',e=>{if(e.key==='Enter')runCompass(false)});
@@ -3776,6 +3793,9 @@ NVC.addEventListener('mousemove',e=>{
 });
 NVC.addEventListener('mouseleave',()=>{nvHoverNode=null;document.getElementById('nvTooltip').classList.remove('visible')});
 window.addEventListener('mouseup',e=>{
+  // タッチ端末では touchend の直後に合成 mouseup が発火し、
+  // 2クリック目とみなされて即検索されてしまう。直後の合成イベントは無視。
+  if(Date.now()-nvLastTouch<700){nvView.drag=false;nvDownPos=null;return}
   if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
   if(nvSonarActive){finalizeSonar();nvView.drag=false;nvDownPos=null;return}
   if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
@@ -3787,6 +3807,7 @@ NVC.addEventListener('wheel',e=>{e.preventDefault();nvView.zoom=Math.max(0.3,Mat
 let nvPinch=null; // {dist, zoom0}
 let nvLongPressTimer=null;
 NVC.addEventListener('touchstart',e=>{
+  nvLastTouch=Date.now();
   if(e.touches.length===2){
     // ピンチ開始
     if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
@@ -3834,6 +3855,7 @@ NVC.addEventListener('touchmove',e=>{
   }
 },{passive:true});
 NVC.addEventListener('touchend',e=>{
+  nvLastTouch=Date.now();
   if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
   if(nvLongPressTimer){clearTimeout(nvLongPressTimer);nvLongPressTimer=null}
   // ツールチップを少し残して消す

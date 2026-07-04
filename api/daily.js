@@ -98,7 +98,7 @@ export default async function handler(req, res) {
       if (action !== 'submit') return res.status(400).json({ error: 'unknown action' });
       if (typeof puzzle !== 'number' || typeof moves !== 'number')
         return res.status(400).json({ error: 'invalid' });
-      const cleanName = (name || '名無し').slice(0, 16);
+      const cleanName = String(name || '名無し').replace(/[<>"'&`]/g, '').slice(0, 16);
       const pathStr = Array.isArray(path) ? path.join('→') : '';
       const member = `${cleanName}|${pathStr}`;
       const rankKey = `rank:${period}:${key}:${puzzle}`;
