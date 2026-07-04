@@ -368,6 +368,21 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s}
 .status.hidden{opacity:0!important;pointer-events:none!important;visibility:hidden}
 .status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
+.help-btn{margin-top:14px;background:rgba(16,24,44,0.9);border:1.5px solid rgba(140,170,220,0.5);color:#cdd6ea;font-family:'Noto Serif JP',serif;font-size:13px;padding:8px 18px;border-radius:20px;cursor:pointer;transition:all .15s;pointer-events:auto}
+.help-btn:hover{border-color:var(--amber);color:var(--amber)}
+.help-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.9);z-index:200;backdrop-filter:blur(6px);padding:16px}
+.help-overlay.visible{display:flex}
+.help-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px 24px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto}
+.help-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+.help-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:600;color:var(--text);margin:0 0 8px}
+.help-lead{font-size:13px;color:#aeb9d4;line-height:1.8;margin:0 0 20px}
+.help-sec{margin-bottom:18px}
+.help-h{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:600;color:var(--amber);margin-bottom:6px}
+.help-sec p{font-size:13px;color:#cfd6e8;line-height:1.8;margin:0 0 6px}
+.help-sec ul{margin:6px 0 0;padding-left:18px}
+.help-sec li{font-size:12.5px;color:#bcc6de;line-height:1.9}
+.help-sec li b{color:#e8edf5;font-weight:600}
+.help-start-btn{display:block;width:100%;margin-top:8px;background:var(--amber);color:#080C18;border:none;font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;padding:13px;border-radius:10px;cursor:pointer}
 .status-hint{margin-top:8px;font-size:14px;color:#2E3A55}
 .center-search{display:flex;gap:8px;justify-content:center;margin:18px 0;pointer-events:auto}
 .center-search input{width:min(340px,60vw);background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:12px 18px;border-radius:8px;outline:none;transition:border-color .2s}
@@ -797,6 +812,60 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         <button id="centerBtn">探索</button>
       </div>
       <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
+      <button class="help-btn" id="helpBtn">❓ 使い方・機能の説明</button>
+    </div>
+
+    <!-- 使い方・機能説明オーバーレイ -->
+    <div class="help-overlay" id="helpOverlay">
+      <div class="help-card">
+        <button class="help-close" id="helpClose">✕</button>
+        <h2 class="help-title">語彙空間 GOI-Space の歩き方</h2>
+        <p class="help-lead">言葉を入力すると、関連語が星のように広がります。言葉と言葉のつながりを旅する語彙探索アプリです。</p>
+
+        <div class="help-sec">
+          <div class="help-h">🔭 探索</div>
+          <p>言葉を入力すると、関連語が星雲状に現れます。</p>
+          <ul>
+            <li><b>クリック</b>：その語を中心に再探索</li>
+            <li><b>ダブルクリック</b>：外部の辞書・検索で調べる</li>
+            <li><b>右クリック</b>：語をピン留め</li>
+            <li><b>ホイール / ピンチ</b>：拡大・縮小、<b>ドラッグ</b>：移動</li>
+          </ul>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">⛳ ゴルフ</div>
+          <p>スタートの語からゴールの語へ、関連語をたどって最少手数で到達するゲーム。ランダム・自分で設定・ブラインド（ゴールが隠れ、距離だけが頼り）の3モード。クリアすると、2つの語を何が繋いだのかをAIが読み解きます。</p>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">🗓️ デイリー / マンスリー</div>
+          <p>日替わり・月替わりの共通お題に挑戦。クリアでクレジットが手に入り、ランキングにも記録されます。</p>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">🌌 星図</div>
+          <p>みんなの探索が集まった「集合知の星雲」を旅します。</p>
+          <ul>
+            <li><b>星雲</b>：語のタップで発光し、つながりを表示。もう一度タップで探索へ</li>
+            <li><b>経路</b>：ある語を辿った人々の道筋を覗く</li>
+            <li><b>ソナー</b>：何もない空間を長押しすると円が広がり、囲んだ語から意味を見出す</li>
+            <li><b>星座</b>：自分が探索した語だけを光らせ、自分の軌跡を眺める</li>
+          </ul>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">🧭 知的コンパス</div>
+          <p>星図の右上のボタンから。自分の興味を入れると、そこから離れた6つの学問分野の領域を指し示します。分野をタップすると、読むべき本や論文、キーワードまで案内します。</p>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">👤 マイページ</div>
+          <p>ハンドルネームの設定、プラン・クレジットの管理、探索とクリアの実績確認ができます。実績はCSVで書き出せます。</p>
+        </div>
+
+        <button class="help-start-btn" id="helpStartBtn">はじめる</button>
+      </div>
     </div>
     <div class="golf-panel" id="golfPanel">
       <div class="golf-leg golf-start"><div class="golf-leg-label">START</div><div class="golf-leg-word" id="golfStart">—</div></div>
@@ -1711,6 +1780,15 @@ function randomHint(){
 // プレースホルダーを定期的に変える
 function refreshHint(){centerInput.placeholder=randomHint()}
 refreshHint(); // 初回のみ表示（自動切替なし）
+
+// 使い方・機能説明オーバーレイ
+const helpOverlay=document.getElementById('helpOverlay');
+function openHelp(){helpOverlay.classList.add('visible')}
+function closeHelp(){helpOverlay.classList.remove('visible')}
+document.getElementById('helpBtn').addEventListener('click',openHelp);
+document.getElementById('helpClose').addEventListener('click',closeHelp);
+document.getElementById('helpStartBtn').addEventListener('click',closeHelp);
+helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)closeHelp()});
 
 function centerSearch(){
   const v=centerInput.value.trim();
