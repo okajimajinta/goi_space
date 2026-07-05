@@ -275,6 +275,20 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 
 .nv-empty{text-align:center;color:var(--muted);font-size:12px;padding:16px}
 .nv-peek-notice{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:8px;padding:9px 12px;font-size:12px;color:#e8d3a8;line-height:1.6;margin-bottom:8px}
+.compass-hist-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.9);z-index:62;backdrop-filter:blur(6px);padding:16px}
+.compass-hist-overlay.visible{display:flex}
+.compass-hist-card{position:relative;background:var(--surface);border:1px solid rgba(91,143,222,0.4);border-radius:14px;padding:22px 20px;max-width:540px;width:100%;max-height:86vh;overflow-y:auto}
+.compass-hist-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:19px;cursor:pointer}
+.compass-hist-title{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:#9ec1f5;margin-bottom:14px}
+.ch-loading{text-align:center;color:var(--muted);font-size:13px;padding:30px}
+.ch-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:11px}
+.ch-interests{font-size:13px;color:#e8edf5;font-weight:600;margin-bottom:5px}
+.ch-summary{font-size:12px;color:#9aa6c4;margin-bottom:8px;line-height:1.6}
+.ch-book{font-size:12px;color:var(--amber);margin-bottom:8px}
+.ch-recs{display:flex;flex-direction:column;gap:6px}
+.ch-rec{background:var(--surface);border-radius:6px;padding:7px 10px;font-size:12px;color:#dfe5f2}
+.ch-disc{font-size:11px;font-weight:600;margin-right:4px}
+.ch-rec-val{font-size:11px;color:#9aa6c4;margin-top:2px;line-height:1.5}
 .nv-book{border-left:3px solid var(--amber)!important}
 .nv-book-label{font-size:11px;color:var(--amber);margin-bottom:4px}
 .nv-book-title{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:var(--text)}
@@ -690,6 +704,15 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <button class="nv-depth-btn" data-depth="deep">深く</button>
           </div>
           <div class="nv-detail-body" id="nvDetailBody"></div>
+        </div>
+      </div>
+
+      <!-- コンパス履歴オーバーレイ（他の人のコンパス実績を閲覧）-->
+      <div class="compass-hist-overlay" id="compassHistOverlay">
+        <div class="compass-hist-card">
+          <button class="compass-hist-close" id="compassHistClose">✕</button>
+          <div class="compass-hist-title" id="compassHistTitle">🧭 コンパス履歴</div>
+          <div class="compass-hist-body" id="compassHistBody"></div>
         </div>
       </div>
     </div>
@@ -2991,12 +3014,29 @@ function wordHue(w){let h=0;for(let i=0;i<w.length;i++)h=(h*31+w.charCodeAt(i))%
 async function enterNebula(){
   flushPath(); // 直近の探索経路を保存してから（経路検索で見つかるように）
   buildMyConstellation();
+  loadCompassWords(); // コンパス履歴のある語を取得（ボタン表示用）
   NV.classList.add('visible');
   document.getElementById('nvWordInput').value='';
   setNvMode('explore');
   // 星雲データは毎回最新を取得（新しい探索を反映）
   await loadNebulaGraph();
   startNvLoop();
+}
+// コンパス履歴のある語の集合を取得
+let compassWordSet=new Set();
+let nvCompassButtons=[]; // 星雲上のコンパス履歴ボタン（画面座標）
+(function(){
+  const c=document.getElementById('compassHistClose');
+  const ov=document.getElementById('compassHistOverlay');
+  if(c)c.addEventListener('click',()=>ov.classList.remove('visible'));
+  if(ov)ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('visible')});
+})();
+async function loadCompassWords(){
+  try{
+    const r=await fetch('/api/compass?words=1');
+    const d=await r.json();
+    compassWordSet=new Set(d.words||[]);
+  }catch{compassWordSet=new Set();}
 }
 // 自分の探索履歴から「星座」データ（語の集合＋連続ペア）を作る
 function buildMyConstellation(){
@@ -3706,6 +3746,27 @@ function drawNebulaView(dpr){
     }
   });
 
+  // ===== コンパス履歴ボタン（履歴のある語の近くに青い🧭）=====
+  nvCompassButtons=[];
+  if(nvMode==='explore'&&compassWordSet.size&&!nvSelectedNode){
+    nodes.forEach(n=>{
+      if(n._px==null||!compassWordSet.has(n.word))return;
+      if(n._pd>0.7)return; // 奥すぎるものは省略
+      const r=Math.max(0.8,(4+n.norm*16)*z*0.5*(n._ps||1));
+      const bx=n._px+r+11*dpr, by=n._py; // ノードの右横
+      const br=8*dpr;
+      // 青い丸＋コンパス記号
+      NVCX.beginPath();NVCX.arc(bx,by,br,0,Math.PI*2);
+      NVCX.fillStyle='rgba(91,143,222,0.92)';NVCX.fill();
+      NVCX.strokeStyle='rgba(200,220,255,0.8)';NVCX.lineWidth=1*dpr;NVCX.stroke();
+      NVCX.font=`${10*dpr}px sans-serif`;NVCX.fillStyle='#fff';NVCX.textAlign='center';NVCX.textBaseline='middle';
+      NVCX.fillText('🧭',bx,by+0.5*dpr);
+      NVCX.textBaseline='alphabetic';
+      // ヒット判定用に保存（画面座標）
+      nvCompassButtons.push({word:n.word,bx,by,br:br+6*dpr});
+    });
+  }
+
   // ===== 経路ヒットの発光波紋 =====
   if(nvRipples.length){
     const now=Date.now();const DUR=1400;
@@ -3795,6 +3856,9 @@ function nebulaNodeAt(clientX,clientY){
   return best;
 }
 function nebulaNodeClicked(clientX,clientY){
+  // コンパス履歴ボタンのヒットを最優先で判定
+  const cb=compassButtonAt(clientX,clientY);
+  if(cb){openCompassHistory(cb.word);return;}
   const n=nebulaNodeAt(clientX,clientY);
   if(n){
     if(nvSelectedNode===n){
@@ -3814,6 +3878,45 @@ function nebulaNodeClicked(clientX,clientY){
   const s=sonarAt(clientX,clientY);
   if(s){nvSelectedNode=null;nvSelectedNeighbors=new Set();sonarToCompass(s);return;}
   nvSelectedNode=null;nvSelectedNeighbors=new Set();
+}
+// クリック位置にコンパス履歴ボタンがあるか
+function compassButtonAt(clientX,clientY){
+  if(!nvCompassButtons.length)return null;
+  const rect=NVC.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  const px=(clientX-rect.left)*dpr, py=(clientY-rect.top)*dpr;
+  let best=null,bestD=Infinity;
+  nvCompassButtons.forEach(b=>{
+    const d=(b.bx-px)**2+(b.by-py)**2;
+    if(d<b.br*b.br&&d<bestD){bestD=d;best=b;}
+  });
+  return best;
+}
+// コンパス履歴を取得して表示
+async function openCompassHistory(word){
+  const ov=document.getElementById('compassHistOverlay');
+  const body=document.getElementById('compassHistBody');
+  document.getElementById('compassHistTitle').textContent=`🧭「${word}」のコンパス履歴`;
+  ov.classList.add('visible');
+  body.innerHTML='<div class="ch-loading">履歴を読み込んでいます…</div>';
+  try{
+    const r=await fetch(`/api/compass?history=${encodeURIComponent(word)}&limit=12`);
+    const d=await r.json();
+    const hist=d.history||[];
+    if(!hist.length){body.innerHTML='<div class="ch-loading">まだこの語のコンパス履歴はありません。</div>';return;}
+    body.innerHTML=hist.map(h=>{
+      const recs=(h.recommendations||[]).map(r=>
+        `<div class="ch-rec" style="border-left:3px solid ${r.color||'#5B8FDE'}"><span class="ch-disc" style="color:${r.color||'#5B8FDE'}">${esc(r.discipline||'')}</span> ${esc(r.domain||'')}<div class="ch-rec-val">${esc(r.value||'')}</div></div>`
+      ).join('');
+      const bookHtml=h.book&&h.book.title?`<div class="ch-book">📖 ${esc(h.book.title)}${h.book.author?` / ${esc(h.book.author)}`:''}</div>`:'';
+      return `<div class="ch-card">
+        <div class="ch-interests">興味：${(h.interests||[]).map(w=>esc(w)).join('、')}</div>
+        ${h.summary?`<div class="ch-summary">${esc(h.summary)}</div>`:''}
+        ${bookHtml}
+        <div class="ch-recs">${recs}</div>
+      </div>`;
+    }).join('');
+  }catch{body.innerHTML='<div class="ch-loading">読み込みに失敗しました。</div>';}
 }
 // ノードを選択し、つながった語の集合を作る（発光表示用）
 function selectNebulaNode(n){
