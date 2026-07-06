@@ -201,6 +201,24 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-constel-btn.visible{display:block}
 .nv-constel-btn:hover{transform:translateY(-2px)}
 .nv-constel-btn.active{background:linear-gradient(135deg,#F5C842,#E0863A);color:#080C18;box-shadow:0 4px 18px rgba(245,200,66,0.6)}
+.nv-filter-btn{position:absolute;bottom:138px;right:12px;z-index:46;background:linear-gradient(135deg,#5B6A8A,#2a3550);color:#fff;border:none;padding:10px 16px;border-radius:22px;font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.4);transition:all .15s;display:none}
+.nv-filter-btn.visible{display:block}
+.nv-filter-btn:hover{transform:translateY(-2px)}
+.nv-filter-btn.active{background:linear-gradient(135deg,#4ECBA8,#2E8B6E);box-shadow:0 4px 18px rgba(78,203,168,0.55)}
+.nv-filter-panel{position:absolute;bottom:186px;right:12px;z-index:47;width:min(300px,86vw);background:rgba(13,19,36,0.97);border:1.5px solid rgba(140,170,220,0.5);border-radius:12px;padding:15px 16px;backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,0.5);display:none}
+.nv-filter-panel.open{display:block}
+.nvf-title{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;color:#e8edf5;margin-bottom:12px}
+.nvf-group{margin-bottom:12px}
+.nvf-label{font-size:12px;color:#cdd6ea;margin-bottom:5px;display:flex;justify-content:space-between}
+.nvf-range{color:var(--amber);font-size:11px}
+.nvf-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.nvf-row span{font-size:10px;color:#8595B3;width:26px}
+.nvf-row input[type=range]{flex:1;accent-color:#4ECBA8}
+.nvf-count{font-size:11px;color:#9aa6c4;text-align:center;margin:8px 0}
+.nvf-actions{display:flex;gap:8px}
+.nvf-reset,.nvf-close{flex:1;padding:8px;border-radius:8px;font-family:'Noto Serif JP',serif;font-size:12px;cursor:pointer}
+.nvf-reset{background:none;border:1px solid var(--border);color:#9aa6c4}
+.nvf-close{background:#4ECBA8;border:none;color:#081812;font-weight:600}
 /* コンパス起動ボタン（右上・丸形）*/
 .nv-compass-fab{position:absolute;top:14px;right:14px;z-index:46;width:63px;height:63px;border-radius:50%;border:2px solid rgba(245,166,35,0.6);background:radial-gradient(circle at 35% 30%,#2a3550,#0c1228);color:#F5A623;font-size:29px;cursor:pointer;box-shadow:0 4px 20px rgba(245,166,35,0.25);transition:all .2s;display:flex;align-items:center;justify-content:center}
 .nv-compass-fab:hover{transform:rotate(30deg) scale(1.08);box-shadow:0 6px 22px rgba(245,166,35,0.4)}
@@ -287,6 +305,65 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .ch-book{font-size:12px;color:var(--amber);margin-bottom:8px}
 .ch-recs{display:flex;flex-direction:column;gap:6px}
 .ch-rec{background:var(--surface);border-radius:6px;padding:7px 10px;font-size:12px;color:#dfe5f2}
+.ch-rec-click{cursor:pointer;transition:background .15s}
+.ch-rec-click:hover{background:rgba(91,143,222,0.12)}
+.ch-rec-more{font-size:10px;color:#7c95c8;margin-top:4px}
+/* ===== 藍の夢 ===== */
+.ainoyume-entry{display:block;width:100%;margin:0 0 12px;background:linear-gradient(135deg,#1a2a52,#0d1530);border:1.5px solid rgba(90,120,220,0.55);color:#a9bdf0;font-family:'Noto Serif JP',serif;font-size:13px;padding:11px;border-radius:10px;cursor:pointer;transition:all .2s;letter-spacing:.03em}
+.ainoyume-entry:hover{border-color:#7a9af5;color:#d3defc;box-shadow:0 0 16px rgba(90,120,220,0.35)}
+.ainoyume-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,7,18,0.94);z-index:64;backdrop-filter:blur(8px);padding:14px}
+.ainoyume-overlay.visible{display:flex}
+.ainoyume-card{position:relative;background:linear-gradient(180deg,#0c1330,#0a0f22);border:1.5px solid rgba(90,120,220,0.5);border-radius:16px;padding:24px 22px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.ay-close{position:absolute;top:13px;right:15px;background:none;border:none;color:#7c89a8;font-size:20px;cursor:pointer}
+.ay-title{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:600;color:#a9bdf0;letter-spacing:.15em}
+.ay-sub{font-size:11.5px;color:#8595b3;line-height:1.8;margin:6px 0 18px}
+.ay-input-row{display:flex;gap:8px;margin-bottom:8px}
+.ay-input-row input{flex:1;background:#080c1a;border:1px solid rgba(90,120,220,0.4);color:var(--text);font-family:'Noto Serif JP',serif;font-size:14px;padding:11px 13px;border-radius:9px;outline:none}
+.ay-input-row input:focus{border-color:#7a9af5}
+.ay-weave{background:linear-gradient(135deg,#4a6ae0,#2a3f9e);color:#fff;border:none;padding:11px 18px;border-radius:9px;font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.ay-weave:disabled{background:#2a3350;color:#7c89a8;cursor:wait}
+.ay-cost{font-size:11px;color:#8595b3;margin-bottom:16px}
+.ay-progress{padding:26px 0;text-align:center}
+.ay-stage{font-size:13px;color:#a9bdf0;margin-bottom:8px;font-family:'Noto Serif JP',serif}
+.ay-stagebar{height:4px;background:#1a2340;border-radius:2px;overflow:hidden;margin:0 20px}
+.ay-stagebar>div{height:100%;background:linear-gradient(90deg,#4a6ae0,#8aa5f5);transition:width .6s;border-radius:2px}
+.ay-report-head{text-align:center;margin-bottom:14px}
+.ay-report-title{font-family:'Noto Serif JP',serif;font-size:20px;font-weight:600;color:#e8edf5}
+.ay-report-goal{font-size:12px;color:#8595b3;margin-top:3px}
+.ay-pioneer{font-size:12px;border-radius:8px;padding:9px 12px;margin-bottom:14px;line-height:1.7}
+.ay-pioneer.exists{background:rgba(78,203,168,0.08);border:1px solid rgba(78,203,168,0.3);color:#9fdfc8}
+.ay-pioneer.none{background:rgba(122,154,245,0.08);border:1px solid rgba(122,154,245,0.35);color:#a9bdf0}
+.ay-legend{display:flex;gap:10px;font-size:10px;color:#8595b3;margin-bottom:10px;flex-wrap:wrap}
+.ay-legend span{display:inline-flex;align-items:center;gap:4px}
+.ay-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.ay-item{background:rgba(12,18,40,0.8);border:1px solid #1e2a50;border-radius:10px;padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.ay-item:hover{border-color:rgba(122,154,245,0.5)}
+.ay-item.frontier{border-color:rgba(122,154,245,0.55);background:linear-gradient(135deg,rgba(42,63,158,0.18),rgba(12,18,40,0.8))}
+.ay-item-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ay-order{font-size:11px;color:#7a9af5;font-weight:600;min-width:20px}
+.ay-name{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;color:#e8edf5}
+.ay-badge{font-size:9.5px;padding:2px 7px;border-radius:8px;white-space:nowrap}
+.ay-badge.pu{background:rgba(245,166,35,0.15);color:#f5c878;border:1px solid rgba(245,166,35,0.35)}
+.ay-badge.cu{background:rgba(155,114,232,0.15);color:#c3a8f0;border:1px solid rgba(155,114,232,0.35)}
+.ay-badge.fr{background:rgba(122,154,245,0.2);color:#a9bdf0;border:1px solid rgba(122,154,245,0.5)}
+.ay-gist{font-size:12px;color:#bcc6de;margin-top:4px;line-height:1.6}
+.ay-frontier-box{margin-top:8px;border-top:1px dashed rgba(122,154,245,0.3);padding-top:8px;font-size:11.5px;line-height:1.7}
+.ay-frontier-box .ay-pred{color:#d3defc}
+.ay-frontier-box .ay-caveat{color:#f5c878;font-size:10.5px;margin-top:3px}
+.ay-frontier-box .ay-plan{color:#8595b3;margin-top:3px}
+.ay-note{margin-top:9px;border-top:1px solid #1e2a50;padding-top:9px;font-size:12px}
+.ay-note-loading{color:#8595b3;font-size:11px;padding:6px 0}
+.ay-note-sec{margin-bottom:9px}
+.ay-note-h{font-size:11px;font-weight:600;color:#a9bdf0;margin-bottom:3px}
+.ay-note-b{font-size:12px;color:#cfd6e8;line-height:1.75}
+.ay-note-unknown{background:rgba(122,154,245,0.08);border-left:2px solid rgba(122,154,245,0.5);padding:7px 10px;border-radius:5px}
+.ay-more{font-size:10px;color:#7a9af5;margin-top:6px}
+.ay-list-title{font-family:'Noto Serif JP',serif;font-size:14px;color:#a9bdf0;margin:20px 0 10px;border-top:1px solid #1e2a50;padding-top:16px}
+.ay-list-item{background:rgba(12,18,40,0.6);border:1px solid #1e2a50;border-radius:9px;padding:10px 13px;margin-bottom:7px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ay-list-item:hover{border-color:rgba(122,154,245,0.5)}
+.ay-list-goal{font-size:13px;color:#dfe5f2}
+.ay-list-meta{font-size:10px;color:#7c89a8;white-space:nowrap}
+.ay-back{background:none;border:1px solid #1e2a50;color:#8595b3;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;margin-bottom:14px}
 .ch-disc{font-size:11px;font-weight:600;margin-right:4px}
 .ch-rec-val{font-size:11px;color:#9aa6c4;margin-top:2px;line-height:1.5}
 .nv-book{border-left:3px solid var(--amber)!important}
@@ -332,7 +409,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-tune-reset{background:var(--bg);color:#9aa6c4;border:1px solid var(--border);padding:10px 14px;border-radius:8px;font-size:12px;cursor:pointer}
 #nvTuneBtn{background:rgba(10,16,36,0.9);border:1px solid var(--border);color:var(--amber);border-radius:8px;padding:0 12px;cursor:pointer;font-size:16px}
 /* 詳細オーバーレイ */
-.nv-detail-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.85);z-index:60;backdrop-filter:blur(4px);padding:16px}
+.nv-detail-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.85);z-index:66;backdrop-filter:blur(4px);padding:16px}
 .nv-detail-overlay.visible{display:flex}
 .nv-detail-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:86vh;overflow-y:auto;position:relative}
 .nv-detail-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#9aa6c4;font-size:18px;cursor:pointer}
@@ -658,6 +735,26 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="nebula-panel" id="nvPanel"></div>
       <button class="nv-reverse-btn" id="nvReverseBtn" title="明暗・大小を反転してマイナーな語を浮かび上がらせる">🔄 反転</button>
       <button class="nv-constel-btn" id="nvConstelBtn" title="自分の探索した語だけを星座として光らせる">✦ 星座</button>
+      <button class="nv-filter-btn" id="nvFilterBtn" title="抽象度・アクセス数で語を絞り込む">🎚 フィルター</button>
+      <!-- フィルターパネル -->
+      <div class="nv-filter-panel" id="nvFilterPanel">
+        <div class="nvf-title">語のフィルター</div>
+        <div class="nvf-group">
+          <div class="nvf-label">抽象度（接続数）<span class="nvf-range" id="nvfDegLabel">すべて</span></div>
+          <div class="nvf-row"><span>下限</span><input type="range" id="nvfDegMin" min="0" max="100" value="0"></div>
+          <div class="nvf-row"><span>上限</span><input type="range" id="nvfDegMax" min="0" max="100" value="100"></div>
+        </div>
+        <div class="nvf-group">
+          <div class="nvf-label">アクセス数<span class="nvf-range" id="nvfWLabel">すべて</span></div>
+          <div class="nvf-row"><span>下限</span><input type="range" id="nvfWMin" min="0" max="100" value="0"></div>
+          <div class="nvf-row"><span>上限</span><input type="range" id="nvfWMax" min="0" max="100" value="100"></div>
+        </div>
+        <div class="nvf-count" id="nvfCount"></div>
+        <div class="nvf-actions">
+          <button class="nvf-reset" id="nvfReset">解除</button>
+          <button class="nvf-close" id="nvfClose">閉じる</button>
+        </div>
+      </div>
       <!-- コンパス起動ボタン（右上・丸形）-->
       <button class="nv-compass-fab" id="nvCompassFab" title="知的コンパスを開く">🧭</button>
       <div class="nebula-hint" id="nvHint">星雲をドラッグで移動・ホイールで拡大。明るい星ほど多くの人が辿った語です。</div>
@@ -671,6 +768,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <button class="compass-pane-close" id="compassPaneClose">✕</button>
           </div>
           <div class="compass-pane-sub">興味を入れると、そこから離れた6つの分野の領域を返します。</div>
+          <button class="ainoyume-entry" id="ainoyumeEntry">藍の夢 — 目標から未踏の知の航海図を紡ぐ</button>
           <div class="compass-input-row">
             <input id="compassInput" type="text" placeholder="興味を入力（読点区切り・例：宇宙、詩、孤独）" autocomplete="off"/>
             <button id="compassTuneFab" title="ジャンルごとの距離を調整">⚙</button>
@@ -713,6 +811,18 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           <button class="compass-hist-close" id="compassHistClose">✕</button>
           <div class="compass-hist-title" id="compassHistTitle">🧭 コンパス履歴</div>
           <div class="compass-hist-body" id="compassHistBody"></div>
+        </div>
+      </div>
+
+      <!-- 藍の夢（出藍の誉）：目標→未踏検出→知の航海図 -->
+      <div class="ainoyume-overlay" id="ainoyumeOverlay">
+        <div class="ainoyume-card">
+          <button class="ay-close" id="ayClose">✕</button>
+          <div class="ay-head">
+            <div class="ay-title">藍の夢</div>
+            <div class="ay-sub">出藍の誉 — 集合知（藍）から出て、藍より青い場所へ。目標に必要な知を洗い出し、あなたと人類の未踏を検出して、一枚の航海図に凝縮します。</div>
+          </div>
+          <div class="ay-body" id="ayBody"></div>
         </div>
       </div>
     </div>
@@ -880,6 +990,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
         <div class="help-sec">
           <div class="help-h">🧭 知的コンパス</div>
           <p>星図の右上のボタンから。自分の興味を入れると、そこから離れた6つの学問分野の領域を指し示します。分野をタップすると、読むべき本や論文、キーワードまで案内します。</p>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">藍の夢</div>
+          <p>コンパスの中にある藍色のボタンから。知りたいゴールを入れると、必要な知の領域を洗い出し、あなたの未踏・集合知の未踏・人類未踏の候補を検出して、一枚の航海図に凝縮します（15クレジット）。註脚をひらくと前提知識や読むべきものが深く展開されます。生成された航海図はすべて公開され、誰かの出発点になります。</p>
         </div>
 
         <div class="help-sec">
@@ -3054,12 +3169,15 @@ function exitNebula(){
   if(nvRAF){cancelAnimationFrame(nvRAF);nvRAF=null}
   nvSonarActive=null;if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
   if(typeof closeCompass==='function')closeCompass();
+  const ch=document.getElementById('compassHistOverlay');if(ch)ch.classList.remove('visible');
+  const ayo=document.getElementById('ainoyumeOverlay');if(ayo)ayo.classList.remove('visible');
 }
 async function loadNebulaGraph(){
   try{
     const r=await fetch('/api/transitions?action=nebula&limit=120');
     nebulaGraph=await r.json();
     layoutNebulaGraph();
+    if(typeof applyNvFilter==='function')applyNvFilter(); // フィルター設定を再適用
   }catch{nebulaGraph={nodes:[],edges:[]}}
 }
 function layoutNebulaGraph(){
@@ -3153,7 +3271,14 @@ function setNvMode(m){
   if(revBtn)revBtn.classList.toggle('visible',m==='explore');
   const constelBtn=document.getElementById('nvConstelBtn');
   if(constelBtn)constelBtn.classList.toggle('visible',m==='explore');
-  if(m!=='explore'){nvReverse=false;if(revBtn)revBtn.classList.remove('active');nvConstel=false;if(constelBtn)constelBtn.classList.remove('active');nvSonarActive=null}
+  const filterBtn=document.getElementById('nvFilterBtn');
+  if(filterBtn)filterBtn.classList.toggle('visible',m==='explore');
+  if(m!=='explore'){
+    nvReverse=false;if(revBtn)revBtn.classList.remove('active');
+    nvConstel=false;if(constelBtn)constelBtn.classList.remove('active');
+    nvSonarActive=null;
+    const fp=document.getElementById('nvFilterPanel');if(fp)fp.classList.remove('open');
+  }
   if(m!=='peek')nvRipples=[];
   nvSelectedNode=null;nvSelectedNeighbors=new Set();
   // ヒント文を反転状態で出し分け
@@ -3194,6 +3319,57 @@ document.getElementById('nvConstelBtn').addEventListener('click',()=>{
   }else{
     hint.textContent='ドラッグで移動・ホバーで語を確認。何もない空間を長押しすると🌀ソナーが広がり、囲んだ語から意味を見出します。奥（小さく暗い星）ほど抽象的な語です。';
   }
+});
+// ===== フィルター（抽象度・アクセス数で絞り込み）=====
+let nvFilterOn=false;
+const nvFilter={degMin:0,degMax:100,wMin:0,wMax:100};
+function applyNvFilter(){
+  if(!nebulaGraph||!nebulaGraph.nodes)return;
+  const nodes=nebulaGraph.nodes;
+  const maxDeg=Math.max(1,...nodes.map(n=>n.deg||0));
+  const maxW=Math.max(1,...nodes.map(n=>n.weight||1));
+  const isAll=nvFilter.degMin<=0&&nvFilter.degMax>=100&&nvFilter.wMin<=0&&nvFilter.wMax>=100;
+  nvFilterOn=!isAll;
+  let visible=0;
+  nodes.forEach(n=>{
+    if(isAll){n._hidden=false;visible++;return}
+    const degPct=((n.deg||0)/maxDeg)*100;
+    const wPct=((n.weight||1)/maxW)*100;
+    n._hidden=!(degPct>=nvFilter.degMin&&degPct<=nvFilter.degMax&&wPct>=nvFilter.wMin&&wPct<=nvFilter.wMax);
+    if(!n._hidden)visible++;
+  });
+  document.getElementById('nvFilterBtn').classList.toggle('active',nvFilterOn);
+  const cnt=document.getElementById('nvfCount');
+  if(cnt)cnt.textContent=nvFilterOn?`表示中：${visible} / ${nodes.length} 語`:`全 ${nodes.length} 語を表示`;
+  const dl=document.getElementById('nvfDegLabel');
+  if(dl)dl.textContent=(nvFilter.degMin<=0&&nvFilter.degMax>=100)?'すべて':`${nvFilter.degMin}%〜${nvFilter.degMax}%`;
+  const wl=document.getElementById('nvfWLabel');
+  if(wl)wl.textContent=(nvFilter.wMin<=0&&nvFilter.wMax>=100)?'すべて':`${nvFilter.wMin}%〜${nvFilter.wMax}%`;
+}
+document.getElementById('nvFilterBtn').addEventListener('click',()=>{
+  const p=document.getElementById('nvFilterPanel');
+  if(p.classList.contains('open')){p.classList.remove('open');return}
+  p.classList.add('open');applyNvFilter();
+});
+document.getElementById('nvfClose').addEventListener('click',()=>{
+  document.getElementById('nvFilterPanel').classList.remove('open');
+});
+document.getElementById('nvfReset').addEventListener('click',()=>{
+  nvFilter.degMin=0;nvFilter.degMax=100;nvFilter.wMin=0;nvFilter.wMax=100;
+  ['nvfDegMin','nvfWMin'].forEach(id=>document.getElementById(id).value=0);
+  ['nvfDegMax','nvfWMax'].forEach(id=>document.getElementById(id).value=100);
+  applyNvFilter();
+});
+[['nvfDegMin','degMin'],['nvfDegMax','degMax'],['nvfWMin','wMin'],['nvfWMax','wMax']].forEach(([id,key])=>{
+  document.getElementById(id).addEventListener('input',e=>{
+    nvFilter[key]=+e.target.value;
+    // 下限が上限を超えないよう補正
+    if(nvFilter.degMin>nvFilter.degMax){if(key==='degMin')nvFilter.degMax=nvFilter.degMin;else nvFilter.degMin=nvFilter.degMax;
+      document.getElementById('nvfDegMin').value=nvFilter.degMin;document.getElementById('nvfDegMax').value=nvFilter.degMax;}
+    if(nvFilter.wMin>nvFilter.wMax){if(key==='wMin')nvFilter.wMax=nvFilter.wMin;else nvFilter.wMin=nvFilter.wMax;
+      document.getElementById('nvfWMin').value=nvFilter.wMin;document.getElementById('nvfWMax').value=nvFilter.wMax;}
+    applyNvFilter();
+  });
 });
 document.getElementById('nvGoBtn').addEventListener('click',runNvQuery);
 document.getElementById('nvWordInput').addEventListener('keydown',e=>{if(e.key==='Enter')runNvQuery()});
@@ -3662,6 +3838,7 @@ function drawNebulaView(dpr){
   const selWord=nvSelectedNode?nvSelectedNode.word:null;
   edges.forEach(e=>{
     const a=nebulaGraph._map[e.a],b=nebulaGraph._map[e.b];if(!a||!b)return;
+    if(a._hidden||b._hidden)return; // フィルターで隠れた語のエッジは描かない
     const touchesSel=selWord&&(e.a===selWord||e.b===selWord);
     NVCX.beginPath();NVCX.moveTo(a._px,a._py);NVCX.lineTo(b._px,b._py);
     const dep=1-((a._pd+b._pd)/2)*0.6; // 奥のエッジは薄く
@@ -3696,6 +3873,7 @@ function drawNebulaView(dpr){
   // 奥（抽象的）から手前（具体的）へ描画（painter's algorithm）
   const order=nodes.map((n,i)=>({n,i})).sort((a,b)=>(b.n._pd)-(a.n._pd));
   order.forEach(({n,i})=>{
+    if(n._hidden)return; // フィルターで非表示
     const x=n._px,y=n._py,ps=n._ps,depth=n._pd;
     const tw=0.7+0.3*Math.sin(t*2+i);
     const isPeekMatch=nvMode==='peek'&&nvOverlay.paths&&nvOverlay.paths.word===n.word;
@@ -3746,25 +3924,30 @@ function drawNebulaView(dpr){
     }
   });
 
-  // ===== コンパス履歴ボタン（履歴のある語の近くに青い🧭）=====
+  // ===== コンパス履歴ボタン（選択した語にコンパス履歴があれば大きく表示）=====
   nvCompassButtons=[];
-  if(nvMode==='explore'&&compassWordSet.size&&!nvSelectedNode){
-    nodes.forEach(n=>{
-      if(n._px==null||!compassWordSet.has(n.word))return;
-      if(n._pd>0.7)return; // 奥すぎるものは省略
-      const r=Math.max(0.8,(4+n.norm*16)*z*0.5*(n._ps||1));
-      const bx=n._px+r+11*dpr, by=n._py; // ノードの右横
-      const br=8*dpr;
-      // 青い丸＋コンパス記号
-      NVCX.beginPath();NVCX.arc(bx,by,br,0,Math.PI*2);
-      NVCX.fillStyle='rgba(91,143,222,0.92)';NVCX.fill();
-      NVCX.strokeStyle='rgba(200,220,255,0.8)';NVCX.lineWidth=1*dpr;NVCX.stroke();
-      NVCX.font=`${10*dpr}px sans-serif`;NVCX.fillStyle='#fff';NVCX.textAlign='center';NVCX.textBaseline='middle';
-      NVCX.fillText('🧭',bx,by+0.5*dpr);
-      NVCX.textBaseline='alphabetic';
-      // ヒット判定用に保存（画面座標）
-      nvCompassButtons.push({word:n.word,bx,by,br:br+6*dpr});
-    });
+  if(nvMode==='explore'&&nvSelectedNode&&compassWordSet.has(nvSelectedNode.word)&&nvSelectedNode._px!=null){
+    const n=nvSelectedNode;
+    const r=Math.max(0.8,(4+n.norm*16)*z*0.5*(n._ps||1));
+    const br=24*dpr; // 従来(8px)の約3倍
+    const bx=n._px+r+br+6*dpr, by=n._py; // ノードの右横
+    const pulse=0.85+0.15*Math.sin(Date.now()/300);
+    // 発光
+    const g=NVCX.createRadialGradient(bx,by,0,bx,by,br*1.8);
+    g.addColorStop(0,`rgba(91,143,222,${0.5*pulse})`);g.addColorStop(1,'rgba(91,143,222,0)');
+    NVCX.fillStyle=g;NVCX.beginPath();NVCX.arc(bx,by,br*1.8,0,Math.PI*2);NVCX.fill();
+    // 青い丸＋コンパス記号
+    NVCX.beginPath();NVCX.arc(bx,by,br,0,Math.PI*2);
+    NVCX.fillStyle='rgba(91,143,222,0.96)';NVCX.fill();
+    NVCX.strokeStyle='rgba(210,228,255,0.95)';NVCX.lineWidth=1.5*dpr;NVCX.stroke();
+    NVCX.font=`${26*dpr}px sans-serif`;NVCX.fillStyle='#fff';NVCX.textAlign='center';NVCX.textBaseline='middle';
+    NVCX.fillText('🧭',bx,by+1*dpr);
+    NVCX.textBaseline='alphabetic';
+    // ラベル
+    NVCX.font=`${10*dpr}px 'Noto Serif JP',serif`;NVCX.fillStyle='rgba(200,220,255,0.9)';
+    NVCX.fillText('履歴',bx,by+br+13*dpr);
+    // ヒット判定用に保存
+    nvCompassButtons.push({word:n.word,bx,by,br:br+8*dpr});
   }
 
   // ===== 経路ヒットの発光波紋 =====
@@ -3847,7 +4030,7 @@ function nebulaNodeAt(clientX,clientY){
   let best=null,bestD=Infinity;
   nebulaGraph.nodes.forEach(n=>{
     // 描画ループがキャッシュした投影座標を使う（擬似3Dと一致）
-    if(n._px==null)return;
+    if(n._px==null||n._hidden)return;
     const x=n._px, y=n._py;
     const r=Math.max(8*dpr, n.r*z*0.5*(n._ps||1)+10*dpr);
     const d=(x-px)**2+(y-py)**2;
@@ -3904,9 +4087,9 @@ async function openCompassHistory(word){
     const d=await r.json();
     const hist=d.history||[];
     if(!hist.length){body.innerHTML='<div class="ch-loading">まだこの語のコンパス履歴はありません。</div>';return;}
-    body.innerHTML=hist.map(h=>{
-      const recs=(h.recommendations||[]).map(r=>
-        `<div class="ch-rec" style="border-left:3px solid ${r.color||'#5B8FDE'}"><span class="ch-disc" style="color:${r.color||'#5B8FDE'}">${esc(r.discipline||'')}</span> ${esc(r.domain||'')}<div class="ch-rec-val">${esc(r.value||'')}</div></div>`
+    body.innerHTML=hist.map((h,hi)=>{
+      const recs=(h.recommendations||[]).map((r,ri)=>
+        `<div class="ch-rec ch-rec-click" data-hi="${hi}" data-ri="${ri}" style="border-left:3px solid ${r.color||'#5B8FDE'}"><span class="ch-disc" style="color:${r.color||'#5B8FDE'}">${esc(r.discipline||'')}</span> ${esc(r.domain||'')}<div class="ch-rec-val">${esc(r.value||'')}</div><div class="ch-rec-more">タップで本・論文・キーワードを見る ▸</div></div>`
       ).join('');
       const bookHtml=h.book&&h.book.title?`<div class="ch-book">📖 ${esc(h.book.title)}${h.book.author?` / ${esc(h.book.author)}`:''}</div>`:'';
       return `<div class="ch-card">
@@ -3916,7 +4099,199 @@ async function openCompassHistory(word){
         <div class="ch-recs">${recs}</div>
       </div>`;
     }).join('');
+    // 各視点カードをタップ → 詳細検索（本・論文・キーワード）
+    body.querySelectorAll('.ch-rec-click').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const h=hist[+el.dataset.hi];const rec=(h.recommendations||[])[+el.dataset.ri];
+        if(!rec)return;
+        // この履歴の興味を検索コンテキストに設定してから詳細を開く
+        const inp=document.getElementById('compassInput');
+        if(inp)inp.value=(h.interests||[]).join('、');
+        openCompassDetail(rec.discipline,rec.domain,rec.color);
+      });
+    });
   }catch{body.innerHTML='<div class="ch-loading">読み込みに失敗しました。</div>';}
+}
+// ===== 藍の夢（出藍の誉）=====
+const ayOverlay=document.getElementById('ainoyumeOverlay');
+const ayBody=document.getElementById('ayBody');
+let ayCurrentReport=null; // {id, report}
+const ayNoteCache={};     // 註脚キャッシュ（クライアント側）
+
+document.getElementById('ainoyumeEntry').addEventListener('click',()=>{openAinoyume()});
+document.getElementById('ayClose').addEventListener('click',()=>ayOverlay.classList.remove('visible'));
+ayOverlay.addEventListener('click',e=>{if(e.target===ayOverlay)ayOverlay.classList.remove('visible')});
+
+function openAinoyume(){
+  ayOverlay.classList.add('visible');
+  renderAyEntry();
+}
+// 入口画面：目標入力＋公開報告書の一覧
+async function renderAyEntry(){
+  ayBody.innerHTML=`
+    <div class="ay-input-row">
+      <input id="ayGoalInput" type="text" placeholder="知りたいゴールを入力（例：YouTube再生数を伸ばしたい）" maxlength="120"/>
+      <button class="ay-weave" id="ayWeaveBtn">紡ぐ</button>
+    </div>
+    <div class="ay-cost">⚡ 15クレジットを消費します（チャレンジ達成でも入手できます）。生成された航海図はすべて公開・永続保存されます。</div>
+    <div class="ay-list-title">みんなの航海図</div>
+    <div id="ayListArea"><div class="ay-note-loading">読み込んでいます…</div></div>`;
+  document.getElementById('ayWeaveBtn').addEventListener('click',runAinoyume);
+  document.getElementById('ayGoalInput').addEventListener('keydown',e=>{if(e.key==='Enter')runAinoyume()});
+  // 公開一覧
+  try{
+    const r=await fetch('/api/compass?ainoyume=list');
+    const d=await r.json();
+    const area=document.getElementById('ayListArea');
+    if(!area)return;
+    if(!d.items||!d.items.length){area.innerHTML='<div class="ay-note-loading">まだ航海図はありません。最初の一枚を紡いでください。</div>';return}
+    area.innerHTML=d.items.map(it=>{
+      const dt=new Date(it.ts);const time=`${dt.getMonth()+1}/${dt.getDate()}`;
+      const fr=it.frontiers?` ・未踏${it.frontiers}`:'';
+      return `<div class="ay-list-item" data-id="${esc(it.id)}"><span class="ay-list-goal">${esc(it.goal)}</span><span class="ay-list-meta">${time}${fr}</span></div>`;
+    }).join('');
+    area.querySelectorAll('.ay-list-item').forEach(el=>el.addEventListener('click',()=>loadAyReport(el.dataset.id)));
+  }catch{const a=document.getElementById('ayListArea');if(a)a.innerHTML='<div class="ay-note-loading">一覧の読み込みに失敗しました</div>';}
+}
+// 既存の報告書を読み込む
+async function loadAyReport(id){
+  ayBody.innerHTML='<div class="ay-progress"><div class="ay-stage">航海図を開いています…</div></div>';
+  try{
+    const r=await fetch(`/api/compass?ainoyume=report&id=${encodeURIComponent(id)}`);
+    const d=await r.json();
+    if(!d.report){ayBody.innerHTML='<div class="ay-note-loading">見つかりませんでした</div>';return}
+    ayCurrentReport={id:d.id,report:d.report};
+    renderAyReport();
+  }catch{ayBody.innerHTML='<div class="ay-note-loading">読み込みに失敗しました</div>';}
+}
+// 生成フロー：expand → detect → chart
+async function runAinoyume(){
+  const goal=(document.getElementById('ayGoalInput')?.value||'').trim();
+  if(!goal){toast('ゴールを入力してください','info',2200);return}
+  const btn=document.getElementById('ayWeaveBtn');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="compass-spinner"></span>';}
+  const showStage=(label,pct)=>{
+    ayBody.innerHTML=`<div class="ay-progress"><div class="ay-stage">${label}</div><div class="ay-stagebar"><div style="width:${pct}%"></div></div></div>`;
+  };
+  try{
+    // 段階1：先駆者確認＋周辺展開（クレジット15消費）
+    showStage('先駆者を確認し、周辺の知を展開しています…',15);
+    const r1=await fetch('/api/compass',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({ainoyume:{stage:'expand',goal}})});
+    if(r1.status===402){
+      const d=await r1.json();
+      ayBody.innerHTML=`<div class="ay-note-loading">クレジットが不足しています（必要:15 / 残高:${d.credits||0}）。<br>デイリー・マンスリーのクリアやクレジット購入で入手できます。</div><button class="ay-back" id="ayBackBtn">戻る</button>`;
+      document.getElementById('ayBackBtn').addEventListener('click',renderAyEntry);
+      return;
+    }
+    const d1=await r1.json();
+    if(!d1.domains||!d1.domains.length)throw new Error('expand failed');
+    if(typeof d1.creditsLeft==='number'){userCredits=d1.creditsLeft;localStorage_set('userCredits',String(userCredits));updateCreditDisplay();}
+    // 段階2：二重の未踏検出（本人の既知語＝探索履歴を送る）
+    showStage('あなたと人類の未踏を検出しています…',55);
+    const myWords=[...new Set(routeHistory.flatMap(h=>[h.from,h.to]).filter(Boolean))].slice(0,400);
+    const r2=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ainoyume:{stage:'detect',domains:d1.domains,myWords}})});
+    const d2=await r2.json();
+    // 段階3：航海図の凝縮＋保存
+    showStage('航海図を一枚に凝縮しています…',85);
+    const r3=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ainoyume:{stage:'chart',goal,pioneer:d1.pioneer,domains:d2.domains||d1.domains}})});
+    const d3=await r3.json();
+    if(!d3.report)throw new Error(d3.error||'chart failed');
+    ayCurrentReport={id:d3.id,report:d3.report};
+    renderAyReport();
+  }catch(e){
+    ayBody.innerHTML='<div class="ay-note-loading">生成に失敗しました。時間をおいて再度お試しください。</div><button class="ay-back" id="ayBackBtn">戻る</button>';
+    const b=document.getElementById('ayBackBtn');if(b)b.addEventListener('click',renderAyEntry);
+  }
+}
+// 航海図（A4一枚・註脚は開いた時に展開）
+function renderAyReport(){
+  const {id,report}=ayCurrentReport;
+  const p=report.p||{};
+  const pioneerHtml=p.exists
+    ?`<div class="ay-pioneer exists">この道には先駆者がいます — 追走の地図。${esc(p.note||'')}</div>`
+    :`<div class="ay-pioneer none">この道はまだ誰も歩いていません — 開拓の地図。${esc(p.note||'')}</div>`;
+  const items=(report.d||[]).map(it=>{
+    const badges=[
+      it.pu?'<span class="ay-badge pu">あなたの未踏</span>':'',
+      it.cu?'<span class="ay-badge cu">集合知の未踏</span>':'',
+      it.f==='frontier'?'<span class="ay-badge fr">人類未踏候補</span>':'',
+    ].join('');
+    const frontierBox=it.f==='frontier'?`
+      <div class="ay-frontier-box">
+        ${it.pr?`<div class="ay-pred">予測：${esc(it.pr)}</div><div class="ay-caveat">⚠ これは未検証の予測です。実際の研究・検証が必要です。</div>`:''}
+        ${it.pl?`<div class="ay-plan">調査計画：${esc(it.pl)}</div>`:''}
+      </div>`:'';
+    return `<div class="ay-item ${it.f==='frontier'?'frontier':''}" data-item="${esc(it.n)}">
+      <div class="ay-item-head"><span class="ay-order">${it.o}</span><span class="ay-name">${esc(it.n)}</span>${badges}</div>
+      <div class="ay-gist">${esc(it.g||'')}${it.w?`　<span style="color:#7c89a8">（${esc(it.w)}）</span>`:''}</div>
+      ${frontierBox}
+      <div class="ay-more">タップで註脚をひらく ▸</div>
+      <div class="ay-note" style="display:none"></div>
+    </div>`;
+  }).join('');
+  ayBody.innerHTML=`
+    <button class="ay-back" id="ayBackBtn">◂ 一覧へ</button>
+    <div class="ay-report-head">
+      <div class="ay-report-title">${esc(report.ti||report.g)}</div>
+      <div class="ay-report-goal">ゴール：${esc(report.g)}</div>
+    </div>
+    ${pioneerHtml}
+    <div class="ay-legend">
+      <span><span class="ay-dot" style="background:#f5c878"></span>あなたの未踏＝学ぶ価値</span>
+      <span><span class="ay-dot" style="background:#c3a8f0"></span>集合知の未踏</span>
+      <span><span class="ay-dot" style="background:#7a9af5"></span>人類未踏候補＝研究の余地</span>
+    </div>
+    ${items}`;
+  document.getElementById('ayBackBtn').addEventListener('click',renderAyEntry);
+  // 註脚の開閉（遅延生成・キャッシュ）
+  ayBody.querySelectorAll('.ay-item').forEach(el=>{
+    el.addEventListener('click',()=>toggleAyNote(el));
+  });
+}
+async function toggleAyNote(el){
+  const noteDiv=el.querySelector('.ay-note');
+  const more=el.querySelector('.ay-more');
+  if(noteDiv.style.display!=='none'){noteDiv.style.display='none';if(more)more.style.display='block';return}
+  noteDiv.style.display='block';if(more)more.style.display='none';
+  const itemName=el.dataset.item;
+  const key=ayCurrentReport.id+'|'+itemName;
+  if(ayNoteCache[key]){renderAyNote(noteDiv,ayNoteCache[key]);return}
+  noteDiv.innerHTML='<div class="ay-note-loading">註脚を紡いでいます…（初回のみ・以降は全員に共有されます）</div>';
+  try{
+    const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ainoyume:{stage:'note',id:ayCurrentReport.id,item:itemName}})});
+    const d=await r.json();
+    if(!d.note)throw new Error();
+    ayNoteCache[key]=d.note;
+    renderAyNote(noteDiv,d.note);
+  }catch{noteDiv.innerHTML='<div class="ay-note-loading">註脚の生成に失敗しました。もう一度タップしてください。</div>';}
+}
+function renderAyNote(div,note){
+  const res=(note.resources||[]).map(b=>{
+    const isPaper=b.type==='paper';
+    const link=isPaper
+      ?`https://scholar.google.com/scholar?q=${encodeURIComponent([b.title,b.author].filter(Boolean).join(' '))}`
+      :amazonLink(b.title,b.author);
+    return `<li><span class="nv-bk-title">${esc(b.title)}</span>${b.author?` <span class="nv-bk-auth">/ ${esc(b.author)}</span>`:''}${b.note?`<div class="nv-bk-note">${esc(b.note)}</div>`:''}<a class="nv-bk-link" href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${isPaper?'🔎 論文を探す':'📚 Amazonで探す'}</a></li>`;
+  }).join('');
+  const kws=(note.keywords||[]).map(k=>`<span class="nv-kw ay-kw" data-kw="${esc(k)}">${esc(k)}</span>`).join('');
+  div.innerHTML=`
+    ${note.context?`<div class="ay-note-sec"><div class="ay-note-h">前提・背景</div><div class="ay-note-b">${esc(note.context)}</div></div>`:''}
+    ${note.core?`<div class="ay-note-sec"><div class="ay-note-h">掴むべき核心</div><div class="ay-note-b">${esc(note.core)}</div></div>`:''}
+    ${note.unknown?`<div class="ay-note-sec"><div class="ay-note-h">分かっていないこと（空白の輪郭）</div><div class="ay-note-b ay-note-unknown">${esc(note.unknown)}</div></div>`:''}
+    ${res?`<div class="ay-note-sec"><div class="ay-note-h">読むべきもの</div><ul class="nv-bk-list">${res}</ul></div>`:''}
+    ${kws?`<div class="ay-note-sec"><div class="ay-note-h">掘るためのキーワード（タップで探索）</div><div class="nv-kw-wrap">${kws}</div></div>`:''}
+  `;
+  div.querySelectorAll('.ay-kw').forEach(k=>k.addEventListener('click',e=>{
+    e.stopPropagation();
+    const w=k.dataset.kw;
+    ayOverlay.classList.remove('visible');closeCompass();exitNebula();
+    const t=document.querySelector('.mode-tab[data-mode="explore"]');if(t)t.click();
+    WI.value=w;explore(w,currentCenter());toast(`「${w}」を探索します`,'info',1800);
+  }));
 }
 // ノードを選択し、つながった語の集合を作る（発光表示用）
 function selectNebulaNode(n){

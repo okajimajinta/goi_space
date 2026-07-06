@@ -10,6 +10,7 @@
 //   青=自然科学(0) 緑=生物(60) 黄=社会(120) 紫=芸術(180) 赤=哲学(240) 白=数学(300)
 
 import { setCors, redis } from './_redis.js';
+import { getCredits, consumeCredits } from './_ratelimit.js';
 
 const DISCIPLINES = [
   { key: '自然科学', color: '#5B8FDE', angle: 0 },
@@ -48,6 +49,31 @@ export default async function handler(req, res) {
 
   // --- コンパス履歴の閲覧（GET）: /api/compass?history=語 ---
   if (req.method === 'GET') {
+    // === 藍の夢：報告書一覧（全公開・新しい順）===
+    if (req.query.ainoyume === 'list') {
+      try {
+        const ids = await redis('ZREVRANGE', 'ainoyume:list', 0, 29) || [];
+        const items = [];
+        for (const id of ids) {
+          try {
+            const raw = await redis('GET', `ainoyume:${id}`);
+            if (!raw) continue;
+            const r = JSON.parse(raw);
+            items.push({ id, goal: r.g, pioneer: r.p ? r.p.exists : null, ts: r.t, frontiers: (r.d || []).filter(x => x.f === 'frontier').length });
+          } catch {}
+        }
+        return res.status(200).json({ items });
+      } catch { return res.status(200).json({ items: [] }); }
+    }
+    // === 藍の夢：報告書の取得 ===
+    if (req.query.ainoyume === 'report' && req.query.id) {
+      const id = String(req.query.id).slice(0, 20).replace(/[^a-zA-Z0-9]/g, '');
+      try {
+        const raw = await redis('GET', `ainoyume:${id}`);
+        if (!raw) return res.status(404).json({ error: 'not found' });
+        return res.status(200).json({ id, report: JSON.parse(raw) });
+      } catch { return res.status(500).json({ error: 'load failed' }); }
+    }
     // 履歴のある語の一覧（星雲でボタン表示判定に使う）
     if (req.query.words === '1') {
       try {
@@ -91,6 +117,199 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // ===== 藍の夢（出藍の誉）：目標→未踏検出→知の航海図 =====
+  if (req.body && req.body.ainoyume) {
+    const ay = req.body.ainoyume;
+    const stage = String(ay.stage || '');
+
+    // --- 段階1：先駆者確認＋周辺展開（クレジット15消費）---
+    if (stage === 'expand') {
+      const goal = String(ay.goal || '').trim().slice(0, 120);
+      if (!goal) return res.status(400).json({ error: 'goal required' });
+      // クレジット消費（藍の夢は1回15クレジット）
+      const { email, credits } = await getCredits(req);
+      if (!email || credits < 15) {
+        return res.status(402).json({ error: 'insufficient_credits', need: 15, credits: credits || 0 });
+      }
+      const ok = await consumeCredits(email, 15);
+      if (!ok) return res.status(402).json({ error: 'insufficient_credits', need: 15, credits });
+      const prompt = `ユーザーの目標：「${goal}」
+
+この目標について、次の2つを調べてください。
+
+1. 先駆者確認：この目標に対して、事業・研究・実践の先駆者（既に取り組んで成果を出している人・組織・研究分野）が存在するか。
+2. 周辺展開：この目標を達成するために必要な知の領域を8〜12個洗い出す。技能・理論・周辺分野を含め、依存関係（何を先に知るべきか）を意識すること。各領域には、その領域を代表する検索可能なキーワードを1つ添える。
+
+次のJSON形式のみで出力（前後の説明文なし）：
+{
+ "pioneer": {"exists": true/false, "note": "先駆者の概況、または不在の理由（60字以内）"},
+ "domains": [
+   {"name": "領域名（短く）", "key": "代表キーワード1語", "why": "なぜ目標に必要か（40字以内）", "order": 学習順序の番号（1が最初）}
+ ]
+}`;
+      try {
+        const parsed = await callClaude(prompt, 1600);
+        const domains = (parsed.domains || []).slice(0, 14).map(d => ({
+          name: String(d.name || '').slice(0, 40),
+          key: String(d.key || '').slice(0, 30),
+          why: String(d.why || '').slice(0, 100),
+          order: Math.max(1, Math.min(20, Number(d.order) || 1)),
+        })).filter(d => d.name);
+        return res.status(200).json({
+          pioneer: { exists: !!(parsed.pioneer && parsed.pioneer.exists), note: String(parsed.pioneer?.note || '').slice(0, 140) },
+          domains,
+          creditsLeft: credits - 15,
+        });
+      } catch (e) {
+        // 生成失敗時はクレジットを返却
+        try { await redis('INCRBY', `credits:${email}`, 15); } catch {}
+        return res.status(502).json({ error: '展開に失敗しました。クレジットは返却されました。' });
+      }
+    }
+
+    // --- 段階2：二重の未踏検出（Redis照合のみ・AI不使用）---
+    if (stage === 'detect') {
+      const domains = Array.isArray(ay.domains) ? ay.domains.slice(0, 14) : [];
+      const myWords = new Set((Array.isArray(ay.myWords) ? ay.myWords : []).map(w => String(w).slice(0, 50)));
+      const out = [];
+      for (const d of domains) {
+        const key = String(d.key || d.name || '').slice(0, 50);
+        // 集合知照合：星雲・コンパス履歴にその語が存在するか
+        let inNebula = false, inCompass = false;
+        try { inNebula = (await redis('ZSCORE', 'nebula:words', key)) != null; } catch {}
+        try { inCompass = (await redis('SISMEMBER', 'compass:words', key)) === 1; } catch {}
+        out.push({
+          ...d,
+          personalUnknown: !myWords.has(key) && !myWords.has(d.name), // 本人未踏
+          collectiveUnknown: !inNebula && !inCompass,                  // 本サービス集合知の未踏
+        });
+      }
+      return res.status(200).json({ domains: out });
+    }
+
+    // --- 段階3：航海図の凝縮＋人類未踏の判定＋保存（公開・永続）---
+    if (stage === 'chart') {
+      const goal = String(ay.goal || '').trim().slice(0, 120);
+      const pioneer = ay.pioneer || { exists: false, note: '' };
+      const domains = Array.isArray(ay.domains) ? ay.domains.slice(0, 14) : [];
+      if (!goal || !domains.length) return res.status(400).json({ error: 'goal/domains required' });
+      const domList = domains.map(d =>
+        `- ${d.name}（キーワード:${d.key}／必要理由:${d.why}／本人未踏:${d.personalUnknown ? 'はい' : 'いいえ'}／集合知未踏:${d.collectiveUnknown ? 'はい' : 'いいえ'}）`
+      ).join('\n');
+      const prompt = `ユーザーの目標：「${goal}」
+先駆者：${pioneer.exists ? `存在する（${pioneer.note}）` : `見当たらない（${pioneer.note}）`}
+必要な知の領域（未踏フラグ付き）：
+${domList}
+
+この目標のための「知の航海図」を作ります。各領域について：
+1. 学習順序（依存関係順）を最終決定する
+2. 一行の要点（この領域の芯を突く要約、25字以内）を書く
+3. 人類未踏の判定：あなたの知識に照らして、その領域に確立された研究・知見・実践が存在するかを判定。本当に確立知見が無い場合のみ "frontier" とする（安易に frontier にしないこと）
+4. frontier と判定した領域には、検証されていない「予測（仮説）」と、それを確かめるための調査計画の要点を書く。予測は必ず未検証であると分かる書き方をすること
+
+次のJSON形式のみで出力（前後の説明文なし）：
+{
+ "title": "この航海図の題（20字以内・目標を言い換えた詩的すぎない題）",
+ "items": [
+   {"name": "領域名", "key": "キーワード", "order": 番号, "gist": "一行要点25字以内",
+    "status": "known(確立知見あり) または frontier(人類未踏候補)",
+    "prediction": "frontierのみ：未検証の予測（60字以内）", "plan": "frontierのみ：調査計画の要点（60字以内）"}
+ ]
+}
+items は入力された全領域を含めること。`;
+      try {
+        const parsed = await callClaude(prompt, 2200);
+        const items = (parsed.items || []).slice(0, 14).map((it, i) => {
+          const src = domains.find(d => d.name === it.name) || domains[i] || {};
+          return {
+            n: String(it.name || src.name || '').slice(0, 40),
+            k: String(it.key || src.key || '').slice(0, 30),
+            o: Math.max(1, Math.min(20, Number(it.order) || i + 1)),
+            g: String(it.gist || '').slice(0, 60),
+            w: String(src.why || '').slice(0, 100),
+            f: (String(it.status || '').includes('frontier')) ? 'frontier' : 'known',
+            pu: !!src.personalUnknown,
+            cu: !!src.collectiveUnknown,
+            pr: String(it.prediction || '').slice(0, 140),
+            pl: String(it.plan || '').slice(0, 140),
+          };
+        }).filter(it => it.n);
+        items.sort((a, b) => a.o - b.o);
+        // 保存（全公開・永続）
+        const idNum = await redis('INCR', 'ainoyume:seq');
+        const id = `a${idNum}`;
+        const rec = {
+          g: goal,
+          ti: String(parsed.title || goal).slice(0, 40),
+          p: { exists: !!pioneer.exists, note: String(pioneer.note || '').slice(0, 140) },
+          d: items,
+          t: Date.now(),
+        };
+        await redis('SET', `ainoyume:${id}`, JSON.stringify(rec));
+        await redis('ZADD', 'ainoyume:list', rec.t, id);
+        // 人類未踏カタログに索引
+        for (const it of items) {
+          if (it.f === 'frontier') {
+            try { await redis('RPUSH', 'ainoyume:frontiers', JSON.stringify({ id, n: it.n, g: goal, t: rec.t })); } catch {}
+          }
+        }
+        return res.status(200).json({ id, report: rec });
+      } catch (e) {
+        return res.status(502).json({ error: '航海図の凝縮に失敗しました' });
+      }
+    }
+
+    // --- 註脚の遅延生成（開いた時に生成→全体キャッシュ。次に開く人は無料）---
+    if (stage === 'note') {
+      const id = String(ay.id || '').slice(0, 20).replace(/[^a-zA-Z0-9]/g, '');
+      const itemName = String(ay.item || '').slice(0, 40);
+      if (!id || !itemName) return res.status(400).json({ error: 'id/item required' });
+      const cacheKey = `ainoyume:note:${id}:${itemName}`;
+      try {
+        const cached = await redis('GET', cacheKey);
+        if (cached) return res.status(200).json({ note: JSON.parse(cached), cached: true });
+      } catch {}
+      // 報告書から文脈を取得
+      let rec = null;
+      try { const raw = await redis('GET', `ainoyume:${id}`); if (raw) rec = JSON.parse(raw); } catch {}
+      if (!rec) return res.status(404).json({ error: 'report not found' });
+      const item = (rec.d || []).find(x => x.n === itemName);
+      if (!item) return res.status(404).json({ error: 'item not found' });
+      const isFrontier = item.f === 'frontier';
+      const prompt = `目標「${rec.g}」の知の航海図における領域「${item.n}」（キーワード:${item.k}）の註脚を書いてください。
+${isFrontier ? 'この領域は確立知見が無い「人類未踏候補」です。前提として何が分かっていて何が分かっていないかを峻別してください。' : ''}
+学習効率を最大化するため、抽象論ではなく具体的な概念名・手法・事実に触れること。
+
+次のJSON形式のみで出力（前後の説明文なし）：
+{
+ "context": "この領域の前提知識・背景（120字以内・具体的に）",
+ "core": "目標達成のために掴むべき核心（100字以内）",
+ "resources": [{"title": "本・文献・資料名", "author": "著者", "note": "何が得られるか25字以内", "type": "book または paper"}],
+ "keywords": ["さらに掘るための具体的キーワード4〜6個"]${isFrontier ? ',\n "unknown": "何が分かっていないのか、その空白の正確な輪郭（100字以内）"' : ''}
+}
+resources は2〜3点。実在するものを優先。`;
+      try {
+        const parsed = await callClaude(prompt, 1200);
+        const note = {
+          context: String(parsed.context || '').slice(0, 300),
+          core: String(parsed.core || '').slice(0, 240),
+          resources: (parsed.resources || []).slice(0, 4).map(b => ({
+            title: String(b.title || '').slice(0, 120),
+            author: String(b.author || '').slice(0, 80),
+            note: String(b.note || '').slice(0, 80),
+            type: String(b.type || 'book').toLowerCase().includes('paper') ? 'paper' : 'book',
+          })),
+          keywords: (parsed.keywords || []).slice(0, 8).map(k => String(k).slice(0, 30)),
+          unknown: String(parsed.unknown || '').slice(0, 240),
+        };
+        await redis('SET', cacheKey, JSON.stringify(note)); // 永続キャッシュ（公開）
+        return res.status(200).json({ note });
+      } catch { return res.status(502).json({ error: '註脚の生成に失敗しました' }); }
+    }
+
+    return res.status(400).json({ error: 'unknown ainoyume stage' });
+  }
 
   // === ソナー：円内に入った語群から共通する意味を抽出して命名 ===
   if (req.body && req.body.sonar && Array.isArray(req.body.words)) {
