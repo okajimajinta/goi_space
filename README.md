@@ -375,6 +375,12 @@ goi-space/
 
 ---
 
+## 更新履歴
+
+全アップデートの一覧は [PATCHNOTES.md](PATCHNOTES.md) を参照。
+
+---
+
 ## ライセンス / お問い合わせ
 
 個人プロジェクト。お問い合わせは [privacy.html](public/privacy.html) 記載の連絡先まで。

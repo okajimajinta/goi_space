@@ -452,7 +452,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .loading-text::after{content:'▋';color:var(--amber);animation:cursorBlink 0.9s steps(2) infinite;margin-left:2px}
 .loading-text.fading{opacity:0}
 @keyframes cursorBlink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
-.loading-ad{width:300px;height:250px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#2E3A55;font-size:11px;margin-top:8px}
+.loading-ad{width:300px;min-height:250px;border-radius:4px;display:flex;align-items:center;justify-content:center;margin-top:8px;overflow:hidden}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* === STATUS (initial) === */
@@ -460,6 +460,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .status.hidden{opacity:0!important;pointer-events:none!important;visibility:hidden}
 .status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
 .help-btn{margin-top:14px;background:rgba(16,24,44,0.9);border:1.5px solid rgba(140,170,220,0.5);color:#cdd6ea;font-family:'Noto Serif JP',serif;font-size:13px;padding:8px 18px;border-radius:20px;cursor:pointer;transition:all .15s;pointer-events:auto}
+.fast-toggle{display:inline-flex;align-items:center;gap:7px;margin-top:14px;background:rgba(16,24,44,0.85);border:1px solid rgba(245,166,35,0.4);border-radius:20px;padding:7px 15px;font-size:12px;color:#e8d3a8;cursor:pointer;pointer-events:auto;user-select:none}
+.fast-toggle input{accent-color:var(--amber);width:15px;height:15px;cursor:pointer}
+.fast-toggle-note{color:#8595b3;font-size:10.5px;margin-left:2px}
+.site-desc{margin-top:16px;font-size:11.5px;color:#8595b3;line-height:1.9;max-width:440px;pointer-events:auto}
+.site-desc a{color:#b8a06a}
 .help-btn:hover{border-color:var(--amber);color:var(--amber)}
 .help-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.9);z-index:200;backdrop-filter:blur(6px);padding:16px}
 .help-overlay.visible{display:flex}
@@ -558,6 +563,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .comp-node-reason{font-size:11px;color:var(--muted);white-space:nowrap}
 .comp-arrow{color:var(--muted);font-size:18px}
 .comp-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.comp-ad{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);min-height:90px}
 .comp-btn{padding:12px 22px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .15s}
 .comp-btn:hover{border-color:var(--amber);color:var(--amber)}
 .comp-btn.twitter{background:#1DA1F2;border-color:#1DA1F2;color:#fff}
@@ -711,6 +717,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
     </select>
     <div class="header-links">
       <div class="usage-badge" id="usageBadge">残り <span class="count" id="usageCount">—</span>回</div>
+      <a href="/words">語彙さくいん</a>
+      <a href="/about.html">サイトについて</a>
       <a href="/privacy.html">プライバシー</a>
       <a href="mailto:girlsvibesproject@gmail.com">お問い合わせ</a>
     </div>
@@ -946,6 +954,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       </div>
       <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
       <button class="help-btn" id="helpBtn">❓ 使い方・機能の説明</button>
+      <p class="site-desc">語彙空間 GOI-Space は、言葉のつながりを星図として旅する語彙探索サービスです。<br>類語・対義語・連想語をたどる探索、言葉をつなぐワードゴルフ、<a href="/words">語彙辞典（意味・例文・語源）</a>を提供しています。</p>
+      <label class="fast-toggle" id="fastToggle" style="display:none">
+        <input type="checkbox" id="fastToggleChk"/>
+        <span>⚡ 高速・先読みモード<span class="fast-toggle-note">（1検索につき1クレジット消費）</span></span>
+      </label>
     </div>
 
     <!-- 使い方・機能説明オーバーレイ -->
@@ -1063,7 +1076,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="loading-spinner"></div>
       <div class="loading-word" id="loadingWord"></div>
       <div class="loading-text" id="loadingText">語彙空間を探索中…</div>
-      <div class="loading-ad">広告スペース（300×250）</div>
+      <!-- ローディング画面への広告はGoogleポリシーで明示的に禁止（コンテンツなし画面）のため設置しない -->
     </div>
     <div class="completion" id="completion"></div>
   </div>
@@ -1090,6 +1103,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 
 <footer class="site-footer">
   <span>当サイトはAmazonアソシエイト・プログラムの参加者です。商品リンクから得た収益はサービス運営に充てられます。</span>
+  <a href="/words">語彙さくいん</a>
+  <a href="/about.html">サイトについて</a>
   <a href="/privacy.html">プライバシー</a>
 </footer>
 
@@ -1385,10 +1400,12 @@ function loop(){tick();draw();animFrame=requestAnimationFrame(loop)}
 let premiumEmail=localStorage_get('premiumEmail')||'';
 let userPlan=localStorage_get('userPlan')||'free'; // free | premium | premium_plus
 let userCredits=parseInt(localStorage_get('userCredits'),10)||0; // 高速クレジット残高
-// 常時高速モード（premium_plus or クレジット保有）
-function isFastMode(){return userPlan==='premium_plus'||userCredits>0}
-// プリフェッチ対象：常時高速ユーザーのみ（月額premiumは先読みしない＝コスト抑制）
-function isPrefetchEligible(){return userPlan==='premium_plus'||userCredits>0}
+// クレジットを消費した高速・先読みのオンオフ（デフォルト：オフ）
+let fastEnabled=localStorage_get('fastEnabled')==='1';
+// 常時高速モード（premium_plus は無償で常時、クレジットはオンにした時だけ）
+function isFastMode(){return userPlan==='premium_plus'||(userCredits>0&&fastEnabled)}
+// プリフェッチ対象：premium_plus は常時、クレジットはオンにした時だけ（月額premiumは先読みしない）
+function isPrefetchEligible(){return userPlan==='premium_plus'||(userCredits>0&&fastEnabled)}
 function setUserPlan(tier){
   userPlan=tier||'free';
   localStorage_set('userPlan',userPlan);
@@ -1427,6 +1444,8 @@ async function fetchWords(word,context,fastFallback){
   }
   // 月額会員で先読みが間に合わなかった場合、この検索だけ高速生成(Haiku)を要求
   if(fastFallback)body.fastFallback=true;
+  // クレジット高速モードをオンにしている時だけ、消費して高速化する（デフォルトはオフ）
+  if(fastEnabled)body.fastOn=true;
   const resp=await fetch('/api/claude',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
   if(resp.status===429){const d=await resp.json();return{_error:'daily_limit',_message:d.message}}
   if(resp.status===402){const d=await resp.json();return{_error:'no_credits',_message:d.message}}
@@ -1533,9 +1552,6 @@ async function explore(word,fromWord,opts){
   // 選択ノードの説明文を1文字ずつ表示する演出（語そのものも上部に表示）
   const loadingDesc=(opts&&opts.description)?opts.description:`${word} へ`;
   startLoadingTypewriter(loadingDesc,word);
-
-  // Refresh ad during loading (placeholder)
-  refreshAd();
 
   try{
     // 前の語があれば文脈として渡す（A→Bの流れからコンテキスト語を追加生成）
@@ -1928,6 +1944,27 @@ document.getElementById('helpClose').addEventListener('click',closeHelp);
 document.getElementById('helpStartBtn').addEventListener('click',closeHelp);
 helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)closeHelp()});
 
+// ⚡ 高速・先読みモードのトグル（クレジット保有者のみ表示・デフォルトオフ）
+const fastToggleEl=document.getElementById('fastToggle');
+const fastToggleChk=document.getElementById('fastToggleChk');
+function refreshFastToggle(){
+  // premium_plus は常時無償で高速なのでトグル不要。クレジット保有者だけに出す
+  const show=userPlan!=='premium_plus'&&userCredits>0;
+  if(fastToggleEl)fastToggleEl.style.display=show?'inline-flex':'none';
+  if(fastToggleChk)fastToggleChk.checked=fastEnabled;
+}
+if(fastToggleChk){
+  fastToggleChk.addEventListener('change',e=>{
+    fastEnabled=e.target.checked;
+    localStorage_set('fastEnabled',fastEnabled?'1':'0');
+    toast(fastEnabled?'⚡ 高速・先読みモードをオンにしました（1検索1クレジット）':'高速モードをオフにしました','info',2600);
+  });
+}
+refreshFastToggle();
+// クレジット表示更新時にトグルの表示も同期
+const _origUpdateCredit=updateCreditDisplay;
+updateCreditDisplay=function(){_origUpdateCredit.apply(this,arguments);refreshFastToggle();};
+
 function centerSearch(){
   const v=centerInput.value.trim();
   if(!v)return;
@@ -1959,11 +1996,9 @@ function shareOnX(text,opts={}){
 }
 
 // ===== AD REFRESH =====
-function refreshAd(){
-  try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch{}
-}
-// Periodic refresh every 60s during play
-setInterval(refreshAd,60000);
+// アプリ本体（Canvas中心のSPA）にはAdSense広告を表示しない。
+// 広告はテキストの豊富なSEOページ（/word/◯◯）にのみ配置する（審査対応）。
+// （自動リフレッシュはポリシー違反リスクがあるため廃止）
 
 // ===== LIVE SEARCH POLLING =====
 async function pollLive(){
@@ -2096,8 +2131,10 @@ async function finishGolf(){
     <div class="comp-actions">
       <button class="comp-btn twitter" onclick="window.__golfShare&&window.__golfShare()">Xで共有</button>
       <button class="comp-btn" onclick="CO.classList.remove('visible')">閉じる</button>
-    </div>`;
+    </div>
+    <div class="comp-ad"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-9246118623869056" data-ad-slot="" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
   CO.classList.add('visible');
+  requestAnimationFrame(()=>{try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch{}});
 
   // ★経路の抽象化：A→Bを何が接続していたか
   async function loadConnection(){

@@ -7,6 +7,13 @@
 import { redis } from './_redis.js';
 
 const SITE = process.env.SITE_URL || 'https://goispace.app';
+const AMAZON_TAG = process.env.AMAZON_TAG || 'goispacead-22';
+
+// Amazonアソシエイト検索リンク（書籍カテゴリ）
+function amazonSearch(query) {
+  const q = encodeURIComponent(String(query || '').slice(0, 60));
+  return `https://www.amazon.co.jp/s?k=${q}&i=stripbooks&tag=${AMAZON_TAG}`;
+}
 const CACHE_TTL = 60 * 60 * 24 * 7; // 7日
 
 function esc(s) {
@@ -28,14 +35,19 @@ async function relatedFromNebula(word) {
 
 // AIで語をカテゴリ分類生成（Haiku・安価）
 async function relatedFromAI(word) {
-  const prompt = `日本語の言葉「${word}」に関連する語を挙げてください。
-「${word}」自身は含めないこと。次のJSON形式のみで出力（前後の説明・マークダウン不可）：
+  const prompt = `日本語の言葉「${word}」について、語彙辞典のページを作ります。
+「${word}」自身は類語等に含めないこと。次のJSON形式のみで出力（前後の説明・マークダウン不可）：
 {
  "reading":"${word}のよみがな",
- "summary":"${word}という語の意味・ニュアンスの簡潔な説明（60字以内）",
+ "summary":"${word}の意味・ニュアンスの説明（80字以内）",
+ "meaning_long":"${word}の意味をより詳しく、使われる文脈やニュアンスの違いも含めて説明（200字以内）",
  "synonyms":["類義語・関連語を8語"],
  "antonyms":["対義語・対比となる語を4語"],
- "related":["連想される語・周辺概念を8語"]
+ "related":["連想される語・周辺概念を8語"],
+ "examples":["${word}を使った自然な例文を3つ（各40字以内）"],
+ "etymology":"${word}の語源・成り立ち・由来（120字以内。不明なら空文字）",
+ "english":["${word}に対応する英語表現を2〜3語"],
+ "book_theme":"${word}を深く知るために読むとよい本のテーマやジャンル（Amazon検索に使う短い語句）"
 }`;
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -47,7 +59,7 @@ async function relatedFromAI(word) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 600,
+        max_tokens: 1100,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -58,21 +70,26 @@ async function relatedFromAI(word) {
     const p = JSON.parse(txt);
     return {
       reading: String(p.reading || '').slice(0, 40),
-      summary: String(p.summary || '').slice(0, 160),
+      summary: String(p.summary || '').slice(0, 200),
+      meaning_long: String(p.meaning_long || '').slice(0, 300),
       synonyms: (p.synonyms || []).map(w => String(w).slice(0, 30)).filter(Boolean).slice(0, 10),
       antonyms: (p.antonyms || []).map(w => String(w).slice(0, 30)).filter(Boolean).slice(0, 6),
       related: (p.related || []).map(w => String(w).slice(0, 30)).filter(Boolean).slice(0, 10),
+      examples: (p.examples || []).map(w => String(w).slice(0, 80)).filter(Boolean).slice(0, 4),
+      etymology: String(p.etymology || '').slice(0, 200),
+      english: (p.english || []).map(w => String(w).slice(0, 40)).filter(Boolean).slice(0, 4),
+      book_theme: String(p.book_theme || '').slice(0, 40),
     };
   } catch {
-    return { reading: '', summary: '', synonyms: [], antonyms: [], related: [] };
+    return { reading: '', summary: '', meaning_long: '', synonyms: [], antonyms: [], related: [], examples: [], etymology: '', english: [], book_theme: '' };
   }
 }
 
 function buildHTML(word, data, nebulaWords) {
-  const title = `「${word}」の類語・関連語・対義語 | 語彙空間 GOI-Space`;
+  const title = `「${word}」の意味・類語・対義語・例文・語源 | 語彙空間 GOI-Space`;
   const desc = data.summary
-    ? `${word}（${data.reading}）：${data.summary} 類語・関連語・対義語を語彙の星図で探索。`
-    : `「${word}」の類語・関連語・対義語・連想語を一覧。語彙空間 GOI-Space で意味のつながりを探索できます。`;
+    ? `${word}（${data.reading}）の意味：${data.summary} 類語・対義語・例文・語源・英語も。語彙の星図で探索。`
+    : `「${word}」の意味・類語・対義語・例文・語源・英語訳。語彙空間 GOI-Space で意味のつながりを探索できます。`;
   const url = `${SITE}/word/${encodeURIComponent(word)}`;
 
   const chipList = (arr, cls) => arr.map(w =>
@@ -132,7 +149,17 @@ h2{font-size:18px;border-bottom:1px solid var(--border);padding-bottom:8px;margi
 .chip.neb{border-color:rgba(245,166,35,0.5);background:rgba(245,166,35,0.06)}
 footer{text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:20px;margin-top:40px}
 footer a{color:var(--muted)}
+.ad-slot{margin:28px 0;min-height:100px;text-align:center}
+.prose{font-size:15px;line-height:1.9;color:var(--text)}
+.examples{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.examples li{background:var(--surface);border:1px solid var(--border);border-left:3px solid rgba(91,143,222,0.5);border-radius:8px;padding:10px 14px;font-size:15px;line-height:1.7}
+.chip.eng{border-color:rgba(120,200,180,0.4);cursor:default}
+.books-sec h2{margin-bottom:6px}
+.books{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.book-link{display:block;background:linear-gradient(135deg,#2a1e0e,#1a1408);border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:13px 16px;text-decoration:none;color:var(--amber);font-size:15px;font-weight:600;transition:all .15s}
+.book-link:hover{border-color:var(--amber);background:linear-gradient(135deg,#3a2a12,#241a0c)}
 </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="wrap">
@@ -143,14 +170,35 @@ footer a{color:var(--muted)}
 </header>
 ${data.summary ? `<div class="summary">${esc(data.summary)}</div>` : ''}
 <a class="cta" href="/?q=${encodeURIComponent(word)}">「${esc(word)}」を星図で探索する →</a>
+${data.meaning_long ? `<section><h2>「${esc(word)}」の意味</h2><p class="prose">${esc(data.meaning_long)}</p></section>` : ''}
+${data.examples && data.examples.length ? `<section><h2>例文</h2><ul class="examples">${data.examples.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section>` : ''}
 ${data.synonyms.length ? `<section><h2>類語・関連語</h2><div class="chips">${chipList(data.synonyms, 'syn')}</div></section>` : ''}
+<div class="ad-slot">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-9246118623869056" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
 ${data.antonyms.length ? `<section><h2>対義語・対比となる語</h2><div class="chips">${chipList(data.antonyms, 'ant')}</div></section>` : ''}
 ${data.related.length ? `<section><h2>連想語・周辺概念</h2><div class="chips">${chipList(data.related, 'rel')}</div></section>` : ''}
+${data.etymology ? `<section><h2>語源・由来</h2><p class="prose">${esc(data.etymology)}</p></section>` : ''}
+${data.english && data.english.length ? `<section><h2>英語で言うと</h2><div class="chips">${data.english.map(e => `<span class="chip eng">${esc(e)}</span>`).join('')}</div></section>` : ''}
 ${nebulaChips}
+<section class="books-sec">
+  <h2>「${esc(word)}」をもっと知る本</h2>
+  <p class="note">この言葉やそのテーマを深めたい方へ。</p>
+  <div class="books">
+    <a class="book-link" href="${amazonSearch(word)}" target="_blank" rel="noopener nofollow">📚「${esc(word)}」に関する本を探す</a>
+    ${data.book_theme ? `<a class="book-link" href="${amazonSearch(data.book_theme)}" target="_blank" rel="noopener nofollow">📖「${esc(data.book_theme)}」の本を探す</a>` : ''}
+    <a class="book-link" href="${amazonSearch(word + ' 語源 由来')}" target="_blank" rel="noopener nofollow">🔍 語源・由来の本を探す</a>
+  </div>
+</section>
+<div class="ad-slot">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-9246118623869056" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
 <a class="cta" href="/?q=${encodeURIComponent(word)}">語彙の星雲で「${esc(word)}」を探索する →</a>
 <footer>
   <p>「${esc(word)}」の意味のつながりを、語彙空間 GOI-Space の星図でインタラクティブに探索できます。</p>
-  <p><a href="/">トップページ</a> ・ <a href="/privacy.html">プライバシー</a></p>
+  <p><a href="/">トップページ</a> ・ <a href="/words">語彙さくいん</a> ・ <a href="/about.html">サイトについて</a> ・ <a href="/privacy.html">プライバシー</a></p>
 </footer>
 </div>
 </body>
@@ -159,6 +207,54 @@ ${nebulaChips}
 
 export default async function handler(req, res) {
   // サイトマップ（/word?sitemap=1 または /sitemap.xml をrewrite）
+  // 語彙さくいん（/words）：審査員・クローラーが語彙ページ群を発見できるHTML一覧
+  if (req.query && req.query.list === '1') {
+    const set = new Set();
+    try { (await redis('SMEMBERS', 'seo:words') || []).forEach(w => set.add(w)); } catch {}
+    try { (await redis('ZREVRANGE', 'nebula:words', 0, 999) || []).forEach(w => set.add(w)); } catch {}
+    const words = [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')).slice(0, 1000);
+    const links = words.map(w => `<a class="w" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
+    const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>語彙さくいん | 語彙空間 GOI-Space</title>
+<meta name="description" content="語彙空間 GOI-Space の語彙辞典さくいん。各語の意味・類語・対義語・例文・語源のページ一覧。">
+<link rel="canonical" href="${SITE}/words">
+<meta name="robots" content="index, follow">
+<link rel="icon" href="/favicon.svg">
+<style>
+:root{--bg:#080C18;--surface:#111726;--border:#233047;--text:#E8EDF5;--muted:#8595B3;--amber:#F5A623}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;line-height:1.8}
+.wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+.logo{font-size:14px;color:var(--muted);text-decoration:none;letter-spacing:.1em}
+h1{font-size:24px;margin:18px 0 8px}
+.lead{font-size:14px;color:var(--muted);margin-bottom:24px}
+.list{display:flex;flex-wrap:wrap;gap:9px}
+.w{display:inline-block;padding:7px 14px;border-radius:16px;text-decoration:none;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.w:hover{border-color:var(--amber);color:var(--amber)}
+footer{text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:20px;margin-top:40px}
+footer a{color:var(--muted);margin:0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="logo" href="/">語彙空間 GOI-Space</a>
+<h1>語彙さくいん</h1>
+<p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えていきます（現在 ${words.length} 語）。</p>
+<div class="list">${links || '<span style="color:var(--muted)">まだ語彙ページがありません。</span>'}</div>
+<footer>
+  <a href="/">トップ</a><a href="/about.html">サイトについて</a><a href="/privacy.html">プライバシー</a>
+</footer>
+</div>
+</body>
+</html>`;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=21600');
+    return res.status(200).send(html);
+  }
+
   if (req.query && (req.query.sitemap || req.url?.includes('sitemap'))) {
     const set = new Set();
     // 生成済みのSEOページ
@@ -175,6 +271,8 @@ export default async function handler(req, res) {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>${SITE}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+<url><loc>${SITE}/words</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+<url><loc>${SITE}/about.html</loc><changefreq>monthly</changefreq></url>
 ${urls}
 </urlset>`;
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
@@ -218,9 +316,14 @@ ${urls}
   const data = {
     reading: ai.reading,
     summary: ai.summary,
+    meaning_long: ai.meaning_long,
     synonyms: ai.synonyms,
     antonyms: ai.antonyms,
     related: ai.related,
+    examples: ai.examples,
+    etymology: ai.etymology,
+    english: ai.english,
+    book_theme: ai.book_theme,
   };
 
   const html = buildHTML(word, data, nebulaWords.slice(0, 16));
