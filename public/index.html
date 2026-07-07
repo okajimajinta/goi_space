@@ -445,7 +445,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === LOADING OVERLAY (with ad) === */
 .loading-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(8,12,24,0.85);z-index:60;backdrop-filter:blur(4px)}
 .loading-overlay.visible{display:flex}
-.loading-tip{max-width:min(420px,84vw);margin-top:6px;font-size:12.5px;line-height:1.8;color:#9aa6c4;text-align:center;padding:0 16px}
+.loading-tip{max-width:min(440px,86vw);margin-top:6px;font-size:12.5px;line-height:1.9;color:#9aa6c4;text-align:center;padding:0 16px;overflow-wrap:break-word;line-break:strict}
 .loading-tip .tip-label{color:var(--amber);font-weight:600;margin-right:5px;font-size:11px}
 .loading-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite}
 .loading-text{font-family:'Noto Serif JP',serif;font-size:18px;color:var(--text);letter-spacing:.06em;max-width:80vw;text-align:center;line-height:1.7;min-height:1.7em;transition:opacity .5s}
@@ -465,8 +465,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .fast-toggle{display:inline-flex;align-items:center;gap:7px;margin-top:14px;background:rgba(16,24,44,0.85);border:1px solid rgba(245,166,35,0.4);border-radius:20px;padding:7px 15px;font-size:12px;color:#e8d3a8;cursor:pointer;pointer-events:auto;user-select:none}
 .fast-toggle input{accent-color:var(--amber);width:15px;height:15px;cursor:pointer}
 .fast-toggle-note{color:#8595b3;font-size:10.5px;margin-left:2px}
-.site-desc{margin-top:16px;font-size:11.5px;color:#8595b3;line-height:1.9;max-width:440px;pointer-events:auto}
-.site-desc a{color:#b8a06a}
+.site-desc{margin-top:16px;font-size:11.5px;color:#8595b3;line-height:1.9;max-width:460px;pointer-events:auto;overflow-wrap:break-word;line-break:strict}
+.site-desc a{color:#b8a06a;white-space:nowrap}
 .help-btn:hover{border-color:var(--amber);color:var(--amber)}
 .help-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.9);z-index:200;backdrop-filter:blur(6px);padding:16px}
 .help-overlay.visible{display:flex}
@@ -572,7 +572,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .comp-btn.twitter:hover{opacity:.85}
 
 /* === OVERLAY UI === */
-.legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:8px;opacity:0;transition:opacity .4s;pointer-events:none;background:rgba(17,23,38,0.7);padding:12px 14px;border-radius:8px;border:1px solid var(--border)}
+.legend{position:absolute;bottom:64px;left:12px;display:flex;flex-direction:column;gap:8px;opacity:0;transition:opacity .4s;pointer-events:none;background:rgba(17,23,38,0.7);padding:12px 14px;border-radius:8px;border:1px solid var(--border)}
 .word-panel{position:absolute;bottom:16px;right:12px;z-index:22;width:min(330px,88vw);display:none;flex-direction:column;pointer-events:none}
 .word-panel.on{display:flex}
 .wp-head{pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(15,21,40,0.94);border:1px solid rgba(140,170,220,0.4);border-radius:10px;padding:9px 13px;color:#cdd6ea;font-family:'Noto Serif JP',serif;font-size:12.5px;cursor:pointer;text-align:left}
@@ -657,7 +657,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .pin-chip-remove:hover{color:var(--rose)}
 
 /* === ENCHANT === */
-.enchant-btn{position:absolute;bottom:16px;right:12px;z-index:46;background:linear-gradient(135deg,#9B72E8,#5B8FDE);color:#fff;border:none;padding:10px 16px;border-radius:22px;font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(155,114,232,0.4);transition:all .15s;display:none}
+.enchant-btn{position:absolute;bottom:16px;left:12px;z-index:46;background:linear-gradient(135deg,#9B72E8,#5B8FDE);color:#fff;border:none;padding:10px 16px;border-radius:22px;font-family:'Noto Serif JP',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(155,114,232,0.4);transition:all .15s;display:none}
 .enchant-btn.visible{display:block}
 .enchant-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(155,114,232,0.55)}
 .enchant-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,24,0.92);z-index:90;backdrop-filter:blur(6px)}
@@ -975,7 +975,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       </div>
       <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
       <button class="help-btn" id="helpBtn">❓ 使い方・機能の説明</button>
-      <p class="site-desc">語彙空間 GOI-Space は、言葉のつながりを星図として旅する語彙探索サービスです。<br>類語・対義語・連想語をたどる探索、言葉をつなぐワードゴルフ、<a href="/words">語彙辞典（意味・例文・語源）</a>を提供しています。</p>
+      <p class="site-desc">語彙空間 GOI-Space は、言葉のつながりを星図として旅する語彙探索サービスです。<br>類語・対義語・連想語をたどる探索、言葉をつなぐワードゴルフ、<a href="/words">語彙辞典</a>を提供しています。</p>
       <label class="fast-toggle" id="fastToggle" style="display:none">
         <input type="checkbox" id="fastToggleChk"/>
         <span>⚡ 高速・先読みモード<span class="fast-toggle-note">（1検索につき1クレジット消費）</span></span>
