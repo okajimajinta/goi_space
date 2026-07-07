@@ -120,11 +120,67 @@ JSON形式のみで返答：
 
 語のリスト：${list}
 
-JSON形式のみで返答：
+JSON形式のみで返答（前後に説明文を付けない）：
 {"distances":[{"word":"語","distance":数値,"reason":"一言理由(10字以内)"}]}
 `.trim();
-      const out = await callClaude(prompt, 500, true); // Haiku
-      return res.status(200).json(JSON.parse(out));
+      const out = await callClaude(prompt, 600, true); // Haiku
+      // 頑健なJSON抽出（Haikuが前後に文字を付けても拾う）
+      let parsed;
+      try {
+        parsed = JSON.parse(out);
+      } catch {
+        const s = out.indexOf('{'), e = out.lastIndexOf('}');
+        if (s >= 0 && e > s) {
+          try { parsed = JSON.parse(out.slice(s, e + 1)); } catch {}
+        }
+      }
+      if (!parsed || !Array.isArray(parsed.distances)) {
+        return res.status(200).json({ distances: [], _error: 'parse_failed' });
+      }
+      // 数値を正規化
+      parsed.distances = parsed.distances.map(d => ({
+        word: String(d.word || ''),
+        distance: Math.max(1, Math.min(10, Number(d.distance) || 5)),
+        reason: String(d.reason || '').slice(0, 20),
+      }));
+      return res.status(200).json(parsed);
+    }
+
+    // --- 経路の抽象化：A→Bを何が接続していたか ---
+    if (action === 'connection') {
+      const { path, start, goal } = req.body;
+      if (!Array.isArray(path) || path.length < 2) {
+        return res.status(400).json({ error: 'path required' });
+      }
+      const route = path.slice(0, 30).join(' → ');
+      const s = String(start || path[0]).slice(0, 50);
+      const g = String(goal || path[path.length - 1]).slice(0, 50);
+      const prompt = `語彙の連想ゲームで、ある人が「${s}」から「${g}」へ次の経路で辿り着きました：
+${route}
+
+この経路を振り返り、出発点と終点の間に何があったのかを読み解いてください。
+個々の語ではなく、経路の中で意味が切り替わった点や、通底するテーマに注目してください。
+narrativeは、実際に経路に出てきた語に触れながら書き、「意味の旅」「豊かな流れ」のような空虚な言い回しは避けること。
+
+次のJSON形式のみで出力（前後の説明文なし）：
+{
+  "bridge": "「${s}」と「${g}」の間を接続していた概念・テーマを一言で（15字以内）",
+  "narrative": "経路上の実際の語に触れながら、意味がどう移り変わってB地点へ至ったか（90字以内）",
+  "pivot": "経路の中で意味の向きが変わった転換点の語"
+}`;
+      const out = await callClaude(prompt, 500, false); // Sonnetで質を確保
+      let parsed;
+      try { parsed = JSON.parse(out); }
+      catch {
+        const a = out.indexOf('{'), b = out.lastIndexOf('}');
+        if (a >= 0 && b > a) { try { parsed = JSON.parse(out.slice(a, b + 1)); } catch {} }
+      }
+      if (!parsed) return res.status(200).json({ bridge: '', narrative: '', pivot: '' });
+      return res.status(200).json({
+        bridge: String(parsed.bridge || '').slice(0, 40),
+        narrative: String(parsed.narrative || '').slice(0, 200),
+        pivot: String(parsed.pivot || '').slice(0, 50),
+      });
     }
 
     return res.status(400).json({ error: 'unknown action' });

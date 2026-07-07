@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         if (raw) cur = { handle: '', results: {}, routeHistory: [], ...JSON.parse(raw) };
       } catch {}
 
-      if (typeof handle === 'string') cur.handle = handle.slice(0, 16);
+      if (typeof handle === 'string') cur.handle = handle.replace(/[<>"'&`]/g, '').slice(0, 16);
       if (results && typeof results === 'object') {
         cur.results = { ...cur.results, ...results };
         const keys = Object.keys(cur.results);
@@ -54,6 +54,14 @@ export default async function handler(req, res) {
       // 経路実績（クライアントが管理する全体配列で上書き。最大500件）
       if (Array.isArray(req.body.routeHistory)) {
         cur.routeHistory = req.body.routeHistory.slice(-500);
+      }
+      // コンパスのチューニング（各ジャンルの希望文化的距離）
+      if (req.body.compassTuning && typeof req.body.compassTuning === 'object') {
+        cur.compassTuning = req.body.compassTuning;
+      }
+      // チャレンジのクリア実績
+      if (Array.isArray(req.body.clearRecords)) {
+        cur.clearRecords = req.body.clearRecords.slice(-300);
       }
 
       await redis('SET', `userdata:${e}`, JSON.stringify(cur));

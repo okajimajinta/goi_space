@@ -35,7 +35,7 @@ export default async function handler(req, res) {
 
     // --- 星雲データ（全体の語＋繋がり）---
     if (req.method === 'GET' && req.query.action === 'nebula') {
-      const topN = Math.min(parseInt(req.query.limit, 10) || 100, 200);
+      const topN = Math.min(parseInt(req.query.limit, 10) || 100, 2000);
       const wordsRaw = await redis('ZREVRANGE', 'nebula:words', 0, topN - 1, 'WITHSCORES');
       const nodes = [];
       const wordSet = new Set();
@@ -43,24 +43,36 @@ export default async function handler(req, res) {
         nodes.push({ word: wordsRaw[i], weight: Number(wordsRaw[i + 1]) });
         wordSet.add(wordsRaw[i]);
       }
-      // 上位語それぞれの edge: から、両端が上位に含まれるエッジを収集
+      // 上位語それぞれの edge: から、両端が上位に含まれるエッジを収集。
+      // 語数が多いと逐次Redis呼び出しが重いので、探索対象を絞りつつ並列化する。
       const edges = [];
       const seen = new Set();
-      // 上位40語まで隣接を探索（負荷制御）
-      const probe = nodes.slice(0, 40);
-      for (const n of probe) {
-        const raw = await redis('ZREVRANGE', `edge:${n.word}`, 0, 7, 'WITHSCORES');
-        for (let i = 0; i < (raw?.length || 0); i += 2) {
-          const to = raw[i], w = Number(raw[i + 1]);
-          if (!wordSet.has(to)) continue;
-          const a = n.word < to ? n.word : to;
-          const b = n.word < to ? to : n.word;
-          const key = a + '\u0001' + b;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          edges.push({ a, b, weight: w });
+      // 語数に応じて探索対象を調整（多いほど各語のエッジ本数を絞る）
+      const probeCount = Math.min(nodes.length, topN <= 300 ? nodes.length : 600);
+      const edgesPerWord = topN <= 300 ? 8 : (topN <= 800 ? 6 : 4);
+      const probe = nodes.slice(0, probeCount);
+      // 並列バッチでRedisを叩く（負荷とレイテンシのバランス）
+      const BATCH = 40;
+      for (let start = 0; start < probe.length; start += BATCH) {
+        const batch = probe.slice(start, start + BATCH);
+        const results = await Promise.all(batch.map(n =>
+          redis('ZREVRANGE', `edge:${n.word}`, 0, edgesPerWord - 1, 'WITHSCORES')
+            .then(raw => ({ word: n.word, raw })).catch(() => ({ word: n.word, raw: [] }))
+        ));
+        for (const { word, raw } of results) {
+          for (let i = 0; i < (raw?.length || 0); i += 2) {
+            const to = raw[i], w = Number(raw[i + 1]);
+            if (!wordSet.has(to)) continue;
+            const a = word < to ? word : to;
+            const b = word < to ? to : word;
+            const key = a + '\u0001' + b;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            edges.push({ a, b, weight: w });
+          }
         }
       }
+      res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=120');
       return res.status(200).json({ nodes, edges });
     }
 

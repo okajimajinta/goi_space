@@ -11,6 +11,7 @@
 //   STRIPE_SECRET_KEY … Stripeのシークレットキー
 
 import { redis, setCors } from './_redis.js';
+import { randomInt } from 'node:crypto';
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 
@@ -26,9 +27,10 @@ function normEmail(e) {
 }
 
 // リカバリーコード生成（例: GOI-7K2M-9XQ4）。紛らわしい文字を除外。
+// 認証用の秘密なので暗号論的に安全な乱数を使用。
 function genRecoveryCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I,O,0,1 を除外
-  const block = n => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const block = n => Array.from({ length: n }, () => chars[randomInt(chars.length)]).join('');
   return `GOI-${block(4)}-${block(4)}`;
 }
 
@@ -116,6 +118,15 @@ export default async function handler(req, res) {
       let storedCode = null;
       try { storedCode = await redis('GET', `recovery:${email}`); } catch {}
       if (isRestore && storedCode) {
+        // 総当たり対策：1メールあたり1時間に10回まで
+        try {
+          const gkey = `restore_attempts:${email}`;
+          const attempts = await redis('INCR', gkey);
+          if (attempts === 1) await redis('EXPIRE', gkey, 3600);
+          if (attempts > 10) {
+            return res.status(429).json({ premium: false, email, needCode: true, tooManyAttempts: true });
+          }
+        } catch {}
         if (!code || code !== storedCode) {
           return res.status(200).json({ premium: false, email, needCode: true, codeError: !!code });
         }

@@ -61,10 +61,12 @@ export default async function handler(req, res) {
   const hasCredits = credits > 0;
   // 月額プレミアム会員が先読み未完了ノードをクリックした際の高速生成要求
   const fastFallback = req.body?.fastFallback === true && plan === 'premium';
-  // 高速モード：永久プレミアム+、クレジット残高あり、または月額会員の高速フォールバック
-  const fastMode = plan === 'premium_plus' || hasCredits || fastFallback;
-  // クレジット消費対象：高速だが永久プレミアム+ではない（=クレジットで高速化している）
-  const usesCredit = hasCredits && plan !== 'premium_plus';
+  // クレジット高速モードは「明示的にオンにした時だけ」消費する（デフォルトはオフ）
+  const fastOptIn = req.body?.fastOn === true;
+  // 高速モード：永久プレミアム+（常時・無償）、クレジットをオンにした場合、または月額会員の高速フォールバック
+  const fastMode = plan === 'premium_plus' || (hasCredits && fastOptIn) || fastFallback;
+  // クレジット消費対象：クレジットで高速化している（オプトイン時のみ・永久+は除く）
+  const usesCredit = hasCredits && fastOptIn && plan !== 'premium_plus';
 
   // キャッシュ（高速モードは別キャッシュ）。フォールバックは標準キャッシュも参照
   const cacheKey = (fastMode && !fastFallback) ? `vocabfast:${word}` : `vocab:${word}`;
