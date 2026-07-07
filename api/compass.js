@@ -248,10 +248,17 @@ items は入力された全領域を含めること。`;
         };
         await redis('SET', `ainoyume:${id}`, JSON.stringify(rec));
         await redis('ZADD', 'ainoyume:list', rec.t, id);
-        // 人類未踏カタログに索引
+        // 人類未踏カタログに索引＋語→航海図の索引（SEOページへの還元用）
         for (const it of items) {
           if (it.f === 'frontier') {
             try { await redis('RPUSH', 'ainoyume:frontiers', JSON.stringify({ id, n: it.n, g: goal, t: rec.t })); } catch {}
+          }
+          // 領域名・キーワードの両方で引けるように
+          for (const w of [...new Set([it.k, it.n])].filter(Boolean)) {
+            try {
+              await redis('ZADD', `ayword:${w}`, rec.t, id);
+              await redis('ZREMRANGEBYRANK', `ayword:${w}`, 0, -51); // 各語50件まで
+            } catch {}
           }
         }
         return res.status(200).json({ id, report: rec });

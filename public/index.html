@@ -24,7 +24,6 @@
 <meta name="theme-color" content="#080C18">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056" crossorigin="anonymous"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#080C18;--surface:#111726;--border:#1E2840;--text:#D4DCF0;--muted:#5B6A8A;--amber:#F5A623;--blue:#5B8FDE;--green:#4ECBA8;--rose:#E06B8B;--violet:#9B72E8;--goal:#FF6B6B}
@@ -208,6 +207,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .nv-filter-panel{position:absolute;bottom:186px;right:12px;z-index:47;width:min(300px,86vw);background:rgba(13,19,36,0.97);border:1.5px solid rgba(140,170,220,0.5);border-radius:12px;padding:15px 16px;backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,0.5);display:none}
 .nv-filter-panel.open{display:block}
 .nvf-title{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;color:#e8edf5;margin-bottom:12px}
+.nvf-hint{font-size:10px;color:#7c89a8;line-height:1.5;margin-top:4px}
 .nvf-group{margin-bottom:12px}
 .nvf-label{font-size:12px;color:#cdd6ea;margin-bottom:5px;display:flex;justify-content:space-between}
 .nvf-range{color:var(--amber);font-size:11px}
@@ -445,6 +445,8 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 /* === LOADING OVERLAY (with ad) === */
 .loading-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(8,12,24,0.85);z-index:60;backdrop-filter:blur(4px)}
 .loading-overlay.visible{display:flex}
+.loading-tip{max-width:min(420px,84vw);margin-top:6px;font-size:12.5px;line-height:1.8;color:#9aa6c4;text-align:center;padding:0 16px}
+.loading-tip .tip-label{color:var(--amber);font-weight:600;margin-right:5px;font-size:11px}
 .loading-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .9s linear infinite}
 .loading-text{font-family:'Noto Serif JP',serif;font-size:18px;color:var(--text);letter-spacing:.06em;max-width:80vw;text-align:center;line-height:1.7;min-height:1.7em;transition:opacity .5s}
 .loading-word{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:600;color:var(--amber);margin-bottom:12px;letter-spacing:.08em;text-align:center;transition:opacity .5s}
@@ -571,6 +573,20 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 
 /* === OVERLAY UI === */
 .legend{position:absolute;bottom:16px;left:12px;display:flex;flex-direction:column;gap:8px;opacity:0;transition:opacity .4s;pointer-events:none;background:rgba(17,23,38,0.7);padding:12px 14px;border-radius:8px;border:1px solid var(--border)}
+.word-panel{position:absolute;bottom:16px;right:12px;z-index:22;width:min(330px,88vw);display:none;flex-direction:column;pointer-events:none}
+.word-panel.on{display:flex}
+.wp-head{pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(15,21,40,0.94);border:1px solid rgba(140,170,220,0.4);border-radius:10px;padding:9px 13px;color:#cdd6ea;font-family:'Noto Serif JP',serif;font-size:12.5px;cursor:pointer;text-align:left}
+.wp-arrow{color:#7a9af5;transition:transform .2s}
+.word-panel.open .wp-arrow{transform:rotate(90deg)}
+.wp-body{pointer-events:auto;display:none;background:rgba(13,19,36,0.96);border:1px solid rgba(140,170,220,0.35);border-radius:10px;margin-top:6px;padding:11px 13px;max-height:38vh;overflow-y:auto}
+.word-panel.open .wp-body{display:block}
+.wp-center{font-size:12.5px;color:#e8edf5;line-height:1.75;padding-bottom:9px;border-bottom:1px solid var(--border);margin-bottom:9px}
+.wp-center b{color:var(--amber)}
+.wp-item{font-size:12px;line-height:1.7;color:#bcc6de;margin-bottom:7px}
+.wp-item b{color:#dfe5f2;font-weight:600;cursor:pointer}
+.wp-item b:hover{color:var(--amber)}
+.wp-item .wp-type{font-size:9.5px;padding:1px 6px;border-radius:6px;margin-right:5px;vertical-align:middle;border:1px solid var(--border);color:#8595b3}
+@media(max-width:600px){.word-panel{bottom:64px;right:8px}}
 .legend.visible{opacity:1}
 .legend-item{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text)}
 .legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
@@ -746,7 +762,12 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <button class="nv-filter-btn" id="nvFilterBtn" title="抽象度・アクセス数で語を絞り込む">🎚 フィルター</button>
       <!-- フィルターパネル -->
       <div class="nv-filter-panel" id="nvFilterPanel">
-        <div class="nvf-title">語のフィルター</div>
+        <div class="nvf-title">星雲の表示設定</div>
+        <div class="nvf-group">
+          <div class="nvf-label">表示する語数<span class="nvf-range" id="nvfLimitLabel">200語</span></div>
+          <div class="nvf-row"><span>語数</span><input type="range" id="nvfLimit" min="60" max="1500" step="20" value="200"></div>
+          <div class="nvf-hint" id="nvfLimitHint">多いほど宇宙が広がりますが、端末によっては重くなります</div>
+        </div>
         <div class="nvf-group">
           <div class="nvf-label">抽象度（接続数）<span class="nvf-range" id="nvfDegLabel">すべて</span></div>
           <div class="nvf-row"><span>下限</span><input type="range" id="nvfDegMin" min="0" max="100" value="0"></div>
@@ -850,13 +871,13 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <div><div class="upgrade-plan-name">年額プラン</div><div class="upgrade-plan-detail">2ヶ月分お得！</div></div>
             <div class="upgrade-plan-price">¥5,000/年</div>
           </div>
-          <div class="upgrade-divider">⚡ または、買い切りで高速モード</div>
+          <div class="upgrade-divider">⚡ または、買い切りでクレジット</div>
           <div class="upgrade-plan plus" id="planCreditsSmall">
-            <div><div class="upgrade-plan-name">⚡ クレジット 100</div><div class="upgrade-plan-detail">高速探索100回分・買い切り・期限なし</div></div>
+            <div><div class="upgrade-plan-name">⚡ クレジット 100</div><div class="upgrade-plan-detail">高速探索や藍の夢に使える・買い切り・期限なし</div></div>
             <div class="upgrade-plan-price">¥500</div>
           </div>
           <div class="upgrade-plan plus" id="planCreditsLarge">
-            <div><div class="upgrade-plan-name">⚡ クレジット 300</div><div class="upgrade-plan-detail">高速探索300回分・お得・期限なし</div></div>
+            <div><div class="upgrade-plan-name">⚡ クレジット 300</div><div class="upgrade-plan-detail">高速探索や藍の夢に使える・お得・期限なし</div></div>
             <div class="upgrade-plan-price">¥1,200</div>
           </div>
         </div>
@@ -911,7 +932,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
           </div>
           <div class="account-credits">
             <div class="account-credits-row">
-              <span class="account-credits-label">⚡ 高速クレジット残高</span>
+              <span class="account-credits-label">⚡ クレジット残高</span>
               <span class="account-credits-val" id="accountCredits">0</span>
             </div>
             <button class="account-btn" id="buyCreditsBtn">⚡ クレジットを購入</button>
@@ -1072,10 +1093,16 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>比喩</div>
       <div class="legend-item"><div class="legend-dot" style="background:#E8C547"></div>コンテキスト</div>
     </div>
+    <!-- 語りパネル：中心語と関連語の意味（常設テキスト） -->
+    <div class="word-panel" id="wordPanel">
+      <button class="wp-head" id="wpHead"><span id="wpTitle">語りパネル</span><span class="wp-arrow" id="wpArrow">▸</span></button>
+      <div class="wp-body" id="wpBody"></div>
+    </div>
     <div class="loading-overlay" id="loadingOverlay">
       <div class="loading-spinner"></div>
       <div class="loading-word" id="loadingWord"></div>
       <div class="loading-text" id="loadingText">語彙空間を探索中…</div>
+      <div class="loading-tip" id="loadingTip"></div>
       <!-- ローディング画面への広告はGoogleポリシーで明示的に禁止（コンテンツなし画面）のため設置しない -->
     </div>
     <div class="completion" id="completion"></div>
@@ -1426,6 +1453,20 @@ function updateCreditDisplay(){
   const ce=document.getElementById('accountCredits');
   if(ce)ce.textContent=userCredits;
 }
+// AdSenseスクリプトを必要時（結果画面）のみ1回だけ読み込む。
+// data-ad-frequency-hint等の自動広告は使わず、明示設置の広告だけを出す。
+let _adsenseLoaded=false;
+function loadAdsenseOnce(cb){
+  if(_adsenseLoaded){if(cb)cb();return;}
+  _adsenseLoaded=true;
+  const s=document.createElement('script');
+  s.async=true;
+  s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056';
+  s.crossOrigin='anonymous';
+  s.onload=()=>{if(cb)cb();};
+  s.onerror=()=>{_adsenseLoaded=false;};
+  document.head.appendChild(s);
+}
 function apiHeaders(){
   const h={'Content-Type':'application/json'};
   if(premiumEmail)h['x-premium-email']=premiumEmail;
@@ -1549,6 +1590,7 @@ async function explore(word,fromWord,opts){
   isSearching=true; // 検索中フラグ（モード切替を抑止）
   SE.classList.add('hidden');
   LO.classList.add('visible');
+  showLoadingTip(); // 待機中に使い方Tipsをランダム表示
   // 選択ノードの説明文を1文字ずつ表示する演出（語そのものも上部に表示）
   const loadingDesc=(opts&&opts.description)?opts.description:`${word} へ`;
   startLoadingTypewriter(loadingDesc,word);
@@ -1611,6 +1653,8 @@ async function explore(word,fromWord,opts){
       // Store in vocab memory
       vocabMem.set(w.word,{type:w.type,reading:w.reading,desc:w.description});
     });
+    // 語りパネル：中心語と関連語の意味をテキストとして常設表示
+    renderWordPanel(word,filtered,result.center_description||'');
 
     LE.classList.add('visible');
     pan={x:0,y:0};
@@ -1674,6 +1718,65 @@ function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);retu
 
 // ローディング中の説明文タイプライター演出
 let _typeTimer=null;
+// 待機中に表示する使い方Tips（アプリの操作習熟＋テキスト量の充実）
+const LOADING_TIPS=[
+  'ゴールの言葉を検索することで方針を立てやすくなります。',
+  '対義語を活用することで一気に距離を詰めることができます。',
+  'コンテキストを活用することでゴールに近づきやすくなります。',
+  '語をクリックすると、その語を中心に再探索できます。',
+  'ダブルクリックで、外部の辞書・検索で言葉を調べられます。',
+  '右クリック（長押し）で、気になる語をピン留めできます。',
+  'ホイールやピンチで拡大・縮小、ドラッグで自由に移動できます。',
+  '星図モードでは、みんなの探索が集まった集合知の星雲を旅できます。',
+  'ソナー機能：何もない空間を長押しすると、囲んだ語から意味を見出せます。',
+  '星座モードでは、自分が探索した語だけを結んで軌跡を眺められます。',
+  '知的コンパスは、あなたの興味から離れた学問分野へ導いてくれます。',
+  '「藍の夢」は、目標から未踏の知の航海図を紡ぐ機能です。',
+  'ブラインドゴルフでは、距離の温度だけを頼りに隠れたゴールを探します。',
+  'デイリー・マンスリーのお題をクリアすると、クレジットが手に入ります。',
+  '類語をたどると、思いがけない言葉の隣り合わせに出会えます。',
+  'ゴルフでは、遠回りに見える語がゴールへの近道になることがあります。',
+  '探索の実績はマイページで振り返れます。CSVで書き出すこともできます。',
+];
+let _lastTipIdx=-1;
+function showLoadingTip(){
+  const el=document.getElementById('loadingTip');
+  if(!el)return;
+  // 直前と同じTipは避ける
+  let idx=Math.floor(Math.random()*LOADING_TIPS.length);
+  if(idx===_lastTipIdx)idx=(idx+1)%LOADING_TIPS.length;
+  _lastTipIdx=idx;
+  el.innerHTML=`<span class="tip-label">💡 Tips</span> ${LOADING_TIPS[idx]}`;
+}
+// ===== 語りパネル：中心語と関連語の意味をテキストで常設表示 =====
+const TYPE_LABEL={synonym:'類義',antonym:'対義',emotion:'感情',metaphor:'比喩',context:'文脈'};
+function renderWordPanel(centerWord,words,centerDesc){
+  const panel=document.getElementById('wordPanel');
+  const title=document.getElementById('wpTitle');
+  const body=document.getElementById('wpBody');
+  if(!panel||!body)return;
+  const items=(words||[]).filter(w=>w&&w.word);
+  if(!items.length){panel.classList.remove('on');return}
+  panel.classList.add('on');
+  if(title)title.textContent=`「${centerWord}」の星域を読む`;
+  const centerMem=vocabMem.get(centerWord);
+  const cDesc=centerDesc||(centerMem&&centerMem.desc)||'';
+  body.innerHTML=
+    `<div class="wp-center"><b>${esc(centerWord)}</b>${cDesc?` — ${esc(cDesc)}`:''}</div>`+
+    items.map(w=>`<div class="wp-item"><span class="wp-type">${TYPE_LABEL[w.type]||'関連'}</span><b data-wp-word="${esc(w.word)}">${esc(w.word)}</b>${w.reading?`（${esc(w.reading)}）`:''}${w.description?` — ${esc(w.description)}`:''}</div>`).join('');
+  // 語名タップでその語を探索
+  body.querySelectorAll('[data-wp-word]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const w=el.dataset.wpWord;
+      WI.value=w;explore(w,currentCenter());
+    });
+  });
+}
+(function(){
+  const panel=document.getElementById('wordPanel');
+  const head=document.getElementById('wpHead');
+  if(head&&panel)head.addEventListener('click',()=>panel.classList.toggle('open'));
+})();
 function startLoadingTypewriter(text,word){
   if(_typeTimer){clearInterval(_typeTimer);_typeTimer=null}
   LT.classList.remove('fading');
@@ -2134,7 +2237,9 @@ async function finishGolf(){
     </div>
     <div class="comp-ad"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-9246118623869056" data-ad-slot="" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
   CO.classList.add('visible');
-  requestAnimationFrame(()=>{try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch{}});
+  // 広告スクリプトは結果画面（コンテンツのある画面）でのみ遅延読み込みする。
+  // グローバルに読み込むとGoogleの自動広告がアプリ全画面に貼られ、審査リスクになるため。
+  loadAdsenseOnce(()=>{try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch{}});
 
   // ★経路の抽象化：A→Bを何が接続していたか
   async function loadConnection(){
@@ -2962,8 +3067,8 @@ document.getElementById('buyCreditsBtn').addEventListener('click',()=>{
   const t=document.getElementById('upgradeTitle');
   const d=document.getElementById('upgradeDesc');
   const ic=document.getElementById('upgradeIcon');
-  if(t)t.textContent='⚡ 高速クレジット';
-  if(d)d.textContent='クレジットを購入すると、探索が高速になります。';
+  if(t)t.textContent='⚡ クレジット';
+  if(d)d.textContent='クレジットは、高速探索や「藍の夢」などに使えます。';
   if(ic)ic.textContent='⚡';
   // 月額プランカードは隠し、クレジットパックだけ見せる
   document.querySelectorAll('#planMonthly,#planYearly,.upgrade-divider').forEach(el=>{if(el)el.style.display='none'});
@@ -3209,9 +3314,10 @@ function exitNebula(){
   const ch=document.getElementById('compassHistOverlay');if(ch)ch.classList.remove('visible');
   const ayo=document.getElementById('ainoyumeOverlay');if(ayo)ayo.classList.remove('visible');
 }
+let nebulaLimit=parseInt(localStorage_get('nebulaLimit'),10)||200; // 表示語数（保存・既定200）
 async function loadNebulaGraph(){
   try{
-    const r=await fetch('/api/transitions?action=nebula&limit=120');
+    const r=await fetch('/api/transitions?action=nebula&limit='+nebulaLimit);
     nebulaGraph=await r.json();
     layoutNebulaGraph();
     if(typeof applyNvFilter==='function')applyNvFilter(); // フィルター設定を再適用
@@ -3243,22 +3349,49 @@ function layoutNebulaGraph(){
 
   // ===== フォースレイアウト（力学的クラスタリング）=====
   // つながりの強い語ほど引き合い、全ノードは反発する → 自然にクラスターが生まれる
-  const ITER=140;
+  // 語数に応じて反復回数を調整（多いほど減らして固まりを防ぐ）
+  const n=nodes.length;
+  const ITER=n<=200?140:(n<=500?90:(n<=1000?55:35));
   const REPULSE=4200;   // 反発の強さ
   const CENTER_PULL=0.012; // 中心へ緩く引く（発散防止）
+  // 語数が多い時は空間グリッドで近傍のみ反発計算（O(n^2)を回避）
+  const useGrid=n>300;
+  const CELL=90; // グリッドのセルサイズ
   for(let it=0;it<ITER;it++){
     const cool=1-it/ITER; // 徐々に沈静化
-    // 反発（全ペア。ノード数は最大120程度なのでO(n^2)で許容）
-    for(let a=0;a<nodes.length;a++){
-      const na=nodes[a];
-      for(let b=a+1;b<nodes.length;b++){
-        const nb=nodes[b];
-        let dx=na.bx-nb.bx, dy=na.by-nb.by;
-        let d2=dx*dx+dy*dy;if(d2<1)d2=1;
-        const d=Math.sqrt(d2);
-        const f=REPULSE/d2;
-        const fx=(dx/d)*f, fy=(dy/d)*f;
-        na.vx+=fx;na.vy+=fy;nb.vx-=fx;nb.vy-=fy;
+    if(useGrid){
+      // 空間グリッドに配置 → 同一・隣接セル内のペアだけ反発
+      const grid=new Map();
+      const keyOf=(x,y)=>((x/CELL)|0)+','+((y/CELL)|0);
+      nodes.forEach(nd=>{const k=keyOf(nd.bx,nd.by);let arr=grid.get(k);if(!arr){arr=[];grid.set(k,arr);}arr.push(nd);});
+      nodes.forEach(na=>{
+        const cx=(na.bx/CELL)|0, cy=(na.by/CELL)|0;
+        for(let gx=cx-1;gx<=cx+1;gx++)for(let gy=cy-1;gy<=cy+1;gy++){
+          const arr=grid.get(gx+','+gy);if(!arr)continue;
+          for(const nb of arr){
+            if(nb===na)continue;
+            let dx=na.bx-nb.bx, dy=na.by-nb.by;
+            let d2=dx*dx+dy*dy;if(d2<1)d2=1;
+            if(d2>CELL*CELL*4)continue; // 遠いものは無視
+            const d=Math.sqrt(d2);
+            const f=REPULSE/d2;
+            na.vx+=(dx/d)*f;na.vy+=(dy/d)*f;
+          }
+        }
+      });
+    }else{
+      // 反発（全ペア。少数ノードならO(n^2)で許容）
+      for(let a=0;a<nodes.length;a++){
+        const na=nodes[a];
+        for(let b=a+1;b<nodes.length;b++){
+          const nb=nodes[b];
+          let dx=na.bx-nb.bx, dy=na.by-nb.by;
+          let d2=dx*dx+dy*dy;if(d2<1)d2=1;
+          const d=Math.sqrt(d2);
+          const f=REPULSE/d2;
+          const fx=(dx/d)*f, fy=(dy/d)*f;
+          na.vx+=fx;na.vy+=fy;nb.vx-=fx;nb.vy-=fy;
+        }
       }
     }
     // 引力（edge＝バネ）：重みが強いほど近づける
@@ -3410,6 +3543,24 @@ document.getElementById('nvfReset').addEventListener('click',()=>{
 });
 document.getElementById('nvGoBtn').addEventListener('click',runNvQuery);
 document.getElementById('nvWordInput').addEventListener('keydown',e=>{if(e.key==='Enter')runNvQuery()});
+// 表示語数スライダー（変更中はラベルだけ更新し、離した時に再取得）
+(function(){
+  const sl=document.getElementById('nvfLimit');
+  const lb=document.getElementById('nvfLimitLabel');
+  if(!sl)return;
+  sl.value=nebulaLimit;if(lb)lb.textContent=nebulaLimit+'語';
+  let reloadTimer=null;
+  const applyLimit=()=>{
+    nebulaLimit=+sl.value;
+    localStorage_set('nebulaLimit',String(nebulaLimit));
+    if(lb)lb.textContent=nebulaLimit+'語';
+    // 星雲モードの時だけ再取得（デバウンス）
+    if(reloadTimer)clearTimeout(reloadTimer);
+    reloadTimer=setTimeout(()=>{if(nvMode==='explore')loadNebulaGraph();},450);
+  };
+  sl.addEventListener('input',()=>{if(lb)lb.textContent=(+sl.value)+'語';});
+  sl.addEventListener('change',applyLimit);
+})();
 async function runNvQuery(){
   const val=document.getElementById('nvWordInput').value.trim();
   if(!val)return;

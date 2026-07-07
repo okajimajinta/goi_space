@@ -33,6 +33,58 @@ async function relatedFromNebula(word) {
   } catch { return []; }
 }
 
+// 利用者の活動データ（探索経路・コンパス記録・藍の夢）を集める
+// → 集合知がそのままSEOテキストに還元される
+async function gatherActivity(word) {
+  const out = { routes: [], compass: [], ainoyume: [] };
+  // 探索経路：この語を通った旅
+  try {
+    const ids = await redis('ZREVRANGE', `pathword:${word}`, 0, 4) || [];
+    for (const pid of ids) {
+      if (out.routes.length >= 3) break;
+      try {
+        const raw = await redis('GET', `path:${pid}`);
+        if (!raw) continue;
+        const rec = JSON.parse(raw);
+        const words = rec.w || rec.words || [];
+        if (words.length >= 2) out.routes.push(words.slice(0, 12));
+      } catch {}
+    }
+  } catch {}
+  // コンパス記録：この語を含む興味から導かれた分野
+  try {
+    const ids = await redis('ZREVRANGE', `compassword:${word}`, 0, 3) || [];
+    for (const cid of ids) {
+      if (out.compass.length >= 2) break;
+      try {
+        const raw = await redis('GET', `compasslog:${cid}`);
+        if (!raw) continue;
+        const rec = JSON.parse(raw);
+        out.compass.push({
+          interests: (rec.i || []).slice(0, 6),
+          summary: rec.s || '',
+          domains: (rec.r || []).slice(0, 3).map(r => ({ disc: r.discipline || '', dom: r.domain || '' })),
+        });
+      } catch {}
+    }
+  } catch {}
+  // 藍の夢：この語が登場した知の航海図
+  try {
+    const ids = await redis('ZREVRANGE', `ayword:${word}`, 0, 3) || [];
+    for (const aid of ids) {
+      if (out.ainoyume.length >= 2) break;
+      try {
+        const raw = await redis('GET', `ainoyume:${aid}`);
+        if (!raw) continue;
+        const rec = JSON.parse(raw);
+        const item = (rec.d || []).find(x => x.k === word || x.n === word);
+        out.ainoyume.push({ goal: rec.g || '', title: rec.ti || '', gist: item ? (item.g || '') : '' });
+      } catch {}
+    }
+  } catch {}
+  return out;
+}
+
 // AIで語をカテゴリ分類生成（Haiku・安価）
 async function relatedFromAI(word) {
   const prompt = `日本語の言葉「${word}」について、語彙辞典のページを作ります。
@@ -85,7 +137,33 @@ async function relatedFromAI(word) {
   }
 }
 
-function buildHTML(word, data, nebulaWords) {
+// 活動データをHTMLセクションに（存在するものだけ）
+function activityHTML(word, activity) {
+  if (!activity) return '';
+  const parts = [];
+  if (activity.routes && activity.routes.length) {
+    const rows = activity.routes.map(words =>
+      `<div class="route-row">${words.map(w => `<a class="chip neb" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('<span class="route-arrow">→</span>')}</div>`
+    ).join('');
+    parts.push(`<section><h2>「${esc(word)}」を通った言葉の旅</h2><p class="note">GOI-Spaceの利用者が「${esc(word)}」を経由して実際にたどった探索の道筋です。</p>${rows}</section>`);
+  }
+  if (activity.compass && activity.compass.length) {
+    const rows = activity.compass.map(c => {
+      const doms = c.domains.map(d => `${esc(d.disc)}「${esc(d.dom)}」`).join('、');
+      return `<div class="act-card"><div class="act-line">興味：${c.interests.map(w => esc(w)).join('、')}</div>${c.summary ? `<div class="act-sub">${esc(c.summary)}</div>` : ''}${doms ? `<div class="act-sub">導かれた領域：${doms}</div>` : ''}</div>`;
+    }).join('');
+    parts.push(`<section><h2>「${esc(word)}」から知的コンパスが導いた先</h2><p class="note">この語を興味に含めた人が、どんな学問領域へ導かれたかの記録です。</p>${rows}</section>`);
+  }
+  if (activity.ainoyume && activity.ainoyume.length) {
+    const rows = activity.ainoyume.map(a =>
+      `<div class="act-card"><div class="act-line">目標：${esc(a.goal)}${a.title ? `（航海図「${esc(a.title)}」）` : ''}</div>${a.gist ? `<div class="act-sub">この語の位置づけ：${esc(a.gist)}</div>` : ''}</div>`
+    ).join('');
+    parts.push(`<section><h2>「${esc(word)}」が登場した知の航海図</h2><p class="note">「藍の夢」で紡がれた、目標達成のための知の地図にこの語が現れた記録です。</p>${rows}</section>`);
+  }
+  return parts.join('\n');
+}
+
+function buildHTML(word, data, nebulaWords, activity) {
   const title = `「${word}」の意味・類語・対義語・例文・語源 | 語彙空間 GOI-Space`;
   const desc = data.summary
     ? `${word}（${data.reading}）の意味：${data.summary} 類語・対義語・例文・語源・英語も。語彙の星図で探索。`
@@ -158,6 +236,11 @@ footer a{color:var(--muted)}
 .books{display:flex;flex-direction:column;gap:9px;margin-top:12px}
 .book-link{display:block;background:linear-gradient(135deg,#2a1e0e,#1a1408);border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:13px 16px;text-decoration:none;color:var(--amber);font-size:15px;font-weight:600;transition:all .15s}
 .book-link:hover{border-color:var(--amber);background:linear-gradient(135deg,#3a2a12,#241a0c)}
+.route-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px}
+.route-arrow{color:var(--muted);font-size:12px}
+.act-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:11px 14px;margin-bottom:9px}
+.act-line{font-size:14px;color:var(--text);font-weight:600}
+.act-sub{font-size:13px;color:var(--muted);line-height:1.7;margin-top:4px}
 </style>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056" crossorigin="anonymous"></script>
 </head>
@@ -182,6 +265,7 @@ ${data.related.length ? `<section><h2>連想語・周辺概念</h2><div class="c
 ${data.etymology ? `<section><h2>語源・由来</h2><p class="prose">${esc(data.etymology)}</p></section>` : ''}
 ${data.english && data.english.length ? `<section><h2>英語で言うと</h2><div class="chips">${data.english.map(e => `<span class="chip eng">${esc(e)}</span>`).join('')}</div></section>` : ''}
 ${nebulaChips}
+${activityHTML(word, activity)}
 <section class="books-sec">
   <h2>「${esc(word)}」をもっと知る本</h2>
   <p class="note">この言葉やそのテーマを深めたい方へ。</p>
@@ -308,9 +392,10 @@ ${urls}
   } catch {}
 
   // 生成：星雲データ ＋ AI補完
-  const [nebulaWords, ai] = await Promise.all([
+  const [nebulaWords, ai, activity] = await Promise.all([
     relatedFromNebula(word),
     relatedFromAI(word),
+    gatherActivity(word),
   ]);
 
   const data = {
@@ -326,7 +411,7 @@ ${urls}
     book_theme: ai.book_theme,
   };
 
-  const html = buildHTML(word, data, nebulaWords.slice(0, 16));
+  const html = buildHTML(word, data, nebulaWords.slice(0, 16), activity);
 
   // キャッシュ保存＋sitemap用の語セットに登録
   try {
