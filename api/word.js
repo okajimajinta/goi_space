@@ -391,12 +391,41 @@ ${urls}
     }
   } catch {}
 
-  // 生成：星雲データ ＋ AI補完
-  const [nebulaWords, ai, activity] = await Promise.all([
+  // ===== 生成レート制限 =====
+  // 新規AI生成を1時間あたり上限までに制限し、機械的な大量クロールによる暴走を防ぐ。
+  // 閾値は人間の閲覧速度では到達しない高さ。超過時はAIを呼ばず、
+  // 星雲データだけの軽量ページを短期キャッシュで返す（負荷が落ち着けば後で完全版に昇格）。
+  const GEN_LIMIT_PER_HOUR = 120; // 1時間あたりの新規AI生成の上限
+  let canGenerate = true;
+  try {
+    const hourKey = `seogen:${new Date().toISOString().slice(0, 13)}`; // 例: seogen:2026-07-07T14
+    const n = await redis('INCR', hourKey);
+    if (n === 1) await redis('EXPIRE', hourKey, 3700);
+    if (n > GEN_LIMIT_PER_HOUR) canGenerate = false;
+  } catch {}
+
+  // 星雲データ・活動データは常に取得（AIを使わない・安価）
+  const [nebulaWords, activity] = await Promise.all([
     relatedFromNebula(word),
-    relatedFromAI(word),
     gatherActivity(word),
   ]);
+
+  if (!canGenerate) {
+    // 上限超過：AIを呼ばず、星雲データだけの軽量ページを返す。
+    // 短期キャッシュ（1時間）にして、負荷が落ち着いた頃の再訪で完全版に生成し直す。
+    const lightData = { reading: '', summary: '', meaning_long: '', synonyms: [], antonyms: [], related: [], examples: [], etymology: '', english: [], book_theme: '' };
+    const lightHtml = buildHTML(word, lightData, nebulaWords.slice(0, 16), activity);
+    try {
+      await redis('SET', cacheKey, lightHtml, 'EX', 3600); // 1時間だけ保持（永続にしない）
+      await redis('SADD', 'seo:words', word);
+    } catch {}
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800');
+    return res.status(200).send(lightHtml);
+  }
+
+  // 上限内：AI補完で完全なページを生成
+  const ai = await relatedFromAI(word);
 
   const data = {
     reading: ai.reading,
@@ -413,9 +442,10 @@ ${urls}
 
   const html = buildHTML(word, data, nebulaWords.slice(0, 16), activity);
 
-  // キャッシュ保存＋sitemap用の語セットに登録
+  // キャッシュ保存（永続・TTLなし）＋sitemap用の語セットに登録
+  // 一度生成した語のページは生涯1回だけAI生成すればよく、再生成コストが発生しない。
   try {
-    await redis('SET', cacheKey, html, 'EX', CACHE_TTL);
+    await redis('SET', cacheKey, html);
     await redis('SADD', 'seo:words', word);
   } catch {}
 

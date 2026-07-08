@@ -699,8 +699,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   .golf-panel{padding:8px 10px;gap:8px;max-width:96vw}
   .golf-leg-word{font-size:15px}
   .golf-stat-num{font-size:19px}
-  .legend{bottom:10px;left:8px}
+  .legend{bottom:64px;left:8px;padding:8px 10px;gap:5px}
   .legend-item{font-size:12px}
+  .enchant-btn{bottom:12px;left:8px;padding:8px 13px;font-size:13px}
   .loading-ad{width:min(250px,80vw);height:200px}
   .daily-panel{width:100vw}
   .comp-title{font-size:22px}
@@ -1720,23 +1721,23 @@ function currentCenter(){const c=nodes.find(n=>n.fixed&&n.generation===gen);retu
 let _typeTimer=null;
 // 待機中に表示する使い方Tips（アプリの操作習熟＋テキスト量の充実）
 const LOADING_TIPS=[
-  'ゴールの言葉を検索することで方針を立てやすくなります。',
-  '対義語を活用することで一気に距離を詰めることができます。',
-  'コンテキストを活用することでゴールに近づきやすくなります。',
-  '語をクリックすると、その語を中心に再探索できます。',
-  'ダブルクリックで、外部の辞書・検索で言葉を調べられます。',
-  '右クリック（長押し）で、気になる語をピン留めできます。',
-  'ホイールやピンチで拡大・縮小、ドラッグで自由に移動できます。',
-  '星図モードでは、みんなの探索が集まった集合知の星雲を旅できます。',
-  'ソナー機能：何もない空間を長押しすると、囲んだ語から意味を見出せます。',
-  '星座モードでは、自分が探索した語だけを結んで軌跡を眺められます。',
-  '知的コンパスは、あなたの興味から離れた学問分野へ導いてくれます。',
-  '「藍の夢」は、目標から未踏の知の航海図を紡ぐ機能です。',
-  'ブラインドゴルフでは、距離の温度だけを頼りに隠れたゴールを探します。',
-  'デイリー・マンスリーのお題をクリアすると、クレジットが手に入ります。',
-  '類語をたどると、思いがけない言葉の隣り合わせに出会えます。',
-  'ゴルフでは、遠回りに見える語がゴールへの近道になることがあります。',
-  '探索の実績はマイページで振り返れます。CSVで書き出すこともできます。',
+  'ゴールの言葉を検索することで\n方針を立てやすくなります。',
+  '対義語を活用することで\n一気に距離を詰めることができます。',
+  'コンテキストを活用することで\nゴールに近づきやすくなります。',
+  '語をクリックすると、\nその語を中心に再探索できます。',
+  'ダブルクリックで、\n外部の辞書・検索で言葉を調べられます。',
+  '右クリック（長押し）で、\n気になる語をピン留めできます。',
+  'ホイールやピンチで拡大・縮小、\nドラッグで自由に移動できます。',
+  '星図モードでは、\nみんなの探索が集まった星雲を旅できます。',
+  'ソナー機能：何もない空間を長押しすると、\n囲んだ語から意味を見出せます。',
+  '星座モードでは、\n自分が探索した語だけで軌跡を眺められます。',
+  '知的コンパスは、\nあなたの興味から離れた分野へ導いてくれます。',
+  '「藍の夢」は、\n目標から未踏の知の航海図を紡ぐ機能です。',
+  'ブラインドゴルフでは、\n距離の温度だけを頼りに隠れたゴールを探します。',
+  'デイリー・マンスリーのお題をクリアすると、\nクレジットが手に入ります。',
+  '類語をたどると、\n思いがけない言葉の隣り合わせに出会えます。',
+  'ゴルフでは、遠回りに見える語が\nゴールへの近道になることがあります。',
+  '探索の実績はマイページで振り返れます。\nCSVで書き出すこともできます。',
 ];
 let _lastTipIdx=-1;
 function showLoadingTip(){
@@ -1746,7 +1747,8 @@ function showLoadingTip(){
   let idx=Math.floor(Math.random()*LOADING_TIPS.length);
   if(idx===_lastTipIdx)idx=(idx+1)%LOADING_TIPS.length;
   _lastTipIdx=idx;
-  el.innerHTML=`<span class="tip-label">💡 Tips</span> ${LOADING_TIPS[idx]}`;
+  const tip=LOADING_TIPS[idx].replace(/\n/g,'<br>');
+  el.innerHTML=`<span class="tip-label">💡 Tips</span><br>${tip}`;
 }
 // ===== 語りパネル：中心語と関連語の意味をテキストで常設表示 =====
 const TYPE_LABEL={synonym:'類義',antonym:'対義',emotion:'感情',metaphor:'比喩',context:'文脈'};
