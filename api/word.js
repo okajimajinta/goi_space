@@ -290,6 +290,30 @@ ${activityHTML(word, activity)}
 }
 
 export default async function handler(req, res) {
+  // 【メンテナンス】既存の永続seopageキャッシュにTTLを付与して容量を段階的に解放する。
+  // 使い方: /api/word?cleanup=1&key=<CLEANUP_SECRET>&batch=500
+  if (req.query && req.query.cleanup === '1') {
+    const secret = process.env.CLEANUP_SECRET || '';
+    if (!secret || req.query.key !== secret) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const batch = Math.min(parseInt(req.query.batch, 10) || 500, 2000);
+    const ttl = 60 * 60 * 24 * 3; // 3日後に消える
+    let processed = 0, expired = 0;
+    try {
+      const words = await redis('SMEMBERS', 'seo:words') || [];
+      for (const w of words.slice(0, batch)) {
+        processed++;
+        try {
+          // TTL未設定（=永続）のものだけにTTLを付ける
+          const t = await redis('TTL', `seopage:${w}`);
+          if (t === -1) { await redis('EXPIRE', `seopage:${w}`, ttl); expired++; }
+        } catch {}
+      }
+    } catch {}
+    return res.status(200).json({ processed, expired, note: `${expired}件にTTL(3日)を付与しました。数日で容量が解放されます。` });
+  }
+
   // サイトマップ（/word?sitemap=1 または /sitemap.xml をrewrite）
   // 語彙さくいん（/words）：全語をページ切替・頭文字辞書引き・ランダム注目で閲覧
   if (req.query && req.query.list === '1') {
@@ -533,10 +557,12 @@ ${urls}
 
   const html = buildHTML(word, data, nebulaWords.slice(0, 16), activity);
 
-  // キャッシュ保存（永続・TTLなし）＋sitemap用の語セットに登録
-  // 一度生成した語のページは生涯1回だけAI生成すればよく、再生成コストが発生しない。
+  // キャッシュ保存（3日TTL）＋sitemap用の語セットに登録。
+  // HTML全文は容量が大きいため永続保存せず、実キャッシュはVercel CDN(s-maxage)に任せる。
+  // Redis側は再生成の緩衝として短期間だけ保持し、ストレージ肥大を防ぐ。
+  const SEO_HTML_TTL = 60 * 60 * 24 * 3; // 3日
   try {
-    await redis('SET', cacheKey, html);
+    await redis('SET', cacheKey, html, 'EX', SEO_HTML_TTL);
     await redis('SADD', 'seo:words', word);
   } catch {}
 
