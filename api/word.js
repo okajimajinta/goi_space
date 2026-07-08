@@ -291,22 +291,92 @@ ${activityHTML(word, activity)}
 
 export default async function handler(req, res) {
   // サイトマップ（/word?sitemap=1 または /sitemap.xml をrewrite）
-  // 語彙さくいん（/words）：審査員・クローラーが語彙ページ群を発見できるHTML一覧
+  // 語彙さくいん（/words）：全語をページ切替・頭文字辞書引き・ランダム注目で閲覧
   if (req.query && req.query.list === '1') {
     const set = new Set();
     try { (await redis('SMEMBERS', 'seo:words') || []).forEach(w => set.add(w)); } catch {}
-    try { (await redis('ZREVRANGE', 'nebula:words', 0, 999) || []).forEach(w => set.add(w)); } catch {}
-    const words = [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')).slice(0, 1000);
-    const links = words.map(w => `<a class="w" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
+    try { (await redis('ZREVRANGE', 'nebula:words', 0, 9999) || []).forEach(w => set.add(w)); } catch {}
+    let all = [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'));
+    const total = all.length;
+
+    // 頭文字（五十音の行）判定
+    const kanaRow = (w) => {
+      const c = (w[0] || '');
+      const code = c.charCodeAt(0);
+      // カタカナはひらがなに寄せる
+      let ch = c;
+      if (code >= 0x30A1 && code <= 0x30F6) ch = String.fromCharCode(code - 0x60);
+      const rows = [
+        ['あ', 'あぁいぃうぅえぇおぉ'], ['か', 'かがきぎくぐけげこご'],
+        ['さ', 'さざしじすずせぜそぞ'], ['た', 'ただちぢっつづてでとど'],
+        ['な', 'なにぬねの'], ['は', 'はばぱひびぴふぶぷへべぺほぼぽ'],
+        ['ま', 'まみむめも'], ['や', 'やゃゆゅよょ'],
+        ['ら', 'らりるれろ'], ['わ', 'わをん'],
+      ];
+      for (const [label, chars] of rows) if (chars.includes(ch)) return label;
+      return '他';
+    };
+
+    // 頭文字フィルタ
+    const row = String(req.query.row || '').slice(0, 2);
+    const ROWS = ['あ', 'か', 'さ', 'た', 'な', 'は', 'ま', 'や', 'ら', 'わ', '他'];
+    if (row && ROWS.includes(row)) all = all.filter(w => kanaRow(w) === row);
+
+    // ページング（1ページ60語）
+    const PER = 60;
+    const pages = Math.max(1, Math.ceil(all.length / PER));
+    let page = parseInt(req.query.page, 10) || 1;
+    if (page < 1) page = 1;
+    if (page > pages) page = pages;
+    const pageWords = all.slice((page - 1) * PER, page * PER);
+    const links = pageWords.map(w => `<a class="w" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
+
+    // ランダムに注目の言葉を数語ピックアップ（全体から）
+    const allArr = [...set].filter(Boolean);
+    const featured = [];
+    const pick = Math.min(8, allArr.length);
+    const used = new Set();
+    for (let i = 0; i < pick; i++) {
+      let idx = Math.floor(Math.random() * allArr.length);
+      let guard = 0;
+      while (used.has(idx) && guard++ < 20) idx = Math.floor(Math.random() * allArr.length);
+      used.add(idx);
+      featured.push(allArr[idx]);
+    }
+    const featuredLinks = featured.map(w => `<a class="w feat" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
+
+    // 行タブ（?row= でフィルタ、選択中を強調）
+    const base = '/words';
+    const rowTabs = `<a class="row-tab ${!row ? 'on' : ''}" href="${base}">すべて</a>` +
+      ROWS.map(r => `<a class="row-tab ${row === r ? 'on' : ''}" href="${base}?row=${encodeURIComponent(r)}">${r}</a>`).join('');
+
+    // ページャ（前後＋現在地）
+    const qRow = row ? `&row=${encodeURIComponent(row)}` : '';
+    const rel = (p) => `${base}?page=${p}${qRow}`;
+    let pager = '';
+    if (pages > 1) {
+      const prev = page > 1 ? `<a class="pg" rel="prev" href="${rel(page - 1)}">‹ 前へ</a>` : `<span class="pg disabled">‹ 前へ</span>`;
+      const next = page < pages ? `<a class="pg" rel="next" href="${rel(page + 1)}">次へ ›</a>` : `<span class="pg disabled">次へ ›</span>`;
+      // 近傍ページ番号
+      const nums = [];
+      const from = Math.max(1, page - 2), to = Math.min(pages, page + 2);
+      if (from > 1) nums.push(`<a class="pgn" href="${rel(1)}">1</a>${from > 2 ? '<span class="pgdot">…</span>' : ''}`);
+      for (let p = from; p <= to; p++) nums.push(`<a class="pgn ${p === page ? 'on' : ''}" href="${rel(p)}">${p}</a>`);
+      if (to < pages) nums.push(`${to < pages - 1 ? '<span class="pgdot">…</span>' : ''}<a class="pgn" href="${rel(pages)}">${pages}</a>`);
+      pager = `<nav class="pager">${prev}<span class="pgnums">${nums.join('')}</span>${next}</nav>`;
+    }
+
     const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>語彙さくいん | 語彙空間 GOI-Space</title>
-<meta name="description" content="語彙空間 GOI-Space の語彙辞典さくいん。各語の意味・類語・対義語・例文・語源のページ一覧。">
-<link rel="canonical" href="${SITE}/words">
+<title>語彙さくいん${page > 1 ? `（${page}ページ目）` : ''}${row ? `「${esc(row)}」から始まる語` : ''} | 語彙空間 GOI-Space</title>
+<meta name="description" content="語彙空間 GOI-Space の語彙辞典さくいん。各語の意味・類語・対義語・例文・語源のページを、頭文字やページ送りで閲覧できます。">
+<link rel="canonical" href="${SITE}/words${page > 1 || row ? `?${row ? `row=${encodeURIComponent(row)}` : ''}${row && page > 1 ? '&' : ''}${page > 1 ? `page=${page}` : ''}` : ''}">
 <meta name="robots" content="index, follow">
+${page > 1 ? `<link rel="prev" href="${SITE}${rel(page - 1)}">` : ''}
+${page < pages ? `<link rel="next" href="${SITE}${rel(page + 1)}">` : ''}
 <link rel="icon" href="/favicon.svg">
 <style>
 :root{--bg:#080C18;--surface:#111726;--border:#233047;--text:#E8EDF5;--muted:#8595B3;--amber:#F5A623}
@@ -314,10 +384,26 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Hiragino Kaku 
 .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
 .logo{font-size:14px;color:var(--muted);text-decoration:none;letter-spacing:.1em}
 h1{font-size:24px;margin:18px 0 8px}
-.lead{font-size:14px;color:var(--muted);margin-bottom:24px}
+h2{font-size:15px;color:var(--amber);margin:26px 0 10px}
+.lead{font-size:14px;color:var(--muted);margin-bottom:20px}
 .list{display:flex;flex-wrap:wrap;gap:9px}
 .w{display:inline-block;padding:7px 14px;border-radius:16px;text-decoration:none;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .w:hover{border-color:var(--amber);color:var(--amber)}
+.w.feat{border-color:rgba(245,166,35,0.4);background:linear-gradient(135deg,#1c1608,#111726)}
+.rows{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 22px}
+.row-tab{padding:5px 12px;border-radius:14px;text-decoration:none;font-size:13px;border:1px solid var(--border);color:var(--muted)}
+.row-tab.on{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:600}
+.row-tab:hover{border-color:var(--amber);color:var(--text)}
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:30px;flex-wrap:wrap}
+.pg{padding:8px 16px;border-radius:8px;text-decoration:none;font-size:14px;border:1px solid var(--border);color:var(--text)}
+.pg.disabled{opacity:.35;pointer-events:none}
+.pg:hover{border-color:var(--amber)}
+.pgnums{display:flex;gap:4px;align-items:center}
+.pgn{min-width:30px;text-align:center;padding:6px 8px;border-radius:6px;text-decoration:none;font-size:13px;color:var(--muted)}
+.pgn.on{background:var(--surface);color:var(--amber);font-weight:600}
+.pgn:hover{color:var(--text)}
+.pgdot{color:var(--muted);padding:0 2px}
+.meta{font-size:12px;color:var(--muted);text-align:center;margin-top:12px}
 footer{text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:20px;margin-top:40px}
 footer a{color:var(--muted);margin:0 8px}
 </style>
@@ -326,8 +412,13 @@ footer a{color:var(--muted);margin:0 8px}
 <div class="wrap">
 <a class="logo" href="/">語彙空間 GOI-Space</a>
 <h1>語彙さくいん</h1>
-<p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えていきます（現在 ${words.length} 語）。</p>
-<div class="list">${links || '<span style="color:var(--muted)">まだ語彙ページがありません。</span>'}</div>
+<p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えています（全 ${total} 語）。</p>
+${!row && page === 1 && featuredLinks ? `<h2>今日の注目の言葉</h2><div class="list">${featuredLinks}</div>` : ''}
+<h2>五十音から引く</h2>
+<div class="rows">${rowTabs}</div>
+<div class="list">${links || '<span style="color:var(--muted)">この頭文字の語はまだありません。</span>'}</div>
+${pager}
+<p class="meta">${row ? `「${esc(row)}」から始まる語 ` : ''}${all.length} 語中 ${(page - 1) * PER + 1}〜${Math.min(page * PER, all.length)} 語目${pages > 1 ? `（${page} / ${pages} ページ）` : ''}</p>
 <footer>
   <a href="/">トップ</a><a href="/about.html">サイトについて</a><a href="/privacy.html">プライバシー</a>
 </footer>
@@ -335,7 +426,7 @@ footer a{color:var(--muted);margin:0 8px}
 </body>
 </html>`;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=21600');
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=3600');
     return res.status(200).send(html);
   }
 
