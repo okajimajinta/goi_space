@@ -9,6 +9,13 @@ import { redis } from './_redis.js';
 const SITE = process.env.SITE_URL || 'https://goispace.app';
 const AMAZON_TAG = process.env.AMAZON_TAG || 'goispacead-22';
 
+// クローラー（ボット）判定。新規AI生成を人間の実訪問だけに限定するために使う。
+function isBot(req) {
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  if (!ua) return true; // UAなしは機械アクセスとみなす（安全側）
+  return /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora|pinterest|vkshare|whatsapp|telegram|discordbot|googlebot|bingbot|yandex|baidu|duckduck|ahrefs|semrush|mj12|dotbot|petalbot|bytespider|gptbot|ccbot|claudebot|anthropic|perplexity|amazonbot|applebot|headless|python-requests|curl|wget|scrapy|http-client|go-http|okhttp/i.test(ua);
+}
+
 // Amazonアソシエイト検索リンク（書籍カテゴリ）
 function amazonSearch(query) {
   const q = encodeURIComponent(String(query || '').slice(0, 60));
@@ -163,6 +170,57 @@ function activityHTML(word, activity) {
   return parts.join('\n');
 }
 
+// ===== トレンド機能 =====
+// Google公式のトレンドRSS（trends.google.com/trending/rss?geo=JP）から急上昇語を取得。
+async function fetchTrendWords(limit) {
+  try {
+    const resp = await fetch('https://trends.google.com/trending/rss?geo=JP', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GoiSpaceTrendBot/1.0)' },
+    });
+    if (!resp.ok) return [];
+    const xml = await resp.text();
+    // <item> 内の <title> を抽出
+    const titles = [];
+    const itemRe = /<item>([\s\S]*?)<\/item>/g;
+    let m;
+    while ((m = itemRe.exec(xml)) && titles.length < limit * 3) {
+      const block = m[1];
+      const tm = block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
+      if (tm) {
+        let t = tm[1].trim();
+        // HTMLエンティティを軽くデコード
+        t = t.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        if (t) titles.push(t.slice(0, 40));
+      }
+    }
+    return titles.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+// 1語分のSEOデータをAI生成して永続保存する（トレンドジョブ用に再利用可能）。
+async function generateAndSaveData(word) {
+  const dataKey = `seodata:${word}`;
+  try {
+    const existing = await redis('GET', dataKey);
+    if (existing) return { word, status: 'exists' }; // 既に生成済みなら再生成しない
+  } catch {}
+  const ai = await relatedFromAI(word);
+  const data = {
+    reading: ai.reading, summary: ai.summary, meaning_long: ai.meaning_long,
+    synonyms: ai.synonyms, antonyms: ai.antonyms, related: ai.related,
+    examples: ai.examples, etymology: ai.etymology, english: ai.english, book_theme: ai.book_theme,
+  };
+  const ok = !!(data.summary || (data.synonyms && data.synonyms.length));
+  if (!ok) return { word, status: 'failed' };
+  try {
+    await redis('SET', dataKey, JSON.stringify(data));
+    await redis('SADD', 'seo:words', word);
+  } catch {}
+  return { word, status: 'generated' };
+}
+
 function buildHTML(word, data, nebulaWords, activity) {
   const title = `「${word}」の意味・類語・対義語・例文・語源 | 語彙空間 GOI-Space`;
   const desc = data.summary
@@ -314,6 +372,54 @@ export default async function handler(req, res) {
     return res.status(200).json({ processed, expired, note: `${expired}件にTTL(3日)を付与しました。数日で容量が解放されます。` });
   }
 
+  // 【トレンドジョブ】週次Cronから叩く。Google急上昇語を取得しSEOページを生成、時期つきで記録。
+  // 使い方: /api/word?trendjob=1&key=<TREND_SECRET>  （Vercel Cronで週1回）
+  if (req.query && req.query.trendjob === '1') {
+    const secret = process.env.TREND_SECRET || '';
+    const cronSecret = process.env.CRON_SECRET || '';
+    const auth = String(req.headers['authorization'] || '');
+    const okByKey = secret && req.query.key === secret;
+    const okByCron = cronSecret && auth === `Bearer ${cronSecret}`;
+    if (!okByKey && !okByCron) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const words = await fetchTrendWords(10);
+    if (!words.length) {
+      return res.status(200).json({ ok: false, note: 'トレンド取得に失敗（前回分を維持）' });
+    }
+    const now = Date.now();
+    const results = [];
+    for (const w of words) {
+      const r = await generateAndSaveData(w); // 既存ならスキップ、新規のみAI生成
+      results.push(r);
+      try {
+        // トレンド語の記録（取得時刻をscoreに。時期表示・並び替えに使う）
+        await redis('ZADD', 'trend:words', now, w);
+        // 語ごとの「話題になった時期」を保存（最初の登場時期を優先）
+        const seen = await redis('GET', `trend:seen:${w}`);
+        if (!seen) await redis('SET', `trend:seen:${w}`, String(now));
+      } catch {}
+    }
+    // トレンド一覧は直近60語まで保持（古いものは索引から外す。ページ本体・seodataは残る）
+    try { await redis('ZREMRANGEBYRANK', 'trend:words', 0, -61); } catch {}
+    return res.status(200).json({ ok: true, count: words.length, results });
+  }
+
+  // 【トレンド語の取得】入口画面・語彙索引で表示するための一覧（新しい順）。
+  if (req.query && req.query.trends === '1') {
+    try {
+      const raw = await redis('ZREVRANGE', 'trend:words', 0, 11, 'WITHSCORES') || [];
+      const items = [];
+      for (let i = 0; i < raw.length; i += 2) {
+        items.push({ word: raw[i], ts: Number(raw[i + 1]) });
+      }
+      res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=3600');
+      return res.status(200).json({ items });
+    } catch {
+      return res.status(200).json({ items: [] });
+    }
+  }
+
   // サイトマップ（/word?sitemap=1 または /sitemap.xml をrewrite）
   // 語彙さくいん（/words）：全語をページ切替・頭文字辞書引き・ランダム注目で閲覧
   if (req.query && req.query.list === '1') {
@@ -392,6 +498,19 @@ export default async function handler(req, res) {
     }
     const featuredLinks = featured.map(w => `<a class="w feat" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
 
+    // トレンド語（話題の言葉）を取得して時期つきで表示
+    let trendLinks = '';
+    try {
+      const traw = await redis('ZREVRANGE', 'trend:words', 0, 11, 'WITHSCORES') || [];
+      const titems = [];
+      for (let i = 0; i < traw.length; i += 2) titems.push({ word: traw[i], ts: Number(traw[i + 1]) });
+      trendLinks = titems.map(t => {
+        const d = new Date(t.ts);
+        const ym = `${d.getFullYear()}年${d.getMonth() + 1}月`;
+        return `<a class="w trend" href="/word/${encodeURIComponent(t.word)}">${esc(t.word)}<span class="trend-when">${ym}</span></a>`;
+      }).join('');
+    } catch {}
+
     // 頭文字タブ（2階層：行グループの中に個別文字。「すべて」＋数字/英語/漢字も）
     const base = '/words';
     const charLink = (c) => `<a class="char-tab ${row === c ? 'on' : ''}" href="${base}?row=${encodeURIComponent(c)}">${esc(c)}</a>`;
@@ -442,6 +561,9 @@ h2{font-size:15px;color:var(--amber);margin:26px 0 10px}
 .w{display:inline-block;padding:7px 14px;border-radius:16px;text-decoration:none;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .w:hover{border-color:var(--amber);color:var(--amber)}
 .w.feat{border-color:rgba(245,166,35,0.4);background:linear-gradient(135deg,#1c1608,#111726)}
+.w.trend{border-color:rgba(255,90,90,0.45);background:linear-gradient(135deg,#241010,#111726);display:inline-flex;align-items:center;gap:7px}
+.w.trend:hover{border-color:#ff6b6b;color:#ff9a9a}
+.trend-when{font-size:10px;color:var(--muted);border-left:1px solid var(--border);padding-left:7px}
 .rows{margin:8px 0 22px}
 .row-tab{display:inline-block;padding:6px 14px;border-radius:14px;text-decoration:none;font-size:13px;border:1px solid var(--border);color:var(--muted);margin-bottom:12px}
 .row-tab.all{font-weight:600}
@@ -473,6 +595,7 @@ footer a{color:var(--muted);margin:0 8px}
 <a class="logo" href="/">語彙空間 GOI-Space</a>
 <h1>語彙さくいん</h1>
 <p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えています（全 ${total} 語）。</p>
+${!row && page === 1 && trendLinks ? `<h2>🔥 話題の言葉（Googleトレンドより）</h2><div class="list">${trendLinks}</div>` : ''}
 ${!row && page === 1 && featuredLinks ? `<h2>今日の注目の言葉</h2><div class="list">${featuredLinks}</div>` : ''}
 <h2>五十音から引く</h2>
 <div class="rows">${rowTabs}</div>
@@ -492,13 +615,10 @@ ${pager}
 
   if (req.query && (req.query.sitemap || req.url?.includes('sitemap'))) {
     const set = new Set();
-    // 生成済みのSEOページ
+    // 【方針B】生成済み（完全版データがある）SEOページのみをsitemapに載せる。
+    // 未生成の語をクローラーに宣伝しないことで、新規生成の連鎖クロールを断つ。
+    // 既に8万語規模の生成済み資産があるため、これで十分な検索網が保たれる。
     try { (await redis('SMEMBERS', 'seo:words') || []).forEach(w => set.add(w)); } catch {}
-    // 星雲でよく辿られている語（未生成でもsitemapに載せてクロールを促す）
-    try {
-      const neb = await redis('ZREVRANGE', 'nebula:words', 0, 4999) || [];
-      neb.forEach(w => set.add(w));
-    } catch {}
     const words = [...set].filter(Boolean);
     const urls = words.slice(0, 50000).map(w =>
       `<url><loc>${SITE}/word/${encodeURIComponent(w)}</loc><changefreq>weekly</changefreq></url>`
@@ -570,8 +690,25 @@ ${urls}
   }
 
   // ===== ここから先は「初めての語」＝AI生成が必要 =====
-  // 新規AI生成を1時間あたり上限までに制限し、機械的な大量クロールの暴走を防ぐ。
-  const GEN_LIMIT_PER_HOUR = 120;
+  // 【方針A】新規AI生成は人間の実訪問のみをトリガーとする。
+  // ボット（クローラー）が未生成の語を踏んでも、AIは呼ばず軽量ページを返す。
+  // これにより、8万語規模のクロールでAIコストが青天井になるのを断ち切る。
+  // 生成済みの語（seodataあり）は上の分岐で完全版を返すので、SEOインデックスは守られる。
+  const light = () => {
+    const lightData = { reading: '', summary: '', meaning_long: '', synonyms: [], antonyms: [], related: [], examples: [], etymology: '', english: [], book_theme: '' };
+    const lightHtml = buildHTML(word, lightData, nebulaWords.slice(0, 16), activity);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    // 未生成の軽量ページはインデックスさせない（薄いページの評価を避ける）。
+    // 完全版が生成されれば通常の index ページとして扱われる。
+    res.setHeader('X-Robots-Tag', 'noindex, follow');
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=900');
+    return res.status(200).send(lightHtml);
+  };
+
+  if (isBot(req)) return light(); // ボットには生成させない
+
+  // 【方針C】新規AI生成のレート上限（人間の実需では超えない低めの天井＝コストの保険）
+  const GEN_LIMIT_PER_HOUR = 20;
   let canGenerate = true;
   try {
     const hourKey = `seogen:${new Date().toISOString().slice(0, 13)}`;
@@ -580,15 +717,7 @@ ${urls}
     if (n > GEN_LIMIT_PER_HOUR) canGenerate = false;
   } catch {}
 
-  if (!canGenerate) {
-    // 上限超過：AIを呼ばず、星雲データだけの軽量ページを返す（データは保存しない）。
-    // 次にアクセスがあり上限内なら、完全版が生成・永続保存される。
-    const lightData = { reading: '', summary: '', meaning_long: '', synonyms: [], antonyms: [], related: [], examples: [], etymology: '', english: [], book_theme: '' };
-    const lightHtml = buildHTML(word, lightData, nebulaWords.slice(0, 16), activity);
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=900'); // 短くして早く完全版に置き換わるように
-    return res.status(200).send(lightHtml);
-  }
+  if (!canGenerate) return light(); // 上限超過時も軽量ページ（次の訪問で完全版に昇格）
 
   // 上限内：AIで完全なデータを生成
   const ai = await relatedFromAI(word);
