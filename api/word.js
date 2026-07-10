@@ -183,7 +183,8 @@ async function fetchTrendWords(limit) {
     const titles = [];
     const itemRe = /<item>([\s\S]*?)<\/item>/g;
     let m;
-    while ((m = itemRe.exec(xml)) && titles.length < limit * 3) {
+    // フィルタで一部が落ちるため、多めに候補を集める
+    while ((m = itemRe.exec(xml)) && titles.length < limit * 6) {
       const block = m[1];
       const tm = block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
       if (tm) {
@@ -193,7 +194,12 @@ async function fetchTrendWords(limit) {
         if (t) titles.push(t.slice(0, 40));
       }
     }
-    return titles.slice(0, limit);
+    // 【方針B】日本語（ひらがな・カタカナ・漢字）を1文字も含まない語は除外する。
+    // → ベトナム語などの外国語や、純粋な英字・記号だけのティッカーが落ちる。
+    // 「vix指数」「s&p 500」のように日本語混じりのものは残す。
+    const hasJapanese = (s) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(s);
+    const filtered = titles.filter(hasJapanese);
+    return filtered.slice(0, limit);
   } catch {
     return [];
   }
