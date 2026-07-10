@@ -9,6 +9,13 @@ import { redis } from './_redis.js';
 const SITE = process.env.SITE_URL || 'https://goispace.app';
 const AMAZON_TAG = process.env.AMAZON_TAG || 'goispacead-22';
 
+// クローラー（ボット）判定。新規AI生成を人間の実訪問だけに限定するために使う。
+function isBot(req) {
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  if (!ua) return true; // UAなしは機械アクセスとみなす（安全側）
+  return /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora|pinterest|vkshare|whatsapp|telegram|discordbot|googlebot|bingbot|yandex|baidu|duckduck|ahrefs|semrush|mj12|dotbot|petalbot|bytespider|gptbot|ccbot|claudebot|anthropic|perplexity|amazonbot|applebot|headless|python-requests|curl|wget|scrapy|http-client|go-http|okhttp/i.test(ua);
+}
+
 // Amazonアソシエイト検索リンク（書籍カテゴリ）
 function amazonSearch(query) {
   const q = encodeURIComponent(String(query || '').slice(0, 60));
@@ -163,6 +170,63 @@ function activityHTML(word, activity) {
   return parts.join('\n');
 }
 
+// ===== トレンド機能 =====
+// Google公式のトレンドRSS（trends.google.com/trending/rss?geo=JP）から急上昇語を取得。
+async function fetchTrendWords(limit) {
+  try {
+    const resp = await fetch('https://trends.google.com/trending/rss?geo=JP', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GoiSpaceTrendBot/1.0)' },
+    });
+    if (!resp.ok) return [];
+    const xml = await resp.text();
+    // <item> 内の <title> を抽出
+    const titles = [];
+    const itemRe = /<item>([\s\S]*?)<\/item>/g;
+    let m;
+    // フィルタで一部が落ちるため、多めに候補を集める
+    while ((m = itemRe.exec(xml)) && titles.length < limit * 6) {
+      const block = m[1];
+      const tm = block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
+      if (tm) {
+        let t = tm[1].trim();
+        // HTMLエンティティを軽くデコード
+        t = t.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        if (t) titles.push(t.slice(0, 40));
+      }
+    }
+    // 【方針B】日本語（ひらがな・カタカナ・漢字）を1文字も含まない語は除外する。
+    // → ベトナム語などの外国語や、純粋な英字・記号だけのティッカーが落ちる。
+    // 「vix指数」「s&p 500」のように日本語混じりのものは残す。
+    const hasJapanese = (s) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(s);
+    const filtered = titles.filter(hasJapanese);
+    return filtered.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+// 1語分のSEOデータをAI生成して永続保存する（トレンドジョブ用に再利用可能）。
+async function generateAndSaveData(word) {
+  const dataKey = `seodata:${word}`;
+  try {
+    const existing = await redis('GET', dataKey);
+    if (existing) return { word, status: 'exists' }; // 既に生成済みなら再生成しない
+  } catch {}
+  const ai = await relatedFromAI(word);
+  const data = {
+    reading: ai.reading, summary: ai.summary, meaning_long: ai.meaning_long,
+    synonyms: ai.synonyms, antonyms: ai.antonyms, related: ai.related,
+    examples: ai.examples, etymology: ai.etymology, english: ai.english, book_theme: ai.book_theme,
+  };
+  const ok = !!(data.summary || (data.synonyms && data.synonyms.length));
+  if (!ok) return { word, status: 'failed' };
+  try {
+    await redis('SET', dataKey, JSON.stringify(data));
+    await redis('SADD', 'seo:words', word);
+  } catch {}
+  return { word, status: 'generated' };
+}
+
 function buildHTML(word, data, nebulaWords, activity) {
   const title = `「${word}」の意味・類語・対義語・例文・語源 | 語彙空間 GOI-Space`;
   const desc = data.summary
@@ -290,23 +354,206 @@ ${activityHTML(word, activity)}
 }
 
 export default async function handler(req, res) {
+  // 【メンテナンス】既存の永続seopageキャッシュにTTLを付与して容量を段階的に解放する。
+  // 使い方: /api/word?cleanup=1&key=<CLEANUP_SECRET>&batch=500
+  if (req.query && req.query.cleanup === '1') {
+    const secret = process.env.CLEANUP_SECRET || '';
+    if (!secret || req.query.key !== secret) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const batch = Math.min(parseInt(req.query.batch, 10) || 500, 2000);
+    const ttl = 60 * 60 * 24 * 3; // 3日後に消える
+    let processed = 0, expired = 0;
+    try {
+      const words = await redis('SMEMBERS', 'seo:words') || [];
+      for (const w of words.slice(0, batch)) {
+        processed++;
+        try {
+          // TTL未設定（=永続）のものだけにTTLを付ける
+          const t = await redis('TTL', `seopage:${w}`);
+          if (t === -1) { await redis('EXPIRE', `seopage:${w}`, ttl); expired++; }
+        } catch {}
+      }
+    } catch {}
+    return res.status(200).json({ processed, expired, note: `${expired}件にTTL(3日)を付与しました。数日で容量が解放されます。` });
+  }
+
+  // 【トレンドジョブ】週次Cronから叩く。Google急上昇語を取得しSEOページを生成、時期つきで記録。
+  // 使い方: /api/word?trendjob=1&key=<TREND_SECRET>  （Vercel Cronで週1回）
+  if (req.query && req.query.trendjob === '1') {
+    const secret = process.env.TREND_SECRET || '';
+    const cronSecret = process.env.CRON_SECRET || '';
+    const auth = String(req.headers['authorization'] || '');
+    const okByKey = secret && req.query.key === secret;
+    const okByCron = cronSecret && auth === `Bearer ${cronSecret}`;
+    if (!okByKey && !okByCron) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const words = await fetchTrendWords(10);
+    if (!words.length) {
+      return res.status(200).json({ ok: false, note: 'トレンド取得に失敗（前回分を維持）' });
+    }
+    const now = Date.now();
+    const results = [];
+    for (const w of words) {
+      const r = await generateAndSaveData(w); // 既存ならスキップ、新規のみAI生成
+      results.push(r);
+      try {
+        // トレンド語の記録（取得時刻をscoreに。時期表示・並び替えに使う）
+        await redis('ZADD', 'trend:words', now, w);
+        // 語ごとの「話題になった時期」を保存（最初の登場時期を優先）
+        const seen = await redis('GET', `trend:seen:${w}`);
+        if (!seen) await redis('SET', `trend:seen:${w}`, String(now));
+      } catch {}
+    }
+    // トレンド一覧は直近60語まで保持（古いものは索引から外す。ページ本体・seodataは残る）
+    try { await redis('ZREMRANGEBYRANK', 'trend:words', 0, -61); } catch {}
+    return res.status(200).json({ ok: true, count: words.length, results });
+  }
+
+  // 【トレンド語の取得】入口画面・語彙索引で表示するための一覧（新しい順）。
+  if (req.query && req.query.trends === '1') {
+    try {
+      const raw = await redis('ZREVRANGE', 'trend:words', 0, 11, 'WITHSCORES') || [];
+      const items = [];
+      for (let i = 0; i < raw.length; i += 2) {
+        items.push({ word: raw[i], ts: Number(raw[i + 1]) });
+      }
+      res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=3600');
+      return res.status(200).json({ items });
+    } catch {
+      return res.status(200).json({ items: [] });
+    }
+  }
+
   // サイトマップ（/word?sitemap=1 または /sitemap.xml をrewrite）
-  // 語彙さくいん（/words）：審査員・クローラーが語彙ページ群を発見できるHTML一覧
+  // 語彙さくいん（/words）：全語をページ切替・頭文字辞書引き・ランダム注目で閲覧
   if (req.query && req.query.list === '1') {
     const set = new Set();
     try { (await redis('SMEMBERS', 'seo:words') || []).forEach(w => set.add(w)); } catch {}
-    try { (await redis('ZREVRANGE', 'nebula:words', 0, 999) || []).forEach(w => set.add(w)); } catch {}
-    const words = [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')).slice(0, 1000);
-    const links = words.map(w => `<a class="w" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
+    try { (await redis('ZREVRANGE', 'nebula:words', 0, 9999) || []).forEach(w => set.add(w)); } catch {}
+    let all = [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'));
+    const total = all.length;
+
+    // 頭文字（五十音の個別文字）判定。濁音・半濁音・拗音・小書きは清音の基本形に正規化する。
+    const kanaChar = (w) => {
+      const c = (w[0] || '');
+      const code = c.charCodeAt(0);
+      let ch = c;
+      // カタカナはひらがなに寄せる
+      if (code >= 0x30A1 && code <= 0x30F6) ch = String.fromCharCode(code - 0x60);
+      // 濁音・半濁音・拗音・小書きを清音の基本形へ正規化
+      const NORM = {
+        'ぁ': 'あ', 'ぃ': 'い', 'ぅ': 'う', 'ぇ': 'え', 'ぉ': 'お',
+        'が': 'か', 'ぎ': 'き', 'ぐ': 'く', 'げ': 'け', 'ご': 'こ',
+        'ざ': 'さ', 'じ': 'し', 'ず': 'す', 'ぜ': 'せ', 'ぞ': 'そ',
+        'だ': 'た', 'ぢ': 'ち', 'づ': 'つ', 'で': 'て', 'ど': 'と', 'っ': 'つ',
+        'ば': 'は', 'び': 'ひ', 'ぶ': 'ふ', 'べ': 'へ', 'ぼ': 'ほ',
+        'ぱ': 'は', 'ぴ': 'ひ', 'ぷ': 'ふ', 'ぺ': 'へ', 'ぽ': 'ほ',
+        'ゃ': 'や', 'ゅ': 'ゆ', 'ょ': 'よ', 'ゎ': 'わ',
+      };
+      if (NORM[ch]) ch = NORM[ch];
+      const GOJUON = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';
+      if (GOJUON.includes(ch)) return ch;
+      if (/[0-9０-９]/.test(c)) return '数字';
+      if (/[a-zA-Zａ-ｚＡ-Ｚ]/.test(c)) return '英語';
+      return '漢字';
+    };
+    // 行（あ・か・さ…）→ その行に属する個別文字（あいうえお等）
+    const GOJUON_ROWS = [
+      ['あ', ['あ', 'い', 'う', 'え', 'お']],
+      ['か', ['か', 'き', 'く', 'け', 'こ']],
+      ['さ', ['さ', 'し', 'す', 'せ', 'そ']],
+      ['た', ['た', 'ち', 'つ', 'て', 'と']],
+      ['な', ['な', 'に', 'ぬ', 'ね', 'の']],
+      ['は', ['は', 'ひ', 'ふ', 'へ', 'ほ']],
+      ['ま', ['ま', 'み', 'む', 'め', 'も']],
+      ['や', ['や', 'ゆ', 'よ']],
+      ['ら', ['ら', 'り', 'る', 'れ', 'ろ']],
+      ['わ', ['わ', 'を', 'ん']],
+    ];
+    const OTHER_CATS = ['数字', '英語', '漢字'];
+    const ALL_CHARS = [...GOJUON_ROWS.flatMap(([, cs]) => cs), ...OTHER_CATS];
+
+    // 頭文字フィルタ（個別文字 or 数字/英語/漢字）
+    const row = String(req.query.row || '').slice(0, 2);
+    if (row && ALL_CHARS.includes(row)) all = all.filter(w => kanaChar(w) === row);
+    // row表示用のラベル（数字/英語/漢字はそのまま、五十音は「から始まる」で自然に読めるようにする）
+    const rowLabel = row ? (OTHER_CATS.includes(row) ? row : `「${row}」から始まる語`) : '';
+
+    // ページング（1ページ60語）
+    const PER = 60;
+    const pages = Math.max(1, Math.ceil(all.length / PER));
+    let page = parseInt(req.query.page, 10) || 1;
+    if (page < 1) page = 1;
+    if (page > pages) page = pages;
+    const pageWords = all.slice((page - 1) * PER, page * PER);
+    const links = pageWords.map(w => `<a class="w" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
+
+    // ランダムに注目の言葉を数語ピックアップ（全体から）
+    const allArr = [...set].filter(Boolean);
+    const featured = [];
+    const pick = Math.min(8, allArr.length);
+    const used = new Set();
+    for (let i = 0; i < pick; i++) {
+      let idx = Math.floor(Math.random() * allArr.length);
+      let guard = 0;
+      while (used.has(idx) && guard++ < 20) idx = Math.floor(Math.random() * allArr.length);
+      used.add(idx);
+      featured.push(allArr[idx]);
+    }
+    const featuredLinks = featured.map(w => `<a class="w feat" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
+
+    // トレンド語（話題の言葉）を取得して時期つきで表示
+    let trendLinks = '';
+    try {
+      const traw = await redis('ZREVRANGE', 'trend:words', 0, 11, 'WITHSCORES') || [];
+      const titems = [];
+      for (let i = 0; i < traw.length; i += 2) titems.push({ word: traw[i], ts: Number(traw[i + 1]) });
+      trendLinks = titems.map(t => {
+        const d = new Date(t.ts);
+        const ym = `${d.getFullYear()}年${d.getMonth() + 1}月`;
+        return `<a class="w trend" href="/word/${encodeURIComponent(t.word)}">${esc(t.word)}<span class="trend-when">${ym}</span></a>`;
+      }).join('');
+    } catch {}
+
+    // 頭文字タブ（2階層：行グループの中に個別文字。「すべて」＋数字/英語/漢字も）
+    const base = '/words';
+    const charLink = (c) => `<a class="char-tab ${row === c ? 'on' : ''}" href="${base}?row=${encodeURIComponent(c)}">${esc(c)}</a>`;
+    const rowGroups = GOJUON_ROWS.map(([label, chars]) =>
+      `<div class="kana-group"><span class="kana-group-label">${label}行</span><div class="kana-group-chars">${chars.map(charLink).join('')}</div></div>`
+    ).join('');
+    const otherGroup = `<div class="kana-group"><span class="kana-group-label">その他</span><div class="kana-group-chars">${OTHER_CATS.map(charLink).join('')}</div></div>`;
+    const rowTabs = `<a class="row-tab all ${!row ? 'on' : ''}" href="${base}">すべて表示</a>` +
+      `<div class="kana-groups">${rowGroups}${otherGroup}</div>`;
+
+    // ページャ（前後＋現在地）
+    const qRow = row ? `&row=${encodeURIComponent(row)}` : '';
+    const rel = (p) => `${base}?page=${p}${qRow}`;
+    let pager = '';
+    if (pages > 1) {
+      const prev = page > 1 ? `<a class="pg" rel="prev" href="${rel(page - 1)}">‹ 前へ</a>` : `<span class="pg disabled">‹ 前へ</span>`;
+      const next = page < pages ? `<a class="pg" rel="next" href="${rel(page + 1)}">次へ ›</a>` : `<span class="pg disabled">次へ ›</span>`;
+      // 近傍ページ番号
+      const nums = [];
+      const from = Math.max(1, page - 2), to = Math.min(pages, page + 2);
+      if (from > 1) nums.push(`<a class="pgn" href="${rel(1)}">1</a>${from > 2 ? '<span class="pgdot">…</span>' : ''}`);
+      for (let p = from; p <= to; p++) nums.push(`<a class="pgn ${p === page ? 'on' : ''}" href="${rel(p)}">${p}</a>`);
+      if (to < pages) nums.push(`${to < pages - 1 ? '<span class="pgdot">…</span>' : ''}<a class="pgn" href="${rel(pages)}">${pages}</a>`);
+      pager = `<nav class="pager">${prev}<span class="pgnums">${nums.join('')}</span>${next}</nav>`;
+    }
+
     const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>語彙さくいん | 語彙空間 GOI-Space</title>
-<meta name="description" content="語彙空間 GOI-Space の語彙辞典さくいん。各語の意味・類語・対義語・例文・語源のページ一覧。">
-<link rel="canonical" href="${SITE}/words">
+<title>語彙さくいん${page > 1 ? `（${page}ページ目）` : ''}${row ? `${OTHER_CATS.includes(row) ? row : `「${row}」`}の語` : ''} | 語彙空間 GOI-Space</title>
+<meta name="description" content="語彙空間 GOI-Space の語彙辞典さくいん。各語の意味・類語・対義語・例文・語源のページを、頭文字やページ送りで閲覧できます。">
+<link rel="canonical" href="${SITE}/words${page > 1 || row ? `?${row ? `row=${encodeURIComponent(row)}` : ''}${row && page > 1 ? '&' : ''}${page > 1 ? `page=${page}` : ''}` : ''}">
 <meta name="robots" content="index, follow">
+${page > 1 ? `<link rel="prev" href="${SITE}${rel(page - 1)}">` : ''}
+${page < pages ? `<link rel="next" href="${SITE}${rel(page + 1)}">` : ''}
 <link rel="icon" href="/favicon.svg">
 <style>
 :root{--bg:#080C18;--surface:#111726;--border:#233047;--text:#E8EDF5;--muted:#8595B3;--amber:#F5A623}
@@ -314,10 +561,37 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Hiragino Kaku 
 .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
 .logo{font-size:14px;color:var(--muted);text-decoration:none;letter-spacing:.1em}
 h1{font-size:24px;margin:18px 0 8px}
-.lead{font-size:14px;color:var(--muted);margin-bottom:24px}
+h2{font-size:15px;color:var(--amber);margin:26px 0 10px}
+.lead{font-size:14px;color:var(--muted);margin-bottom:20px}
 .list{display:flex;flex-wrap:wrap;gap:9px}
 .w{display:inline-block;padding:7px 14px;border-radius:16px;text-decoration:none;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .w:hover{border-color:var(--amber);color:var(--amber)}
+.w.feat{border-color:rgba(245,166,35,0.4);background:linear-gradient(135deg,#1c1608,#111726)}
+.w.trend{border-color:rgba(255,90,90,0.45);background:linear-gradient(135deg,#241010,#111726);display:inline-flex;align-items:center;gap:7px}
+.w.trend:hover{border-color:#ff6b6b;color:#ff9a9a}
+.trend-when{font-size:10px;color:var(--muted);border-left:1px solid var(--border);padding-left:7px}
+.rows{margin:8px 0 22px}
+.row-tab{display:inline-block;padding:6px 14px;border-radius:14px;text-decoration:none;font-size:13px;border:1px solid var(--border);color:var(--muted);margin-bottom:12px}
+.row-tab.all{font-weight:600}
+.row-tab.on{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:600}
+.row-tab:hover{border-color:var(--amber);color:var(--text)}
+.kana-groups{display:flex;flex-wrap:wrap;gap:14px}
+.kana-group{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 10px}
+.kana-group-label{font-size:11px;color:var(--muted);white-space:nowrap}
+.kana-group-chars{display:flex;gap:4px}
+.char-tab{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;border-radius:8px;text-decoration:none;font-size:13px;border:1px solid var(--border);color:var(--text);background:var(--bg)}
+.char-tab.on{background:var(--amber);color:#080C18;border-color:var(--amber);font-weight:600}
+.char-tab:hover{border-color:var(--amber);color:var(--amber)}
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:30px;flex-wrap:wrap}
+.pg{padding:8px 16px;border-radius:8px;text-decoration:none;font-size:14px;border:1px solid var(--border);color:var(--text)}
+.pg.disabled{opacity:.35;pointer-events:none}
+.pg:hover{border-color:var(--amber)}
+.pgnums{display:flex;gap:4px;align-items:center}
+.pgn{min-width:30px;text-align:center;padding:6px 8px;border-radius:6px;text-decoration:none;font-size:13px;color:var(--muted)}
+.pgn.on{background:var(--surface);color:var(--amber);font-weight:600}
+.pgn:hover{color:var(--text)}
+.pgdot{color:var(--muted);padding:0 2px}
+.meta{font-size:12px;color:var(--muted);text-align:center;margin-top:12px}
 footer{text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:20px;margin-top:40px}
 footer a{color:var(--muted);margin:0 8px}
 </style>
@@ -326,8 +600,14 @@ footer a{color:var(--muted);margin:0 8px}
 <div class="wrap">
 <a class="logo" href="/">語彙空間 GOI-Space</a>
 <h1>語彙さくいん</h1>
-<p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えていきます（現在 ${words.length} 語）。</p>
-<div class="list">${links || '<span style="color:var(--muted)">まだ語彙ページがありません。</span>'}</div>
+<p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えています（全 ${total} 語）。</p>
+${!row && page === 1 && trendLinks ? `<h2>🔥 話題の言葉（Googleトレンドより）</h2><div class="list">${trendLinks}</div>` : ''}
+${!row && page === 1 && featuredLinks ? `<h2>今日の注目の言葉</h2><div class="list">${featuredLinks}</div>` : ''}
+<h2>五十音から引く</h2>
+<div class="rows">${rowTabs}</div>
+<div class="list">${links || '<span style="color:var(--muted)">この頭文字の語はまだありません。</span>'}</div>
+${pager}
+<p class="meta">${rowLabel ? `${esc(rowLabel)} ` : ''}${all.length} 語中 ${(page - 1) * PER + 1}〜${Math.min(page * PER, all.length)} 語目${pages > 1 ? `（${page} / ${pages} ページ）` : ''}</p>
 <footer>
   <a href="/">トップ</a><a href="/about.html">サイトについて</a><a href="/privacy.html">プライバシー</a>
 </footer>
@@ -335,19 +615,16 @@ footer a{color:var(--muted);margin:0 8px}
 </body>
 </html>`;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=21600');
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=3600');
     return res.status(200).send(html);
   }
 
   if (req.query && (req.query.sitemap || req.url?.includes('sitemap'))) {
     const set = new Set();
-    // 生成済みのSEOページ
+    // 【方針B】生成済み（完全版データがある）SEOページのみをsitemapに載せる。
+    // 未生成の語をクローラーに宣伝しないことで、新規生成の連鎖クロールを断つ。
+    // 既に8万語規模の生成済み資産があるため、これで十分な検索網が保たれる。
     try { (await redis('SMEMBERS', 'seo:words') || []).forEach(w => set.add(w)); } catch {}
-    // 星雲でよく辿られている語（未生成でもsitemapに載せてクロールを促す）
-    try {
-      const neb = await redis('ZREVRANGE', 'nebula:words', 0, 4999) || [];
-      neb.forEach(w => set.add(w));
-    } catch {}
     const words = [...set].filter(Boolean);
     const urls = words.slice(0, 50000).map(w =>
       `<url><loc>${SITE}/word/${encodeURIComponent(w)}</loc><changefreq>weekly</changefreq></url>`
@@ -379,9 +656,10 @@ ${urls}
     return res.status(302).end();
   }
 
-  const cacheKey = `seopage:${word}`;
+  const dataKey = `seodata:${word}`; // AI生成データ（軽量・永続）
+  const cacheKey = `seopage:${word}`; // 組み立て済みHTML（短期バッファのみ）
 
-  // キャッシュ確認
+  // まず組み立て済みHTMLの短期キャッシュを確認（あれば即返す）
   try {
     const cached = await redis('GET', cacheKey);
     if (cached) {
@@ -391,14 +669,65 @@ ${urls}
     }
   } catch {}
 
-  // 生成：星雲データ ＋ AI補完
-  const [nebulaWords, ai, activity] = await Promise.all([
+  // 星雲データ・活動データは常に取得（AIを使わない・安価）
+  const [nebulaWords, activity] = await Promise.all([
     relatedFromNebula(word),
-    relatedFromAI(word),
     gatherActivity(word),
   ]);
 
-  const data = {
+  // AI生成データが永続保存されていれば、それを使ってHTMLを組み立て直す（AIを呼ばない）。
+  // これにより、一度生成した語は常に「完全版」を返せる。容量はHTML全文より遥かに小さい。
+  let data = null;
+  try {
+    const savedRaw = await redis('GET', dataKey);
+    if (savedRaw) data = JSON.parse(savedRaw);
+  } catch {}
+
+  if (data) {
+    const html = buildHTML(word, data, nebulaWords.slice(0, 16), activity);
+    // 組み立て済みHTMLは短期バッファとしてのみ保持（実キャッシュはVercel CDN）。
+    try {
+      await redis('SET', cacheKey, html, 'EX', 60 * 60 * 24 * 3); // 3日バッファ
+      await redis('SADD', 'seo:words', word);
+    } catch {}
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
+    return res.status(200).send(html);
+  }
+
+  // ===== ここから先は「初めての語」＝AI生成が必要 =====
+  // 【方針A】新規AI生成は人間の実訪問のみをトリガーとする。
+  // ボット（クローラー）が未生成の語を踏んでも、AIは呼ばず軽量ページを返す。
+  // これにより、8万語規模のクロールでAIコストが青天井になるのを断ち切る。
+  // 生成済みの語（seodataあり）は上の分岐で完全版を返すので、SEOインデックスは守られる。
+  const light = () => {
+    const lightData = { reading: '', summary: '', meaning_long: '', synonyms: [], antonyms: [], related: [], examples: [], etymology: '', english: [], book_theme: '' };
+    const lightHtml = buildHTML(word, lightData, nebulaWords.slice(0, 16), activity);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    // 未生成の軽量ページはインデックスさせない（薄いページの評価を避ける）。
+    // 完全版が生成されれば通常の index ページとして扱われる。
+    res.setHeader('X-Robots-Tag', 'noindex, follow');
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=900');
+    return res.status(200).send(lightHtml);
+  };
+
+  if (isBot(req)) return light(); // ボットには生成させない
+
+  // 【方針C】新規AI生成のレート上限（人間の実需では超えない低めの天井＝コストの保険）
+  const GEN_LIMIT_PER_HOUR = 20;
+  let canGenerate = true;
+  try {
+    const hourKey = `seogen:${new Date().toISOString().slice(0, 13)}`;
+    const n = await redis('INCR', hourKey);
+    if (n === 1) await redis('EXPIRE', hourKey, 3700);
+    if (n > GEN_LIMIT_PER_HOUR) canGenerate = false;
+  } catch {}
+
+  if (!canGenerate) return light(); // 上限超過時も軽量ページ（次の訪問で完全版に昇格）
+
+  // 上限内：AIで完全なデータを生成
+  const ai = await relatedFromAI(word);
+  data = {
     reading: ai.reading,
     summary: ai.summary,
     meaning_long: ai.meaning_long,
@@ -411,12 +740,16 @@ ${urls}
     book_theme: ai.book_theme,
   };
 
+  // AIの応答が実質空（生成失敗）なら永続保存しない（次回リトライできるように）
+  const generationOk = !!(data.summary || (data.synonyms && data.synonyms.length));
   const html = buildHTML(word, data, nebulaWords.slice(0, 16), activity);
 
-  // キャッシュ保存＋sitemap用の語セットに登録
   try {
-    await redis('SET', cacheKey, html, 'EX', CACHE_TTL);
-    await redis('SADD', 'seo:words', word);
+    if (generationOk) {
+      await redis('SET', dataKey, JSON.stringify(data)); // ★AI生成データを永続保存（軽量）
+      await redis('SADD', 'seo:words', word);
+    }
+    await redis('SET', cacheKey, html, 'EX', 60 * 60 * 24 * 3); // HTMLは3日バッファ
   } catch {}
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');

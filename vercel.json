@@ -1,28 +1,111 @@
-{
-  "crons": [
-    { "path": "/api/word?trendjob=1", "schedule": "0 0 * * 1" }
-  ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/word/(.*)", "destination": "/api/word?w=$1" },
-    { "source": "/words", "destination": "/api/word?list=1" },
-    { "source": "/sitemap.xml", "destination": "/api/word?sitemap=1" },
-    { "source": "/(.*)", "destination": "/public/$1" }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://*.g.doubleclick.net https://www.googletagservices.com https://adservice.google.com https://*.adtrafficquality.google; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://*.g.doubleclick.net https://*.adtrafficquality.google https://csi.gstatic.com; frame-src https://googleads.g.doubleclick.net https://*.g.doubleclick.net https://*.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; manifest-src 'self' https://vercel.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://checkout.stripe.com; object-src 'none'"
-        }
-      ]
-    }
-  ]
-}
+# 語彙空間 GOI-Space — パッチノート
+
+## 2026.6.22〜28 — 創世
+
+- 語彙空間アプリを初公開
+- 関連語が星状に広がる探索画面
+- ダブルクリックで外部検索
+- ワードゴルフ機能を追加
+- デイリー・マンスリー機能を追加
+- リーダーボード実装
+- スマホ対応UIに刷新
+- GitHub→Vercelで公開
+- 気になる語のピン留め機能
+
+## 2026.6.28
+
+- ホイール／ピンチでズーム対応
+- 右クリックでピン留め
+- 独自ドメイン goispace.app 開設
+- AdSense広告を導入
+- ゴルフお題生成を改善
+- アイコン・共有画像を設定
+- Stripe課金（月額・年額）導入
+- X共有機能を追加
+- パー計算を緩和（3倍）
+- UI文字サイズを拡大
+- クリア記録の消失を修正
+- 課金管理ポータル連携
+- アカウント画面を上部タブ化
+- 中断再開時の手数バグ修正
+
+## 2026.6.29
+
+- モード別の進捗保存・再開
+- 検索バーにランダムヒント
+- 実績・名前をアカウント同期
+- 高速モード（先読み）実装
+- クレジット買い切り制を導入
+- 復元コード認証を実装
+
+## 2026.6.30
+
+- 先読み並列化でさらに高速化
+- ゴルフ「自分で設定」追加
+- 共有画像・ロゴを修正
+- マイページに実績を統合
+- 実績のCSV書き出し
+- クリアでクレジット付与
+- 星図（経路ピーク）を新設
+- ブラインドゴルフを追加
+- 知的コンパスを実装
+
+## 2026.7.1
+
+- 星図を独立タブに昇格
+- 手数の誤計上を修正
+- 探索待機の演出を追加
+- 星図ノードから探索へ連携
+- コンパスUIを読みやすく改善
+- カード詳細（本・鍵語）追加
+- Amazon選書リンク連携
+- マイナー語のホバー表示
+- 反転表示ボタンを追加
+- チューニング表記を明確化
+- ソナー機能（長押しで命名）
+- ソナー結果→コンパス連携
+
+## 2026.7.5
+
+- コンパスを半透明パネル化
+- 選書を専用タブ＋紹介文に
+- クリア経路の抽象化を追加
+- 星雲を力学クラスタ配置に
+- 擬似3D（抽象度＝奥行き）
+- AIっぽい文面を全面調整
+- ゴルフ設定の改行崩れ修正
+
+## 2026.7.6
+
+- 距離測定を逐次方式に変更
+- 共有文面を短縮・要点掲載
+- 「深く」で専門書＋論文提案
+- READMEを図解つきで刷新
+- ブラインドに答え合わせ追加
+- SEO語彙ページ自動生成
+- sitemap・robots整備
+- 星雲タップで発光→再タップ探索
+- 星座の拡大表示を廃止
+- スマホ誤タップ発火を修正
+- 透明UIのタップ妨害を解消
+- コンパス検索中表示を追加
+- XSS対策を4箇所強化
+- セキュリティヘッダー導入
+- 復元コードを暗号乱数化
+- 総当たり攻撃ガード追加
+- CSP（コンテンツ保護）導入
+- 星雲文字をズームで最大3倍
+- ソナー誤発火を修正
+- 経路なし時は類語で代替表示
+- 経路ログを圧縮・永続保存化
+- 実績に保存仕様の注記追加
+- 星雲・経路タブの視認性向上
+- 入口に使い方ガイド追加
+- コンパス履歴の共有機能
+- 選択語に履歴ボタン（3倍）
+- 履歴カードから詳細検索
+- 星雲フィルター機能を追加
+
+## 2026.7.7
+
+- 藍の夢：未踏の知の航海図

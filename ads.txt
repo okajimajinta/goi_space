@@ -466,6 +466,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .fast-toggle input{accent-color:var(--amber);width:15px;height:15px;cursor:pointer}
 .fast-toggle-note{color:#8595b3;font-size:10.5px;margin-left:2px}
 .site-desc{margin-top:16px;font-size:11.5px;color:#8595b3;line-height:1.9;max-width:460px;pointer-events:auto;overflow-wrap:break-word;line-break:strict}
+.trend-entry{margin-top:18px;max-width:460px;pointer-events:auto}
+.trend-entry-label{font-size:11px;color:#c88;margin-bottom:8px;letter-spacing:.05em}
+.trend-entry-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+.trend-chip{display:inline-block;padding:6px 13px;border-radius:15px;font-size:12.5px;border:1px solid rgba(255,90,90,0.4);background:rgba(36,16,16,0.6);color:#e8b0b0;cursor:pointer;transition:all .15s}
+.trend-chip:hover{border-color:#ff6b6b;color:#ffb0b0;background:rgba(48,20,20,0.7)}
 .site-desc a{color:#b8a06a;white-space:nowrap}
 .help-btn:hover{border-color:var(--amber);color:var(--amber)}
 .help-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.9);z-index:200;backdrop-filter:blur(6px);padding:16px}
@@ -699,8 +704,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   .golf-panel{padding:8px 10px;gap:8px;max-width:96vw}
   .golf-leg-word{font-size:15px}
   .golf-stat-num{font-size:19px}
-  .legend{bottom:10px;left:8px}
+  .legend{bottom:64px;left:8px;padding:8px 10px;gap:5px}
   .legend-item{font-size:12px}
+  .enchant-btn{bottom:12px;left:8px;padding:8px 13px;font-size:13px}
   .loading-ad{width:min(250px,80vw);height:200px}
   .daily-panel{width:100vw}
   .comp-title{font-size:22px}
@@ -796,7 +802,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
             <span class="compass-pane-title">🧭 知的コンパス</span>
             <button class="compass-pane-close" id="compassPaneClose">✕</button>
           </div>
-          <div class="compass-pane-sub">興味を入れると、そこから離れた6つの分野の領域を返します。</div>
+          <div class="compass-pane-sub">興味を入れると、そこから離れた6つの分野の領域を返します。<br><span style="color:#b8a06a">⚡ コンパスを回すと3クレジット消費します（分野の深掘りは無料）。</span></div>
           <button class="ainoyume-entry" id="ainoyumeEntry">藍の夢 — 目標から未踏の知の航海図を紡ぐ</button>
           <div class="compass-input-row">
             <input id="compassInput" type="text" placeholder="興味を入力（読点区切り・例：宇宙、詩、孤独）" autocomplete="off"/>
@@ -976,6 +982,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
       <button class="help-btn" id="helpBtn">❓ 使い方・機能の説明</button>
       <p class="site-desc">語彙空間 GOI-Space は、言葉のつながりを星図として旅する語彙探索サービスです。<br>類語・対義語・連想語をたどる探索、言葉をつなぐワードゴルフ、<a href="/words">語彙辞典</a>を提供しています。</p>
+      <div class="trend-entry" id="trendEntry" style="display:none">
+        <div class="trend-entry-label">🔥 話題の言葉から探索</div>
+        <div class="trend-entry-chips" id="trendEntryChips"></div>
+      </div>
       <label class="fast-toggle" id="fastToggle" style="display:none">
         <input type="checkbox" id="fastToggleChk"/>
         <span>⚡ 高速・先読みモード<span class="fast-toggle-note">（1検索につき1クレジット消費）</span></span>
@@ -2038,6 +2048,25 @@ function randomHint(){
 // プレースホルダーを定期的に変える
 function refreshHint(){centerInput.placeholder=randomHint()}
 refreshHint(); // 初回のみ表示（自動切替なし）
+
+// 話題の言葉（Googleトレンド）を入口画面に表示し、タップで探索へ
+async function loadTrendEntry(){
+  try{
+    const r=await fetch('/api/word?trends=1');
+    const d=await r.json();
+    if(!d.items||!d.items.length)return;
+    const box=document.getElementById('trendEntry');
+    const chips=document.getElementById('trendEntryChips');
+    if(!box||!chips)return;
+    chips.innerHTML=d.items.slice(0,8).map(t=>`<span class="trend-chip" data-w="${(t.word||'').replace(/"/g,'&quot;')}">${(t.word||'').replace(/</g,'&lt;')}</span>`).join('');
+    chips.querySelectorAll('.trend-chip').forEach(el=>el.addEventListener('click',()=>{
+      const w=el.dataset.w;if(!w)return;
+      WI.value=w;explore(w,currentCenter());
+    }));
+    box.style.display='block';
+  }catch{}
+}
+loadTrendEntry();
 
 // 使い方・機能説明オーバーレイ
 const helpOverlay=document.getElementById('helpOverlay');
@@ -3693,9 +3722,15 @@ async function runCompass(force){
   runBtn.innerHTML='<span class="compass-spinner"></span>検索中';
   area.innerHTML='<div class="compass-placeholder"><span class="compass-spinner big"></span><br>コンパスを回しています…</div>';
   try{
-    const r=await fetch('/api/compass',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({interests,tuning:compassTuning})});
+    const r=await fetch('/api/compass',{method:'POST',headers:apiHeaders(),body:JSON.stringify({interests,tuning:compassTuning})});
+    if(r.status===402){
+      const d=await r.json();
+      area.innerHTML=`<div class="compass-placeholder">コンパスを回すには <b>3クレジット</b> が必要です（残高：${d.credits||0}）。<br>デイリー・マンスリーのクリアやクレジット購入で入手できます。</div>`;
+      return;
+    }
     const d=await r.json();
     if(!d.recommendations||!d.recommendations.length){area.innerHTML='<div class="compass-placeholder">提案を生成できませんでした。もう一度お試しください。</div>';return}
+    if(typeof d.creditsLeft==='number'){userCredits=d.creditsLeft;localStorage_set('userCredits',String(userCredits));updateCreditDisplay();}
     compassData=d;compassLastQuery=sig;
     // 星図にも反映（中心と推奨をプロット）
     nvOverlay.compass=d;ensureNebulaWords([d.center]);
@@ -4544,8 +4579,10 @@ function startSonar(clientX,clientY){
   // ノードの上では発動しない（何もない空間のみ）
   if(nebulaNodeAt(clientX,clientY))return;
   const {wx,wy}=nvScreenToWorld(clientX,clientY);
-  nvSonarActive={wx,wy,r:6};
+  nvSonarActive={wx,wy,r:6,t0:Date.now()};
   nvView.drag=false; // パンを止めてソナーに専念
+  // 長押しが成立したことを振動で伝える（対応端末のみ）
+  try{if(navigator.vibrate)navigator.vibrate(18)}catch{}
 }
 async function finalizeSonar(){
   const s=nvSonarActive;nvSonarActive=null;
@@ -4569,9 +4606,9 @@ async function finalizeSonar(){
 
 NVC.addEventListener('mousedown',e=>{
   nvView.drag=true;nvView.lx=e.clientX;nvView.ly=e.clientY;nvDownPos={x:e.clientX,y:e.clientY};nvMoved=false;
-  // 星雲モードで、何もない空間の長押し → ソナー起動
+  // 星雲モードで、何もない空間の長押し → ソナー起動（450ms：クリックとの誤判定を防ぐ）
   if(nvMode==='explore'&&!nebulaNodeAt(e.clientX,e.clientY)){
-    nvSonarTimer=setTimeout(()=>startSonar(e.clientX,e.clientY),300);
+    nvSonarTimer=setTimeout(()=>startSonar(e.clientX,e.clientY),450);
   }
 });
 window.addEventListener('mousemove',e=>{if(nvView.drag){if(nvDownPos&&(Math.abs(e.clientX-nvDownPos.x)>5||Math.abs(e.clientY-nvDownPos.y)>5)){nvMoved=true;if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}}if(!nvSonarActive){nvView.x+=e.clientX-nvView.lx;nvView.y+=e.clientY-nvView.ly}nvView.lx=e.clientX;nvView.ly=e.clientY}});
@@ -4598,7 +4635,10 @@ window.addEventListener('mouseup',e=>{
   // 2クリック目とみなされて即検索されてしまう。直後の合成イベントは無視。
   if(Date.now()-nvLastTouch<700){nvView.drag=false;nvDownPos=null;return}
   if(nvSonarTimer){clearTimeout(nvSonarTimer);nvSonarTimer=null}
-  if(nvSonarActive){finalizeSonar();nvView.drag=false;nvDownPos=null;return}
+  if(nvSonarActive){
+    if(nvSonarActive.t0&&Date.now()-nvSonarActive.t0<250){nvSonarActive=null;}
+    else{finalizeSonar();nvView.drag=false;nvDownPos=null;return;}
+  }
   if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
     nebulaNodeClicked(e.clientX,e.clientY);
   }
@@ -4624,8 +4664,8 @@ NVC.addEventListener('touchstart',e=>{
     const tx=e.touches[0].clientX,ty=e.touches[0].clientY;
     const nodeHere=nebulaNodeAt(tx,ty);
     if(nvMode==='explore'&&!nodeHere){
-      // 何もない空間の長押し → ソナー
-      nvSonarTimer=setTimeout(()=>startSonar(tx,ty),300);
+      // 何もない空間の長押し → ソナー（600ms＝OS標準の長押し時間。短いと通常タップで誤作動する）
+      nvSonarTimer=setTimeout(()=>startSonar(tx,ty),600);
     }else if(nodeHere){
       // ノードの長押し → 語をツールチップ表示（ホバー代替）
       nvLongPressTimer=setTimeout(()=>{
@@ -4663,7 +4703,11 @@ NVC.addEventListener('touchend',e=>{
   const tip=document.getElementById('nvTooltip');
   if(nvHoverNode){setTimeout(()=>{nvHoverNode=null;tip.classList.remove('visible')},1200);}
   if(nvPinch){nvPinch=null;nvView.drag=false;nvDownPos=null;return}
-  if(nvSonarActive){finalizeSonar();nvView.drag=false;nvDownPos=null;return}
+  if(nvSonarActive){
+    // ソナー開始直後（250ms未満）に指が離れた＝長めのタップと判断してキャンセル（誤作動の保険）
+    if(nvSonarActive.t0&&Date.now()-nvSonarActive.t0<250){nvSonarActive=null;}
+    else{finalizeSonar();nvView.drag=false;nvDownPos=null;return;}
+  }
   if(nvView.drag&&!nvMoved&&nvDownPos&&NV.classList.contains('visible')){
     nebulaNodeClicked(nvDownPos.x,nvDownPos.y);
   }
