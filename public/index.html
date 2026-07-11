@@ -52,6 +52,11 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 
 /* === USAGE COUNTER === */
 .usage-badge{font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 10px;border-radius:10px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.fast-tab{display:inline-flex;align-items:center;gap:6px;font-family:'Noto Serif JP',serif;font-size:12.5px;color:#8595b3;background:var(--surface);border:1px solid var(--border);padding:6px 12px;border-radius:16px;white-space:nowrap;flex-shrink:0;cursor:pointer;transition:all .15s}
+.fast-tab:hover{border-color:rgba(245,166,35,0.5);color:#cdd6ea}
+.fast-tab.on{background:rgba(245,166,35,0.15);border-color:var(--amber);color:var(--amber)}
+.fast-tab-dot{width:7px;height:7px;border-radius:50%;background:#39445e;transition:all .15s}
+.fast-tab.on .fast-tab-dot{background:var(--amber);box-shadow:0 0 6px rgba(245,166,35,0.8)}
 .usage-badge.premium{border-color:var(--amber);color:var(--amber)}
 .usage-badge .count{color:var(--amber);font-weight:500}
 .usage-badge.low .count{color:var(--rose)}
@@ -458,7 +463,15 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* === STATUS (initial) === */
-.status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s}
+.status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s;width:min(560px,92vw);max-height:92vh;overflow-y:auto}
+.entry-sections{display:flex;flex-direction:column;gap:14px;margin:20px 0 6px;pointer-events:auto}
+.entry-card{background:rgba(14,20,38,0.88);border:1px solid var(--border);border-radius:14px;padding:20px 22px;text-align:center;backdrop-filter:blur(6px)}
+.entry-card-title{font-family:'Noto Serif JP',serif;font-size:16px;color:#e8edf5;margin-bottom:12px;letter-spacing:.04em}
+.entry-card-note{font-size:11.5px;color:#8595b3;line-height:1.8;margin-top:10px;overflow-wrap:break-word;line-break:strict}
+.entry-btn{display:inline-block;margin-top:14px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.5);color:var(--amber);font-family:'Noto Serif JP',serif;font-size:14px;padding:11px 24px;border-radius:10px;text-decoration:none;transition:all .15s}
+.entry-btn:hover{background:rgba(245,166,35,0.22);border-color:var(--amber)}
+.entry-card.trend{border-color:rgba(255,90,90,0.35)}
+.entry-card.trend .entry-card-title{color:#e8b0b0}
 .status.hidden{opacity:0!important;pointer-events:none!important;visibility:hidden}
 .status-text{font-family:'Noto Serif JP',serif;font-size:16px;color:var(--muted);letter-spacing:.08em}
 .help-btn{margin-top:14px;background:rgba(16,24,44,0.9);border:1.5px solid rgba(140,170,220,0.5);color:#cdd6ea;font-family:'Noto Serif JP',serif;font-size:13px;padding:8px 18px;border-radius:20px;cursor:pointer;transition:all .15s;pointer-events:auto}
@@ -466,11 +479,10 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .fast-toggle input{accent-color:var(--amber);width:15px;height:15px;cursor:pointer}
 .fast-toggle-note{color:#8595b3;font-size:10.5px;margin-left:2px}
 .site-desc{margin-top:16px;font-size:11.5px;color:#8595b3;line-height:1.9;max-width:460px;pointer-events:auto;overflow-wrap:break-word;line-break:strict}
-.trend-entry{margin-top:18px;max-width:460px;pointer-events:auto}
-.trend-entry-label{font-size:11px;color:#c88;margin-bottom:8px;letter-spacing:.05em}
-.trend-entry-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
-.trend-chip{display:inline-block;padding:6px 13px;border-radius:15px;font-size:12.5px;border:1px solid rgba(255,90,90,0.4);background:rgba(36,16,16,0.6);color:#e8b0b0;cursor:pointer;transition:all .15s}
+.trend-entry-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+.trend-chip{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;padding:9px 14px;border-radius:12px;font-size:13px;border:1px solid rgba(255,90,90,0.4);background:rgba(36,16,16,0.6);color:#e8b0b0;cursor:pointer;transition:all .15s;max-width:230px;text-align:left}
 .trend-chip:hover{border-color:#ff6b6b;color:#ffb0b0;background:rgba(48,20,20,0.7)}
+.trend-chip-ctx{font-size:10px;color:#9aa6c4;line-height:1.4;font-weight:400}
 .site-desc a{color:#b8a06a;white-space:nowrap}
 .help-btn:hover{border-color:var(--amber);color:var(--amber)}
 .help-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,15,0.9);z-index:200;backdrop-filter:blur(6px);padding:16px}
@@ -487,7 +499,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 .help-sec li b{color:#e8edf5;font-weight:600}
 .help-start-btn{display:block;width:100%;margin-top:8px;background:var(--amber);color:#080C18;border:none;font-family:'Noto Serif JP',serif;font-size:15px;font-weight:600;padding:13px;border-radius:10px;cursor:pointer}
 .status-hint{margin-top:8px;font-size:14px;color:#2E3A55}
-.center-search{display:flex;gap:8px;justify-content:center;margin:18px 0;pointer-events:auto}
+.center-search{display:flex;gap:8px;justify-content:center;margin:0;pointer-events:auto}
 .center-search input{width:min(340px,60vw);background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Noto Serif JP',serif;font-size:16px;padding:12px 18px;border-radius:8px;outline:none;transition:border-color .2s}
 .center-search input::placeholder{color:var(--muted)}
 .center-search input:focus{border-color:var(--amber)}
@@ -682,6 +694,15 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
 
 /* === MOBILE === */
 @media(max-width:768px){
+  .status{width:94vw;max-height:88vh}
+  .entry-sections{gap:10px;margin:14px 0 4px}
+  .entry-card{padding:15px 16px;border-radius:12px}
+  .entry-card-title{font-size:14.5px;margin-bottom:10px}
+  .entry-card-note{font-size:11px;line-height:1.7}
+  .entry-btn{font-size:13px;padding:10px 20px;margin-top:11px}
+  .center-search input{width:100%;font-size:16px;padding:11px 14px}
+  .center-search button{padding:11px 16px;font-size:14px}
+  .trend-chip{font-size:12px;padding:8px 12px;max-width:100%}
   .pin-tray{top:8px;right:8px}
   .pin-chip{padding:5px 10px 5px 12px}
   .pin-chip-word{font-size:14px}
@@ -694,6 +715,7 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
   .mode-tabs{flex-wrap:wrap}
   .mode-tab{font-size:13px;padding:5px 9px}
   .account-tab{font-size:12px;padding:5px 9px}
+  .fast-tab{font-size:11.5px;padding:5px 10px;gap:5px}
   .name-tab{font-size:12px;padding:5px 9px}
   .search-wrap{flex-basis:100%;min-width:0;order:5;gap:4px}
   input#wordInput{font-size:16px;padding:9px 12px;min-width:0}
@@ -727,6 +749,9 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
       <button class="mode-tab" data-mode="nebula">星図</button>
     </div>
     <button class="account-tab" id="myPageTab">マイページ</button>
+    <button class="fast-tab" id="fastTab" style="display:none" title="高速・先読みモード（1検索1クレジット）">
+      <span class="fast-tab-dot"></span>⚡ 高速
+    </button>
     <div class="search-wrap">
       <input id="wordInput" type="text" placeholder="言葉を入力…" autocomplete="off"/>
       <button id="exploreBtn">探索</button>
@@ -975,21 +1000,39 @@ button#exploreBtn:disabled{opacity:.4;cursor:not-allowed}
     </div>
     <div class="status" id="status">
       <div class="status-text">言葉を入力して、語彙の宇宙を探索する</div>
-      <div class="center-search" id="centerSearch">
-        <input id="centerInput" type="text" placeholder="探索する言葉を入力…" autocomplete="off"/>
-        <button id="centerBtn">探索</button>
+
+      <div class="entry-sections">
+        <!-- 1段目：探索 -->
+        <section class="entry-card">
+          <div class="entry-card-title">🔭 言葉を探索する</div>
+          <div class="center-search" id="centerSearch">
+            <input id="centerInput" type="text" placeholder="探索する言葉を入力…" autocomplete="off"/>
+            <button id="centerBtn">探索</button>
+          </div>
+          <div class="entry-card-note">類語・対義語・連想語が星雲のように広がります</div>
+          <label class="fast-toggle" id="fastToggle" style="display:none">
+            <input type="checkbox" id="fastToggleChk"/>
+            <span>⚡ 高速・先読みモード<span class="fast-toggle-note">（1検索につき1クレジット消費）</span></span>
+          </label>
+        </section>
+
+        <!-- 2段目：語彙辞典 -->
+        <section class="entry-card">
+          <div class="entry-card-title">📖 語彙辞典から引く</div>
+          <div class="entry-card-note">意味・類語・対義語・例文・語源をまとめた語彙のさくいん。<br>五十音や漢字から、言葉を辞書のように探せます。</div>
+          <a class="entry-btn" href="/words">語彙さくいんを開く →</a>
+        </section>
+
+        <!-- 3段目：ホットワード -->
+        <section class="entry-card trend" id="trendEntry" style="display:none">
+          <div class="entry-card-title">🔥 話題の言葉から探索</div>
+          <div class="entry-card-note">Googleトレンドで今話題の言葉。タップで探索が始まります。</div>
+          <div class="trend-entry-chips" id="trendEntryChips"></div>
+        </section>
       </div>
+
       <div class="status-hint">クリック→再探索 / Wクリック→検索 / 右クリック→ピン / ホイール→ズーム</div>
       <button class="help-btn" id="helpBtn">❓ 使い方・機能の説明</button>
-      <p class="site-desc">語彙空間 GOI-Space は、言葉のつながりを星図として旅する語彙探索サービスです。<br>類語・対義語・連想語をたどる探索、言葉をつなぐワードゴルフ、<a href="/words">語彙辞典</a>を提供しています。</p>
-      <div class="trend-entry" id="trendEntry" style="display:none">
-        <div class="trend-entry-label">🔥 話題の言葉から探索</div>
-        <div class="trend-entry-chips" id="trendEntryChips"></div>
-      </div>
-      <label class="fast-toggle" id="fastToggle" style="display:none">
-        <input type="checkbox" id="fastToggleChk"/>
-        <span>⚡ 高速・先読みモード<span class="fast-toggle-note">（1検索につき1クレジット消費）</span></span>
-      </label>
     </div>
 
     <!-- 使い方・機能説明オーバーレイ -->
@@ -2058,7 +2101,12 @@ async function loadTrendEntry(){
     const box=document.getElementById('trendEntry');
     const chips=document.getElementById('trendEntryChips');
     if(!box||!chips)return;
-    chips.innerHTML=d.items.slice(0,8).map(t=>`<span class="trend-chip" data-w="${(t.word||'').replace(/"/g,'&quot;')}">${(t.word||'').replace(/</g,'&lt;')}</span>`).join('');
+    chips.innerHTML=d.items.slice(0,6).map(t=>{
+      const w=(t.word||'').replace(/"/g,'&quot;');
+      const wd=(t.word||'').replace(/</g,'&lt;');
+      const ctx=(t.context||'').replace(/</g,'&lt;');
+      return `<span class="trend-chip" data-w="${w}" title="${ctx.replace(/"/g,'&quot;')}">${wd}${ctx?`<span class="trend-chip-ctx">${ctx}</span>`:''}</span>`;
+    }).join('');
     chips.querySelectorAll('.trend-chip').forEach(el=>el.addEventListener('click',()=>{
       const w=el.dataset.w;if(!w)return;
       WI.value=w;explore(w,currentCenter());
@@ -2078,20 +2126,32 @@ document.getElementById('helpStartBtn').addEventListener('click',closeHelp);
 helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)closeHelp()});
 
 // ⚡ 高速・先読みモードのトグル（クレジット保有者のみ表示・デフォルトオフ）
+// ヘッダーと入口画面の2箇所にあり、常に同期する。
 const fastToggleEl=document.getElementById('fastToggle');
 const fastToggleChk=document.getElementById('fastToggleChk');
+const fastTabEl=document.getElementById('fastTab');
 function refreshFastToggle(){
   // premium_plus は常時無償で高速なのでトグル不要。クレジット保有者だけに出す
   const show=userPlan!=='premium_plus'&&userCredits>0;
   if(fastToggleEl)fastToggleEl.style.display=show?'inline-flex':'none';
   if(fastToggleChk)fastToggleChk.checked=fastEnabled;
+  if(fastTabEl){
+    fastTabEl.style.display=show?'inline-flex':'none';
+    fastTabEl.classList.toggle('on',fastEnabled);
+  }
+}
+// 高速モードの切替（両方のUIから呼ばれる共通処理）
+function setFastEnabled(on){
+  fastEnabled=!!on;
+  localStorage_set('fastEnabled',fastEnabled?'1':'0');
+  refreshFastToggle(); // 双方のUIを同期
+  toast(fastEnabled?'⚡ 高速・先読みモードをオンにしました（1検索1クレジット）':'高速モードをオフにしました','info',2600);
 }
 if(fastToggleChk){
-  fastToggleChk.addEventListener('change',e=>{
-    fastEnabled=e.target.checked;
-    localStorage_set('fastEnabled',fastEnabled?'1':'0');
-    toast(fastEnabled?'⚡ 高速・先読みモードをオンにしました（1検索1クレジット）':'高速モードをオフにしました','info',2600);
-  });
+  fastToggleChk.addEventListener('change',e=>setFastEnabled(e.target.checked));
+}
+if(fastTabEl){
+  fastTabEl.addEventListener('click',()=>setFastEnabled(!fastEnabled));
 }
 refreshFastToggle();
 // クレジット表示更新時にトグルの表示も同期

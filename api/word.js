@@ -179,29 +179,65 @@ async function fetchTrendWords(limit) {
     });
     if (!resp.ok) return [];
     const xml = await resp.text();
-    // <item> 内の <title> を抽出
-    const titles = [];
+    const decode = (s) => String(s || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+    const grab = (block, tag) => {
+      const mm = block.match(new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`));
+      return mm ? decode(mm[1]) : '';
+    };
+    const items = [];
     const itemRe = /<item>([\s\S]*?)<\/item>/g;
     let m;
     // フィルタで一部が落ちるため、多めに候補を集める
-    while ((m = itemRe.exec(xml)) && titles.length < limit * 6) {
+    while ((m = itemRe.exec(xml)) && items.length < limit * 6) {
       const block = m[1];
-      const tm = block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
-      if (tm) {
-        let t = tm[1].trim();
-        // HTMLエンティティを軽くデコード
-        t = t.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-        if (t) titles.push(t.slice(0, 40));
+      const word = grab(block, 'title').slice(0, 40);
+      if (!word) continue;
+      // 関連ニュース見出しを収集（なぜ話題になったかのコンテキスト）
+      const news = [];
+      const nRe = /<ht:news_item>([\s\S]*?)<\/ht:news_item>/g;
+      let nm;
+      while ((nm = nRe.exec(block)) && news.length < 3) {
+        const nb = nm[1];
+        const title = grab(nb, 'ht:news_item_title');
+        const source = grab(nb, 'ht:news_item_source');
+        if (title) news.push({ title: title.slice(0, 120), source: source.slice(0, 40) });
       }
+      items.push({ word, news });
     }
-    // 【方針B】日本語（ひらがな・カタカナ・漢字）を1文字も含まない語は除外する。
-    // → ベトナム語などの外国語や、純粋な英字・記号だけのティッカーが落ちる。
-    // 「vix指数」「s&p 500」のように日本語混じりのものは残す。
+    // 【方針B】日本語（ひらがな・カタカナ・漢字）を1文字も含まない語は除外
     const hasJapanese = (s) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(s);
-    const filtered = titles.filter(hasJapanese);
-    return filtered.slice(0, limit);
+    return items.filter(it => hasJapanese(it.word)).slice(0, limit);
   } catch {
     return [];
+  }
+}
+
+// トレンド語が「なぜ話題になったか」を関連ニュース見出しから一文に要約する。
+async function summarizeTrendContext(word, news) {
+  const headlines = news.map(n => `・${n.title}${n.source ? `（${n.source}）` : ''}`).join('\n');
+  const prompt = `「${word}」がGoogleで急上昇しました。関連ニュース見出しは以下です。
+${headlines}
+
+この語がなぜ今話題になっているのかを、事実に基づいて簡潔な一文（40字以内）で説明してください。憶測は避け、見出しから読み取れる範囲で書くこと。説明文のみを出力し、前置きや引用符は不要です。`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const data = await resp.json();
+    const txt = (data.content || []).map(c => c.text || '').join('').trim();
+    return txt.slice(0, 100);
+  } catch {
+    return '';
   }
 }
 
@@ -278,6 +314,8 @@ header{text-align:center;padding:20px 0 10px}
 h1{font-size:34px;margin:18px 0 6px;font-weight:700}
 .reading{color:var(--muted);font-size:15px;margin-bottom:14px}
 .summary{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:14px 16px;font-size:15px;margin-bottom:24px}
+.trend-banner{background:linear-gradient(135deg,#241010,#1a1420);border:1px solid rgba(255,90,90,0.4);border-radius:8px;padding:12px 15px;font-size:14px;color:#e8b0b0;margin-bottom:16px;line-height:1.6}
+.trend-banner b{color:#ff9a9a}
 .cta{display:block;text-align:center;background:var(--amber);color:#080C18;font-weight:700;font-size:16px;text-decoration:none;padding:14px;border-radius:10px;margin:26px 0}
 section{margin-bottom:26px}
 h2{font-size:18px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:14px}
@@ -315,6 +353,7 @@ footer a{color:var(--muted)}
   <h1>${esc(word)}</h1>
   ${data.reading ? `<div class="reading">${esc(data.reading)}</div>` : ''}
 </header>
+${data.trendContext ? `<div class="trend-banner">🔥 <b>今話題の言葉</b>：${esc(data.trendContext)}</div>` : ''}
 ${data.summary ? `<div class="summary">${esc(data.summary)}</div>` : ''}
 <a class="cta" href="/?q=${encodeURIComponent(word)}">「${esc(word)}」を星図で探索する →</a>
 ${data.meaning_long ? `<section><h2>「${esc(word)}」の意味</h2><p class="prose">${esc(data.meaning_long)}</p></section>` : ''}
@@ -389,13 +428,14 @@ export default async function handler(req, res) {
     if (!okByKey && !okByCron) {
       return res.status(403).json({ error: 'forbidden' });
     }
-    const words = await fetchTrendWords(10);
-    if (!words.length) {
+    const trends = await fetchTrendWords(10);
+    if (!trends.length) {
       return res.status(200).json({ ok: false, note: 'トレンド取得に失敗（前回分を維持）' });
     }
     const now = Date.now();
     const results = [];
-    for (const w of words) {
+    for (const t of trends) {
+      const w = t.word;
       const r = await generateAndSaveData(w); // 既存ならスキップ、新規のみAI生成
       results.push(r);
       try {
@@ -404,11 +444,16 @@ export default async function handler(req, res) {
         // 語ごとの「話題になった時期」を保存（最初の登場時期を優先）
         const seen = await redis('GET', `trend:seen:${w}`);
         if (!seen) await redis('SET', `trend:seen:${w}`, String(now));
+        // なぜ話題になったか（関連ニュース見出し）を保存。AIで簡潔な一文の背景に要約する。
+        if (t.news && t.news.length) {
+          const ctx = await summarizeTrendContext(w, t.news);
+          if (ctx) await redis('SET', `trend:ctx:${w}`, ctx);
+        }
       } catch {}
     }
     // トレンド一覧は直近60語まで保持（古いものは索引から外す。ページ本体・seodataは残る）
     try { await redis('ZREMRANGEBYRANK', 'trend:words', 0, -61); } catch {}
-    return res.status(200).json({ ok: true, count: words.length, results });
+    return res.status(200).json({ ok: true, count: trends.length, results });
   }
 
   // 【トレンド語の取得】入口画面・語彙索引で表示するための一覧（新しい順）。
@@ -417,7 +462,10 @@ export default async function handler(req, res) {
       const raw = await redis('ZREVRANGE', 'trend:words', 0, 11, 'WITHSCORES') || [];
       const items = [];
       for (let i = 0; i < raw.length; i += 2) {
-        items.push({ word: raw[i], ts: Number(raw[i + 1]) });
+        const word = raw[i];
+        let ctx = '';
+        try { ctx = await redis('GET', `trend:ctx:${word}`) || ''; } catch {}
+        items.push({ word, ts: Number(raw[i + 1]), context: ctx });
       }
       res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=3600');
       return res.status(200).json({ items });
@@ -504,16 +552,24 @@ export default async function handler(req, res) {
     }
     const featuredLinks = featured.map(w => `<a class="w feat" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
 
-    // トレンド語（話題の言葉）を取得して時期つきで表示
+    // トレンド語（話題の言葉）を取得して、時期＋なぜ話題かの背景つきで表示
     let trendLinks = '';
     try {
       const traw = await redis('ZREVRANGE', 'trend:words', 0, 11, 'WITHSCORES') || [];
       const titems = [];
-      for (let i = 0; i < traw.length; i += 2) titems.push({ word: traw[i], ts: Number(traw[i + 1]) });
+      for (let i = 0; i < traw.length; i += 2) {
+        const w = traw[i];
+        let ctx = '';
+        try { ctx = await redis('GET', `trend:ctx:${w}`) || ''; } catch {}
+        titems.push({ word: w, ts: Number(traw[i + 1]), context: ctx });
+      }
       trendLinks = titems.map(t => {
         const d = new Date(t.ts);
         const ym = `${d.getFullYear()}年${d.getMonth() + 1}月`;
-        return `<a class="w trend" href="/word/${encodeURIComponent(t.word)}">${esc(t.word)}<span class="trend-when">${ym}</span></a>`;
+        return `<a class="trend-card" href="/word/${encodeURIComponent(t.word)}">
+          <div class="trend-card-head"><span class="trend-card-word">${esc(t.word)}</span><span class="trend-when">${ym}</span></div>
+          ${t.context ? `<div class="trend-card-ctx">${esc(t.context)}</div>` : ''}
+        </a>`;
       }).join('');
     } catch {}
 
@@ -567,9 +623,13 @@ h2{font-size:15px;color:var(--amber);margin:26px 0 10px}
 .w{display:inline-block;padding:7px 14px;border-radius:16px;text-decoration:none;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .w:hover{border-color:var(--amber);color:var(--amber)}
 .w.feat{border-color:rgba(245,166,35,0.4);background:linear-gradient(135deg,#1c1608,#111726)}
-.w.trend{border-color:rgba(255,90,90,0.45);background:linear-gradient(135deg,#241010,#111726);display:inline-flex;align-items:center;gap:7px}
-.w.trend:hover{border-color:#ff6b6b;color:#ff9a9a}
-.trend-when{font-size:10px;color:var(--muted);border-left:1px solid var(--border);padding-left:7px}
+.trend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:8px}
+.trend-card{display:block;text-decoration:none;border:1px solid rgba(255,90,90,0.4);border-radius:10px;padding:12px 14px;background:linear-gradient(135deg,#241010,#111726);transition:all .15s}
+.trend-card:hover{border-color:#ff6b6b;background:linear-gradient(135deg,#301414,#141726)}
+.trend-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.trend-card-word{font-size:15px;font-weight:600;color:#e8b0b0}
+.trend-when{font-size:10px;color:var(--muted);white-space:nowrap}
+.trend-card-ctx{font-size:12px;color:#b9c0d0;line-height:1.6;margin-top:6px}
 .rows{margin:8px 0 22px}
 .row-tab{display:inline-block;padding:6px 14px;border-radius:14px;text-decoration:none;font-size:13px;border:1px solid var(--border);color:var(--muted);margin-bottom:12px}
 .row-tab.all{font-weight:600}
@@ -601,7 +661,7 @@ footer a{color:var(--muted);margin:0 8px}
 <a class="logo" href="/">語彙空間 GOI-Space</a>
 <h1>語彙さくいん</h1>
 <p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えています（全 ${total} 語）。</p>
-${!row && page === 1 && trendLinks ? `<h2>🔥 話題の言葉（Googleトレンドより）</h2><div class="list">${trendLinks}</div>` : ''}
+${!row && page === 1 && trendLinks ? `<h2>🔥 話題の言葉（Googleトレンドより）</h2><div class="trend-grid">${trendLinks}</div>` : ''}
 ${!row && page === 1 && featuredLinks ? `<h2>今日の注目の言葉</h2><div class="list">${featuredLinks}</div>` : ''}
 <h2>五十音から引く</h2>
 <div class="rows">${rowTabs}</div>
@@ -675,6 +735,10 @@ ${urls}
     gatherActivity(word),
   ]);
 
+  // トレンド語なら「なぜ話題か」の背景を取得してページ上部に表示する
+  let trendContext = '';
+  try { trendContext = await redis('GET', `trend:ctx:${word}`) || ''; } catch {}
+
   // AI生成データが永続保存されていれば、それを使ってHTMLを組み立て直す（AIを呼ばない）。
   // これにより、一度生成した語は常に「完全版」を返せる。容量はHTML全文より遥かに小さい。
   let data = null;
@@ -684,6 +748,7 @@ ${urls}
   } catch {}
 
   if (data) {
+    if (trendContext) data.trendContext = trendContext;
     const html = buildHTML(word, data, nebulaWords.slice(0, 16), activity);
     // 組み立て済みHTMLは短期バッファとしてのみ保持（実キャッシュはVercel CDN）。
     try {
@@ -742,6 +807,7 @@ ${urls}
 
   // AIの応答が実質空（生成失敗）なら永続保存しない（次回リトライできるように）
   const generationOk = !!(data.summary || (data.synonyms && data.synonyms.length));
+  if (trendContext) data.trendContext = trendContext;
   const html = buildHTML(word, data, nebulaWords.slice(0, 16), activity);
 
   try {
