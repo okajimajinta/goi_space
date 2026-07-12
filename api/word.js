@@ -264,10 +264,22 @@ async function generateAndSaveData(word) {
 }
 
 function buildHTML(word, data, nebulaWords, activity) {
-  const title = `「${word}」の意味・類語・対義語・例文・語源 | 語彙空間 GOI-Space`;
-  const desc = data.summary
-    ? `${word}（${data.reading}）の意味：${data.summary} 類語・対義語・例文・語源・英語も。語彙の星図で探索。`
-    : `「${word}」の意味・類語・対義語・例文・語源・英語訳。語彙空間 GOI-Space で意味のつながりを探索できます。`;
+  // タイトル：検索実績のあるクエリ型（「◯◯とは」「◯◯ 言い換え」「◯◯ 類語」「◯◯ 対義語」）を反映。
+  // 「言い換え」は類語より検索されやすい日本語SEOの定番語なので必ず含める。
+  const title = `${word}とは？意味・言い換え・類語・対義語をわかりやすく解説 | 語彙空間`;
+  // ディスクリプション：定型文ではなく、実際の類語・対義語を見せて「答えがここにある」と伝える。
+  const synPreview = (data.synonyms || []).slice(0, 3).join('・');
+  const antPreview = (data.antonyms || []).slice(0, 2).join('・');
+  let desc;
+  if (data.summary) {
+    const parts = [`${word}${data.reading ? `（${data.reading}）` : ''}とは、${data.summary}`];
+    if (synPreview) parts.push(`言い換え・類語は${synPreview}など。`);
+    if (antPreview) parts.push(`対義語は${antPreview}など。`);
+    parts.push('例文・語源も掲載。');
+    desc = parts.join('').slice(0, 155);
+  } else {
+    desc = `「${word}」の意味・言い換え・類語・対義語・例文・語源を掲載。語彙空間 GOI-Space で意味のつながりを探索できます。`;
+  }
   const url = `${SITE}/word/${encodeURIComponent(word)}`;
 
   const chipList = (arr, cls) => arr.map(w =>
@@ -278,7 +290,9 @@ function buildHTML(word, data, nebulaWords, activity) {
     ? `<section><h2>よく一緒に辿られる語</h2><p class="note">GOI-Spaceの利用者が「${esc(word)}」から実際に辿った語です。</p><div class="chips">${nebulaWords.map(n => `<a class="chip neb" href="/word/${encodeURIComponent(n.word)}">${esc(n.word)}</a>`).join('')}</div></section>`
     : '';
 
-  const jsonld = {
+  // 構造化データ：DefinedTerm＋FAQPage。
+  // FAQPageは「◯◯とは？」「◯◯の言い換えは？」等のQ&Aをリッチリザルト化し、同順位でもCTRを高める狙い。
+  const jsonldTerm = {
     '@context': 'https://schema.org',
     '@type': 'DefinedTerm',
     name: word,
@@ -286,6 +300,40 @@ function buildHTML(word, data, nebulaWords, activity) {
     inDefinedTermSet: `${SITE}`,
     url,
   };
+  const faqs = [];
+  if (data.summary) {
+    faqs.push({
+      '@type': 'Question',
+      name: `${word}とは？意味は？`,
+      acceptedAnswer: { '@type': 'Answer', text: `${word}${data.reading ? `（${data.reading}）` : ''}とは、${data.summary}${data.meaning_long ? ` ${data.meaning_long}` : ''}`.slice(0, 300) },
+    });
+  }
+  if (data.synonyms && data.synonyms.length) {
+    faqs.push({
+      '@type': 'Question',
+      name: `${word}の言い換え・類語は？`,
+      acceptedAnswer: { '@type': 'Answer', text: `${word}の言い換え・類語には、${data.synonyms.slice(0, 8).join('、')}などがあります。` },
+    });
+  }
+  if (data.antonyms && data.antonyms.length) {
+    faqs.push({
+      '@type': 'Question',
+      name: `${word}の対義語は？`,
+      acceptedAnswer: { '@type': 'Answer', text: `${word}の対義語には、${data.antonyms.slice(0, 6).join('、')}などがあります。` },
+    });
+  }
+  if (data.etymology) {
+    faqs.push({
+      '@type': 'Question',
+      name: `${word}の語源・由来は？`,
+      acceptedAnswer: { '@type': 'Answer', text: data.etymology.slice(0, 300) },
+    });
+  }
+  const jsonldFaq = faqs.length >= 2 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs,
+  } : null;
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -303,7 +351,8 @@ function buildHTML(word, data, nebulaWords, activity) {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="robots" content="index, follow">
 <link rel="icon" href="/favicon.svg">
-<script type="application/ld+json">${JSON.stringify(jsonld).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')}</script>
+<script type="application/ld+json">${JSON.stringify(jsonldTerm).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')}</script>
+${jsonldFaq ? `<script type="application/ld+json">${JSON.stringify(jsonldFaq).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')}</script>` : ''}
 <style>
 :root{--bg:#080C18;--surface:#111726;--border:#233047;--text:#E8EDF5;--muted:#8595B3;--amber:#F5A623;--blue:#5B8FDE;--rose:#E06B8B;--green:#4ECBA8}
 *{box-sizing:border-box}
@@ -356,14 +405,14 @@ footer a{color:var(--muted)}
 ${data.trendContext ? `<div class="trend-banner">🔥 <b>今話題の言葉</b>：${esc(data.trendContext)}</div>` : ''}
 ${data.summary ? `<div class="summary">${esc(data.summary)}</div>` : ''}
 <a class="cta" href="/?q=${encodeURIComponent(word)}">「${esc(word)}」を星図で探索する →</a>
-${data.meaning_long ? `<section><h2>「${esc(word)}」の意味</h2><p class="prose">${esc(data.meaning_long)}</p></section>` : ''}
+${data.meaning_long ? `<section><h2>「${esc(word)}」とは？意味を解説</h2><p class="prose">${esc(data.meaning_long)}</p></section>` : ''}
 ${data.examples && data.examples.length ? `<section><h2>例文</h2><ul class="examples">${data.examples.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section>` : ''}
-${data.synonyms.length ? `<section><h2>類語・関連語</h2><div class="chips">${chipList(data.synonyms, 'syn')}</div></section>` : ''}
+${data.synonyms.length ? `<section><h2>「${esc(word)}」の言い換え・類語</h2><div class="chips">${chipList(data.synonyms, 'syn')}</div></section>` : ''}
 <div class="ad-slot">
 <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-9246118623869056" data-ad-format="auto" data-full-width-responsive="true"></ins>
 <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 </div>
-${data.antonyms.length ? `<section><h2>対義語・対比となる語</h2><div class="chips">${chipList(data.antonyms, 'ant')}</div></section>` : ''}
+${data.antonyms.length ? `<section><h2>「${esc(word)}」の対義語</h2><div class="chips">${chipList(data.antonyms, 'ant')}</div></section>` : ''}
 ${data.related.length ? `<section><h2>連想語・周辺概念</h2><div class="chips">${chipList(data.related, 'rel')}</div></section>` : ''}
 ${data.etymology ? `<section><h2>語源・由来</h2><p class="prose">${esc(data.etymology)}</p></section>` : ''}
 ${data.english && data.english.length ? `<section><h2>英語で言うと</h2><div class="chips">${data.english.map(e => `<span class="chip eng">${esc(e)}</span>`).join('')}</div></section>` : ''}
