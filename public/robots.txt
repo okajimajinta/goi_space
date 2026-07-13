@@ -1,4 +1,78 @@
+# 語彙空間 GOI-Space robots.txt
+# 方針：検索エンジン（SEO価値あり）は歓迎。
+# AIスクレイパー・SEO分析ツール等（SEO価値がなくサーバー負荷だけ増やすもの）は遮断する。
+
+# --- 検索エンジン：許可（クロール間隔だけ調整して負荷を平準化）---
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 5
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 5
+
+# --- AI学習・スクレイピング系：遮断（検索流入に寄与せず負荷のみ）---
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+# --- SEO分析ツール系：遮断（大量クロールする割にメリットなし）---
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+# --- その他すべて：許可するがクロール間隔を空けてもらう ---
 User-agent: *
 Allow: /
+Crawl-delay: 10
 
 Sitemap: https://goispace.app/sitemap.xml

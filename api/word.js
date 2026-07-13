@@ -10,6 +10,15 @@ const SITE = process.env.SITE_URL || 'https://goispace.app';
 const AMAZON_TAG = process.env.AMAZON_TAG || 'goispacead-22';
 
 // クローラー（ボット）判定。新規AI生成を人間の実訪問だけに限定するために使う。
+// 【対策B】robots.txtを無視するボットへの実力行使。
+// AIスクレイパー・SEO分析ツールは検索流入に寄与せず、CPUだけを消費するため即座に遮断する。
+// 検索エンジン（Googlebot/Bingbot等）はここに含めない＝SEOには一切影響しない。
+function isBlockedBot(req) {
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  if (!ua) return false; // UAなしはisBot側で軽量ページ扱い（ここでは遮断しない）
+  return /gptbot|chatgpt-user|ccbot|claudebot|anthropic-ai|perplexitybot|bytespider|amazonbot|applebot-extended|meta-externalagent|ahrefsbot|semrushbot|mj12bot|dotbot|petalbot|dataforseobot|blexbot|serpstatbot|zoominfobot|imagesiftbot/i.test(ua);
+}
+
 function isBot(req) {
   const ua = String(req.headers['user-agent'] || '').toLowerCase();
   if (!ua) return true; // UAなしは機械アクセスとみなす（安全側）
@@ -442,6 +451,14 @@ ${activityHTML(word, activity)}
 }
 
 export default async function handler(req, res) {
+  // 【対策B】遮断対象ボットは、Redisアクセスもページ組み立ても行わずに即返す。
+  // robots.txtを無視するスクレイパーからCPU時間を守るための最初の関門。
+  if (isBlockedBot(req)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    return res.status(403).send('Forbidden');
+  }
+
   // 【メンテナンス】既存の永続seopageキャッシュにTTLを付与して容量を段階的に解放する。
   // 使い方: /api/word?cleanup=1&key=<CLEANUP_SECRET>&batch=500
   if (req.query && req.query.cleanup === '1') {
@@ -516,7 +533,7 @@ export default async function handler(req, res) {
         try { ctx = await redis('GET', `trend:ctx:${word}`) || ''; } catch {}
         items.push({ word, ts: Number(raw[i + 1]), context: ctx });
       }
-      res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=3600');
+      res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=21600, stale-while-revalidate=86400');
       return res.status(200).json({ items });
     } catch {
       return res.status(200).json({ items: [] });
@@ -724,7 +741,10 @@ ${pager}
 </body>
 </html>`;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=3600');
+    // 【対策A】語彙さくいんは8万語のソート・分類を伴う最も重い処理。
+    // CDN(s-maxage)で長くキャッシュすれば関数が起動せずCPU消費ゼロになる。
+    // stale-while-revalidateで、期限切れ後も古い版を即返しつつ裏で更新（体感速度も維持）。
+    res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=43200, stale-while-revalidate=86400');
     return res.status(200).send(html);
   }
 
@@ -746,7 +766,7 @@ ${pager}
 ${urls}
 </urlset>`;
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
     return res.status(200).send(xml);
   }
 
@@ -773,7 +793,7 @@ ${urls}
     const cached = await redis('GET', cacheKey);
     if (cached) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800');
       return res.status(200).send(cached);
     }
   } catch {}
@@ -805,7 +825,7 @@ ${urls}
       await redis('SADD', 'seo:words', word);
     } catch {}
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800');
     return res.status(200).send(html);
   }
 
@@ -821,7 +841,8 @@ ${urls}
     // 未生成の軽量ページはインデックスさせない（薄いページの評価を避ける）。
     // 完全版が生成されれば通常の index ページとして扱われる。
     res.setHeader('X-Robots-Tag', 'noindex, follow');
-    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=900');
+    // 未生成の軽量ページ：ボットが繰り返し叩くのでCDNで長めに保持し、関数起動を抑える。
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
     return res.status(200).send(lightHtml);
   };
 
@@ -868,6 +889,6 @@ ${urls}
   } catch {}
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
+  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800');
   return res.status(200).send(html);
 }
