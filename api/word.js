@@ -1197,7 +1197,6 @@ ${urls}
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
     return res.status(200).send(xml);
   }
-  }
 
   // 語を取得（/word/孤独 または ?w=孤独）
   let word = '';
