@@ -30,6 +30,15 @@ export default async function handler(req, res) {
       // 星雲用：語の総出現回数を集計（明るさ・大きさに使う）
       await redis('ZINCRBY', 'nebula:words', 1, from);
       await redis('ZINCRBY', 'nebula:words', 1, to);
+      // 月次探索統計：「今月よく探索されている言葉」ランキング＋語ページの統計表示に使う。
+      // 月ごとに1キー。古い月のキーは120日で自動消滅（直近3〜4ヶ月分だけ保持）。
+      try {
+        const ym = new Date().toISOString().slice(0, 7); // 例: 2026-07
+        const mkey = `wmonth:${ym}`;
+        await redis('ZINCRBY', mkey, 1, from);
+        await redis('ZINCRBY', mkey, 1, to);
+        await redis('EXPIRE', mkey, 60 * 60 * 24 * 120);
+      } catch {}
       return res.status(200).json({ ok: true });
     }
 

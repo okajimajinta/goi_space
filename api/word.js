@@ -454,6 +454,15 @@ ${c.usage_tip ? `<section><h2>どちらを使うべき？判断のポイント</
 </html>`;
 }
 
+// 【品質フィルタ】sitemapに載せる価値のある「充実データ」かを判定する。
+// 意味・類語に加えて、例文または詳細説明まで揃っているものだけを「rich」とする。
+function isRichData(data) {
+  if (!data) return false;
+  const hasCore = !!(data.summary && data.synonyms && data.synonyms.length >= 3);
+  const hasDepth = !!((data.examples && data.examples.length >= 2) || (data.meaning_long && data.meaning_long.length >= 60));
+  return hasCore && hasDepth;
+}
+
 // 1語分のSEOデータをAI生成して永続保存する（トレンドジョブ用に再利用可能）。
 async function generateAndSaveData(word) {
   const dataKey = `seodata:${word}`;
@@ -472,11 +481,15 @@ async function generateAndSaveData(word) {
   try {
     await redis('SET', dataKey, JSON.stringify(data));
     await redis('SADD', 'seo:words', word);
+    if (isRichData(data)) await redis('SADD', 'seo:rich', word);
   } catch {}
   return { word, status: 'generated' };
 }
 
 function buildHTML(word, data, nebulaWords, activity) {
+  // 【広告の出し分け】充実したページ（rich基準）でのみ広告を表示する。
+  // 薄いページ＋広告は「広告のためのページ」と判定されるAdSense審査リスクの核心。
+  const showAds = isRichData(data);
   // タイトル：検索実績のあるクエリ型（「◯◯とは」「◯◯ 言い換え」「◯◯ 類語」「◯◯ 対義語」）を反映。
   // 「言い換え」は類語より検索されやすい日本語SEOの定番語なので必ず含める。
   const title = `${word}とは？意味・言い換え・類語・対義語をわかりやすく解説 | 語彙空間`;
@@ -499,8 +512,29 @@ function buildHTML(word, data, nebulaWords, activity) {
     `<a class="chip ${cls}" href="/word/${encodeURIComponent(w)}">${esc(w)}</a>`).join('');
 
   // 星雲データ由来の「実際によく一緒に辿られた語」
+  // 【独自データの主役化】利用者の実探索から生まれた集合知データ。
+  // ミニ星図Canvas＝このサイトにしかない体験。滞在時間と差別化の要。
+  const totalTraversals = nebulaWords.reduce((s, n) => s + (n.weight || 0), 0);
+  const st = (activity && activity.stats) || {};
+  const statsStrip = (st.connections || st.thisMonth)
+    ? `<div class="stat-strip">${st.connections ? `<span class="stat"><b>${st.connections}</b> 種類の言葉と接続</span>` : ''}${st.thisMonth ? `<span class="stat"><b>${st.thisMonth}</b> 回 今月探索された</span>` : ''}<span class="stat"><b>${totalTraversals}</b> 回 延べ探索</span></div>`
+    : '';
+  const miniMapData = JSON.stringify({
+    center: word,
+    nodes: nebulaWords.slice(0, 12).map(n => ({ w: n.word, v: n.weight || 1 })),
+  }).replace(/</g, '\\u003c');
   const nebulaChips = nebulaWords.length
-    ? `<section><h2>よく一緒に辿られる語</h2><p class="note">GOI-Spaceの利用者が「${esc(word)}」から実際に辿った語です。</p><div class="chips">${nebulaWords.map(n => `<a class="chip neb" href="/word/${encodeURIComponent(n.word)}">${esc(n.word)}</a>`).join('')}</div></section>`
+    ? `<section class="original-data">
+<h2>「${esc(word)}」から実際に辿られた言葉<span class="od-badge">本サイト独自データ</span></h2>
+<p class="note">語彙空間 GOI-Space の利用者が「${esc(word)}」を探索した際に、実際に次へ辿った言葉の記録です（延べ${totalTraversals}回の探索から）。辞書の類語とは異なる、人々の連想の実像を映しています。</p>
+${statsStrip}
+<div class="minimap-wrap">
+  <canvas id="miniMap" width="640" height="320"></canvas>
+  <div class="minimap-hint">★をクリックすると、その言葉のページへ。中心の「${esc(word)}」をクリックすると星図で本格探索できます。</div>
+</div>
+<div class="chips">${nebulaWords.map(n => `<a class="chip neb" href="/word/${encodeURIComponent(n.word)}">${esc(n.word)}${n.weight > 1 ? `<span class="neb-w">${n.weight}</span>` : ''}</a>`).join('')}</div>
+</section>
+<script id="miniMapData" type="application/json">${miniMapData}</script>`
     : '';
 
   // 構造化データ：DefinedTerm＋FAQPage。
@@ -602,7 +636,17 @@ h2{font-size:18px;border-bottom:1px solid var(--border);padding-bottom:8px;margi
 .chip.syn{border-color:rgba(78,203,168,0.4)}
 .chip.ant{border-color:rgba(224,107,139,0.4)}
 .chip.rel{border-color:rgba(91,143,222,0.4)}
-.chip.neb{border-color:rgba(245,166,35,0.5);background:rgba(245,166,35,0.06)}
+.chip.neb{border-color:rgba(245,166,35,0.5);background:rgba(245,166,35,0.06);display:inline-flex;align-items:center;gap:6px}
+.neb-w{font-size:10px;color:var(--muted);background:rgba(245,166,35,0.12);border-radius:8px;padding:1px 6px}
+.original-data{background:linear-gradient(135deg,rgba(245,166,35,0.05),rgba(91,143,222,0.04));border:1px solid rgba(245,166,35,0.3);border-radius:12px;padding:18px 18px 14px;margin:24px 0}
+.original-data h2{border-bottom:none;padding-bottom:0;margin:0 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.od-badge{font-size:10.5px;font-weight:600;color:#080C18;background:var(--amber);border-radius:10px;padding:3px 10px;letter-spacing:.03em}
+.minimap-wrap{margin:14px 0}
+#miniMap{width:100%;height:auto;border-radius:10px;border:1px solid var(--border);display:block}
+.minimap-hint{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+.stat-strip{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 4px}
+.stat{font-size:12px;color:var(--muted)}
+.stat b{color:var(--amber);font-size:15px;margin-right:2px}
 footer{text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:20px;margin-top:40px}
 footer a{color:var(--muted)}
 .ad-slot{margin:28px 0;min-height:100px;text-align:center}
@@ -620,7 +664,7 @@ footer a{color:var(--muted)}
 .act-line{font-size:14px;color:var(--text);font-weight:600}
 .act-sub{font-size:13px;color:var(--muted);line-height:1.7;margin-top:4px}
 </style>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056" crossorigin="anonymous"></script>
+${showAds ? `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9246118623869056" crossorigin="anonymous"></script>` : ''}
 </head>
 <body>
 <div class="wrap">
@@ -633,13 +677,14 @@ ${data.trendContext ? `<div class="trend-banner">🔥 <b>今話題の言葉</b>�
 ${data.summary ? `<div class="summary">${esc(data.summary)}</div>` : ''}
 <a class="cta" href="/?q=${encodeURIComponent(word)}">「${esc(word)}」を星図で探索する →</a>
 ${data.meaning_long ? `<section><h2>「${esc(word)}」とは？意味を解説</h2><p class="prose">${esc(data.meaning_long)}</p></section>` : ''}
+${nebulaChips}
 ${data.usage ? `<section><h2>「${esc(word)}」の使い方</h2><p class="prose">${esc(data.usage)}</p></section>` : ''}
 ${data.examples && data.examples.length ? `<section><h2>例文</h2><ul class="examples">${data.examples.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section>` : ''}
 ${data.synonyms.length ? `<section><h2>「${esc(word)}」の言い換え・類語</h2><div class="chips">${chipList(data.synonyms, 'syn')}</div></section>` : ''}
-<div class="ad-slot">
+${showAds ? `<div class="ad-slot">
 <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-9246118623869056" data-ad-format="auto" data-full-width-responsive="true"></ins>
 <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-</div>
+</div>` : ''}
 ${data.antonyms.length ? `<section><h2>「${esc(word)}」の対義語</h2><div class="chips">${chipList(data.antonyms, 'ant')}</div></section>` : ''}
 ${data.related.length ? `<section><h2>連想語・周辺概念</h2><div class="chips">${chipList(data.related, 'rel')}</div></section>` : ''}
 ${data.nuance ? `<section><h2>類語との使い分け・ニュアンスの違い</h2><p class="prose">${esc(data.nuance)}</p></section>` : ''}
@@ -647,7 +692,6 @@ ${data.etymology ? `<section><h2>語源・由来</h2><p class="prose">${esc(data
 ${data.keigo ? `<section><h2>丁寧な言い方・改まった表現</h2><p class="prose">${esc(data.keigo)}</p></section>` : ''}
 ${data.mistakes ? `<section><h2>よくある誤用・注意点</h2><p class="prose">${esc(data.mistakes)}</p></section>` : ''}
 ${data.english && data.english.length ? `<section><h2>英語で言うと</h2><div class="chips">${data.english.map(e => `<span class="chip eng">${esc(e)}</span>`).join('')}</div>${data.english_note ? `<p class="prose" style="margin-top:10px">${esc(data.english_note)}</p>` : ''}</section>` : ''}
-${nebulaChips}
 ${data.synonyms && data.synonyms.length ? `<section><h2>「${esc(word)}」との違いを比較する</h2><p class="note">似た言葉との違い・使い分けを解説しています。</p><div class="chips">${data.synonyms.slice(0, 4).map(s => `<a class="chip" href="/compare/${encodeURIComponent(word)}-vs-${encodeURIComponent(s)}">${esc(word)} と ${esc(s)} の違い</a>`).join('')}</div></section>` : ''}
 ${activityHTML(word, activity)}
 <section class="books-sec">
@@ -659,16 +703,77 @@ ${activityHTML(word, activity)}
     <a class="book-link" href="${amazonSearch(word + ' 語源 由来')}" target="_blank" rel="noopener nofollow">🔍 語源・由来の本を探す</a>
   </div>
 </section>
-<div class="ad-slot">
+${showAds ? `<div class="ad-slot">
 <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-9246118623869056" data-ad-format="auto" data-full-width-responsive="true"></ins>
 <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-</div>
+</div>` : ''}
 <a class="cta" href="/?q=${encodeURIComponent(word)}">語彙の星雲で「${esc(word)}」を探索する →</a>
 <footer>
   <p>「${esc(word)}」の意味のつながりを、語彙空間 GOI-Space の星図でインタラクティブに探索できます。</p>
-  <p><a href="/">トップページ</a> ・ <a href="/words">語彙さくいん</a> ・ <a href="/about.html">サイトについて</a> ・ <a href="/privacy.html">プライバシー</a></p>
+  <p><a href="/">トップページ</a> ・ <a href="/words">語彙さくいん</a> ・ <a href="/guide.html">使い方ガイド</a> ・ <a href="/about.html">サイトについて</a> ・ <a href="/privacy.html">プライバシー</a></p>
 </footer>
 </div>
+<script>
+(function(){
+  var el=document.getElementById('miniMapData');
+  var cv=document.getElementById('miniMap');
+  if(!el||!cv)return;
+  var data;try{data=JSON.parse(el.textContent)}catch(e){return}
+  var ctx=cv.getContext('2d');
+  var W=cv.width,H=cv.height,CX=W/2,CY=H/2;
+  var maxV=Math.max.apply(null,data.nodes.map(function(n){return n.v}).concat([1]));
+  // ノード配置：中心語の周囲に重み順で円状配置（重いほど近い）
+  var nodes=data.nodes.map(function(n,i){
+    var ang=(i/data.nodes.length)*Math.PI*2-Math.PI/2+(i%2?0.18:-0.12);
+    var norm=n.v/maxV;
+    var r=70+(1-norm)*80;
+    return{w:n.w,v:n.v,x:CX+Math.cos(ang)*r*1.55,y:CY+Math.sin(ang)*r*0.82,rad:4+norm*5};
+  });
+  var stars=[];for(var i=0;i<60;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.1+0.2,tw:Math.random()*Math.PI*2});
+  var hover=-1,t=0;
+  function draw(){
+    t+=0.016;
+    ctx.fillStyle='#080C18';ctx.fillRect(0,0,W,H);
+    for(var i=0;i<stars.length;i++){var s=stars[i];var a=0.25+0.35*Math.abs(Math.sin(t+s.tw));ctx.fillStyle='rgba(255,255,255,'+a+')';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,7);ctx.fill();}
+    // エッジ
+    for(var i=0;i<nodes.length;i++){var n=nodes[i];
+      ctx.strokeStyle=i===hover?'rgba(245,166,35,0.7)':'rgba(120,150,220,0.22)';
+      ctx.lineWidth=i===hover?1.6:0.8;
+      ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(n.x,n.y);ctx.stroke();}
+    // 周辺ノード
+    ctx.textAlign='center';ctx.textBaseline='top';
+    for(var i=0;i<nodes.length;i++){var n=nodes[i];
+      var pulse=1+0.12*Math.sin(t*2+i);
+      ctx.fillStyle=i===hover?'#F5A623':'#9BB4E8';
+      ctx.beginPath();ctx.arc(n.x,n.y,n.rad*pulse,0,7);ctx.fill();
+      ctx.fillStyle=i===hover?'#FFD27A':'#C8D4F0';
+      ctx.font=(i===hover?'600 ':'')+'12px sans-serif';
+      ctx.fillText(n.w,n.x,n.y+n.rad+4);}
+    // 中心語
+    var cp=1+0.08*Math.sin(t*1.5);
+    var grad=ctx.createRadialGradient(CX,CY,0,CX,CY,26*cp);
+    grad.addColorStop(0,'rgba(245,166,35,0.9)');grad.addColorStop(1,'rgba(245,166,35,0)');
+    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(CX,CY,26*cp,0,7);ctx.fill();
+    ctx.fillStyle='#FFE9C0';ctx.beginPath();ctx.arc(CX,CY,7,0,7);ctx.fill();
+    ctx.fillStyle='#FFF';ctx.font='600 14px sans-serif';
+    ctx.fillText(data.center,CX,CY+14);
+    requestAnimationFrame(draw);
+  }
+  function pick(mx,my){
+    var d=Math.hypot(mx-CX,my-CY);if(d<30)return'center';
+    for(var i=0;i<nodes.length;i++){if(Math.hypot(mx-nodes[i].x,my-nodes[i].y)<22)return i;}
+    return -1;
+  }
+  function pos(e){var r=cv.getBoundingClientRect();var sx=W/r.width,sy=H/r.height;
+    var cx=(e.touches?e.touches[0].clientX:e.clientX),cy=(e.touches?e.touches[0].clientY:e.clientY);
+    return{x:(cx-r.left)*sx,y:(cy-r.top)*sy};}
+  cv.addEventListener('mousemove',function(e){var p=pos(e);var h=pick(p.x,p.y);hover=(typeof h==='number')?h:-1;cv.style.cursor=(h!==-1&&h!==undefined)?'pointer':'default';});
+  cv.addEventListener('click',function(e){var p=pos(e);var h=pick(p.x,p.y);
+    if(h==='center'){location.href='/?q='+encodeURIComponent(data.center);}
+    else if(typeof h==='number'&&h>=0){location.href='/word/'+encodeURIComponent(nodes[h].w);}});
+  draw();
+})();
+</script>
 </body>
 </html>`;
 }
@@ -776,6 +881,7 @@ export default async function handler(req, res) {
         if (!extra) { failed++; continue; }
         const merged = { ...data, ...extra };
         await redis('SET', `seodata:${w}`, JSON.stringify(merged));
+        if (isRichData(merged)) await redis('SADD', 'seo:rich', w);
         await redis('DEL', `seopage:${w}`); // HTMLバッファを消して次回アクセスで再構築
         deepened++;
       } catch { failed++; }
@@ -861,6 +967,45 @@ export default async function handler(req, res) {
       } catch { failed++; }
     }
     return res.status(200).json({ ok: true, generated, failed });
+  }
+
+  // 【対策2】品質分類バックフィル：既存の全語を検査し、充実データを持つ語をseo:richに登録する。
+  // 使い方: GET /api/word?richjob=1&key=<TREND_SECRET>&cursor=0&batch=2000
+  // レスポンスの nextCursor を次回の cursor に渡して、全語を数回に分けて処理する。
+  if (req.query && req.query.richjob === '1') {
+    const secret = process.env.TREND_SECRET || '';
+    if (!secret || req.query.key !== secret) return res.status(403).json({ error: 'forbidden' });
+    const cursor = Math.max(0, parseInt(req.query.cursor, 10) || 0);
+    const batch = Math.min(parseInt(req.query.batch, 10) || 2000, 5000);
+    let all = [];
+    try { all = (await redis('SMEMBERS', 'seo:words') || []).filter(Boolean).sort(); } catch {}
+    const slice = all.slice(cursor, cursor + batch);
+    let rich = 0, thin = 0, noData = 0;
+    // 並列バッチでseodataを検査（40件ずつ）
+    const B = 40;
+    for (let i = 0; i < slice.length; i += B) {
+      const group = slice.slice(i, i + B);
+      const results = await Promise.all(group.map(async (w) => {
+        try {
+          const raw = await redis('GET', `seodata:${w}`);
+          if (!raw) return { w, s: 'nodata' };
+          const d = JSON.parse(raw);
+          return { w, s: isRichData(d) ? 'rich' : 'thin' };
+        } catch { return { w, s: 'nodata' }; }
+      }));
+      for (const r of results) {
+        if (r.s === 'rich') { rich++; try { await redis('SADD', 'seo:rich', r.w); } catch {} }
+        else if (r.s === 'thin') thin++;
+        else noData++;
+      }
+    }
+    const nextCursor = cursor + slice.length;
+    return res.status(200).json({
+      ok: true, processed: slice.length, rich, thin, noData,
+      nextCursor: nextCursor < all.length ? nextCursor : null,
+      total: all.length,
+      note: nextCursor < all.length ? `続き: &cursor=${nextCursor}` : '全語の分類が完了しました',
+    });
   }
 
   if (req.query && req.query.trendjob === '1') {
@@ -1017,6 +1162,16 @@ export default async function handler(req, res) {
       }).join('');
     } catch {}
 
+    // 今月よく探索されている言葉（行動統計に基づく独自ランキング）
+    let hotLinks = '';
+    try {
+      const ym = new Date().toISOString().slice(0, 7);
+      const hraw = await redis('ZREVRANGE', `wmonth:${ym}`, 0, 11, 'WITHSCORES') || [];
+      const hitems = [];
+      for (let i = 0; i < hraw.length; i += 2) hitems.push({ word: hraw[i], n: Number(hraw[i + 1]) });
+      hotLinks = hitems.map(h => `<a class="w feat" href="/word/${encodeURIComponent(h.word)}">${esc(h.word)}<span class="hot-n">${h.n}回</span></a>`).join('');
+    } catch {}
+
     // 頭文字タブ（2階層：行グループの中に個別文字。「すべて」＋数字/英語/漢字も）
     const base = '/words';
     const charLink = (c) => `<a class="char-tab ${row === c ? 'on' : ''}" href="${base}?row=${encodeURIComponent(c)}">${esc(c)}</a>`;
@@ -1066,7 +1221,8 @@ h2{font-size:15px;color:var(--amber);margin:26px 0 10px}
 .list{display:flex;flex-wrap:wrap;gap:9px}
 .w{display:inline-block;padding:7px 14px;border-radius:16px;text-decoration:none;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .w:hover{border-color:var(--amber);color:var(--amber)}
-.w.feat{border-color:rgba(245,166,35,0.4);background:linear-gradient(135deg,#1c1608,#111726)}
+.w.feat{border-color:rgba(245,166,35,0.4);background:linear-gradient(135deg,#1c1608,#111726);display:inline-flex;align-items:center;gap:7px}
+.hot-n{font-size:10px;color:var(--muted);border-left:1px solid var(--border);padding-left:7px}
 .trend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:8px}
 .trend-card{display:block;text-decoration:none;border:1px solid rgba(255,90,90,0.4);border-radius:10px;padding:12px 14px;background:linear-gradient(135deg,#241010,#111726);transition:all .15s}
 .trend-card:hover{border-color:#ff6b6b;background:linear-gradient(135deg,#301414,#141726)}
@@ -1106,6 +1262,7 @@ footer a{color:var(--muted);margin:0 8px}
 <h1>語彙さくいん</h1>
 <p class="lead">各語の意味・類語・対義語・例文・語源をまとめた語彙辞典です。利用者の探索によって、ページは日々増えています（全 ${total} 語）。</p>
 ${!row && page === 1 && trendLinks ? `<h2>🔥 話題の言葉（Googleトレンドより）</h2><div class="trend-grid">${trendLinks}</div>` : ''}
+${!row && page === 1 && hotLinks ? `<h2>📈 今月よく探索されている言葉<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:10px">利用者の実探索データ</span></h2><div class="list">${hotLinks}</div>` : ''}
 ${!row && page === 1 && featuredLinks ? `<h2>今日の注目の言葉</h2><div class="list">${featuredLinks}</div>` : ''}
 <h2>五十音から引く</h2>
 <div class="rows">${rowTabs}</div>
@@ -1113,7 +1270,7 @@ ${!row && page === 1 && featuredLinks ? `<h2>今日の注目の言葉</h2><div c
 ${pager}
 <p class="meta">${rowLabel ? `${esc(rowLabel)} ` : ''}${all.length} 語中 ${(page - 1) * PER + 1}〜${Math.min(page * PER, all.length)} 語目${pages > 1 ? `（${page} / ${pages} ページ）` : ''}</p>
 <footer>
-  <a href="/">トップ</a><a href="/about.html">サイトについて</a><a href="/privacy.html">プライバシー</a>
+  <a href="/">トップ</a><a href="/guide.html">使い方ガイド</a><a href="/about.html">サイトについて</a><a href="/privacy.html">プライバシー</a>
 </footer>
 </div>
 </body>
@@ -1132,7 +1289,13 @@ ${pager}
   if (req.query && (req.query.sitemap || req.url?.includes('sitemap'))) {
     const PER_MAP = 20000; // 1ファイルあたりのURL数（上限5万に対し余裕を持たせる）
     let words = [];
-    try { words = (await redis('SMEMBERS', 'seo:words') || []).filter(Boolean); } catch {}
+    // 【対策2】品質フィルタ：充実データを持つ語（seo:rich）だけをsitemapに載せる。
+    // 薄いページをGoogleに提示しないことで、サイト全体の品質評価を守る。
+    // seo:richが未整備（バックフィル前）の間は従来のseo:wordsを使う。
+    try {
+      words = (await redis('SMEMBERS', 'seo:rich') || []).filter(Boolean);
+      if (words.length < 100) words = (await redis('SMEMBERS', 'seo:words') || []).filter(Boolean);
+    } catch {}
     const chunks = Math.max(1, Math.ceil(words.length / PER_MAP));
 
     // 子サイトマップ（?sitemap=1&part=N）
@@ -1192,6 +1355,7 @@ ${urls}
 <url><loc>${SITE}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
 <url><loc>${SITE}/words</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
 <url><loc>${SITE}/about.html</loc><changefreq>monthly</changefreq></url>
+<url><loc>${SITE}/guide.html</loc><changefreq>monthly</changefreq></url>
 </urlset>`;
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
@@ -1227,10 +1391,15 @@ ${urls}
   } catch {}
 
   // 星雲データ・活動データは常に取得（AIを使わない・安価）
-  const [nebulaWords, activity] = await Promise.all([
+  const ym = new Date().toISOString().slice(0, 7);
+  const [nebulaWords, activity, connCount, monthCount] = await Promise.all([
     relatedFromNebula(word),
     gatherActivity(word),
+    redis('ZCARD', `edge:${word}`).catch(() => 0),
+    redis('ZSCORE', `wmonth:${ym}`, word).catch(() => null),
   ]);
+  // 行動統計をactivityに載せてbuildHTMLへ渡す
+  activity.stats = { connections: Number(connCount) || 0, thisMonth: Number(monthCount) || 0 };
 
   // トレンド語なら「なぜ話題か」の背景を取得してページ上部に表示する
   let trendContext = '';
@@ -1312,6 +1481,7 @@ ${urls}
     if (generationOk) {
       await redis('SET', dataKey, JSON.stringify(data)); // ★AI生成データを永続保存（軽量）
       await redis('SADD', 'seo:words', word);
+      if (isRichData(data)) await redis('SADD', 'seo:rich', word);
     }
     await redis('SET', cacheKey, html, 'EX', 60 * 60 * 24 * 3); // HTMLは3日バッファ
   } catch {}
