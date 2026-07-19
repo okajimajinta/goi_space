@@ -872,21 +872,23 @@ export default async function handler(req, res) {
     }
     const target = req.body.words.map(w => String(w || '').trim()).filter(Boolean).slice(0, 50);
     let deepened = 0, failed = 0;
+    const results = [];
     for (const w of target) {
       try {
         const raw = await redis('GET', `seodata:${w}`);
-        if (!raw) { failed++; continue; }
+        if (!raw) { failed++; results.push({ word: w, status: 'no_seodata' }); continue; }
         const data = JSON.parse(raw);
         const extra = await deepenWordData(w, data);
-        if (!extra) { failed++; continue; }
+        if (!extra) { failed++; results.push({ word: w, status: 'ai_failed' }); continue; }
         const merged = { ...data, ...extra };
         await redis('SET', `seodata:${w}`, JSON.stringify(merged));
         if (isRichData(merged)) await redis('SADD', 'seo:rich', w);
         await redis('DEL', `seopage:${w}`); // HTMLバッファを消して次回アクセスで再構築
         deepened++;
-      } catch { failed++; }
+        results.push({ word: w, status: 'ok' });
+      } catch (e) { failed++; results.push({ word: w, status: 'exception', detail: String(e && e.message || e) }); }
     }
-    return res.status(200).json({ ok: true, deepened, failed });
+    return res.status(200).json({ ok: true, deepened, failed, results });
   }
 
   // 【施策3】比較ページ /compare/A-vs-B （「A B 違い」クエリを狙う）
