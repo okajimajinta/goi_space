@@ -779,13 +779,11 @@ ${showAds ? `<div class="ad-slot">
 }
 
 export default async function handler(req, res) {
-  // 【対策B】遮断対象ボットは、Redisアクセスもページ組み立ても行わずに即返す。
-  // robots.txtを無視するスクレイパーからCPU時間を守るための最初の関門。
-  if (isBlockedBot(req)) {
-    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
-    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-    return res.status(403).send('Forbidden');
-  }
+  // 【クロール優先方針】403遮断は無効化した。
+  // 理由：クロール頻度の低下を招くリスクがあり、Pro移行でCPU枠に余裕ができたため
+  // 検索エンジンのクロール性を最優先する。スクレイパー対策はrobots.txtに委ねる。
+  // （必要になれば下記を再度有効化できるよう関数は残してある）
+  // if (isBlockedBot(req)) { ... }
 
   // 【メンテナンス】既存の永続seopageキャッシュにTTLを付与して容量を段階的に解放する。
   // 使い方: /api/word?cleanup=1&key=<CLEANUP_SECRET>&batch=500
@@ -909,10 +907,11 @@ export default async function handler(req, res) {
     } catch {}
 
     if (!c) {
-      // 未生成：ボットには生成させない（コスト暴走防止。人間の訪問のみが生成のトリガー）
-      if (isBot(req)) {
-        res.setHeader('X-Robots-Tag', 'noindex, follow');
-        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      // 検索エンジンには生成を許可。それ以外のボットには軽量版（noindexは付けない）。
+      const cua = String(req.headers['user-agent'] || '').toLowerCase();
+      const cIsSearch = /googlebot|bingbot|duckduckbot|slurp|applebot(?!-extended)/i.test(cua);
+      if (isBot(req) && !cIsSearch) {
+        res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=7200');
         return res.status(200).send(buildCompareHTML(a, b, { summary: '', a_desc: '', b_desc: '', difference: '', a_example: '', b_example: '', usage_tip: '' }));
       }
       c = await compareWordsAI(a, b);
@@ -1437,18 +1436,26 @@ ${urls}
     const lightData = { reading: '', summary: '', meaning_long: '', synonyms: [], antonyms: [], related: [], examples: [], etymology: '', english: [], book_theme: '' };
     const lightHtml = buildHTML(word, lightData, nebulaWords.slice(0, 16), activity);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    // 未生成の軽量ページはインデックスさせない（薄いページの評価を避ける）。
-    // 完全版が生成されれば通常の index ページとして扱われる。
-    res.setHeader('X-Robots-Tag', 'noindex, follow');
-    // 未生成の軽量ページ：ボットが繰り返し叩くのでCDNで長めに保持し、関数起動を抑える。
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
+    // 【クロール優先方針】noindexは付けない。
+    // 大量のnoindex配信はクローラーの巡回意欲を削ぎ、サイト全体のクロール頻度低下を招く。
+    // 中身が薄いページはsitemapに載せない（品質フィルタ）ことで対処し、
+    // ここでは通常の200応答としてクロールを妨げないようにする。
+    res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=7200, stale-while-revalidate=86400');
     return res.status(200).send(lightHtml);
   };
 
-  if (isBot(req)) return light(); // ボットには生成させない
+  // 【クロール優先方針】検索エンジンのクローラーには生成を許可する。
+  // 以前はボット一律で生成を止めていたが、その結果8万語の大半が薄いページのまま残り、
+  // Googlebotの巡回頻度低下＝インデックス消失を招いた。
+  // 検索エンジンは生成を許可し、コストはレート制限で管理する。
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  const isSearchEngine = /googlebot|bingbot|duckduckbot|slurp|applebot(?!-extended)/i.test(ua);
+  // 検索エンジン以外のボット（スクレイパー等）には生成させない
+  if (isBot(req) && !isSearchEngine) return light();
 
-  // 【方針C】新規AI生成のレート上限（人間の実需では超えない低めの天井＝コストの保険）
-  const GEN_LIMIT_PER_HOUR = 20;
+  // 【レート上限】クロール由来の生成も受け止められる水準に設定。
+  // 60語/時 = 1日最大1,440語 ≒ 1日あたり約$9。月上限の目安として調整可能。
+  const GEN_LIMIT_PER_HOUR = 60;
   let canGenerate = true;
   try {
     const hourKey = `seogen:${new Date().toISOString().slice(0, 13)}`;
