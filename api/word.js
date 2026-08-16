@@ -482,8 +482,64 @@ async function generateAndSaveData(word) {
     await redis('SET', dataKey, JSON.stringify(data));
     await redis('SADD', 'seo:words', word);
     if (isRichData(data)) await redis('SADD', 'seo:rich', word);
+    // ジョブ経由の生成も実績に記録（発生源は job として集計）
+    await logGeneration({ headers: { 'user-agent': 'job' } }, 'job-word', word);
   } catch {}
   return { word, status: 'generated' };
+}
+
+// 【生成ログ】AI生成の発生源を記録し、コスト実績を永続的に管理する。
+// 日別・月別・累計の3階層で集計。カウンタのみなので容量は極小（1年で数十KB程度）。
+// 日別の詳細は消さずに残し、長期の実績分析に使えるようにする。
+async function logGeneration(req, kind, word) {
+  try {
+    const now = new Date();
+    const day = now.toISOString().slice(0, 10);   // YYYY-MM-DD
+    const month = now.toISOString().slice(0, 7);  // YYYY-MM
+    const ua = String(req.headers['user-agent'] || '').toLowerCase();
+    let src = 'human';
+    if (/googlebot/.test(ua)) src = 'googlebot';
+    else if (/bingbot/.test(ua)) src = 'bingbot';
+    else if (/duckduckbot|slurp|applebot/.test(ua)) src = 'other-search';
+    else if (!ua) src = 'no-ua';
+    else if (/bot|crawl|spider|python|curl|wget|scrapy|headless/.test(ua)) src = 'other-bot';
+
+    // 日別カウンタ（永続保存）
+    await redis('HINCRBY', `genlog:${day}`, 'total', 1);
+    await redis('HINCRBY', `genlog:${day}`, `kind:${kind}`, 1);
+    await redis('HINCRBY', `genlog:${day}`, `src:${src}`, 1);
+    await redis('HINCRBY', `genlog:${day}`, `src:${src}|${kind}`, 1);
+    // 日付インデックス（どの日のログがあるか一覧するため）
+    await redis('ZADD', 'genlog:days', now.getTime(), day);
+
+    // 月別カウンタ（永続保存・月次実績の把握用）
+    await redis('HINCRBY', `genmonth:${month}`, 'total', 1);
+    await redis('HINCRBY', `genmonth:${month}`, `kind:${kind}`, 1);
+    await redis('HINCRBY', `genmonth:${month}`, `src:${src}`, 1);
+    await redis('ZADD', 'genlog:months', now.getTime(), month);
+
+    // 累計カウンタ（サービス開始からの総生成数）
+    await redis('HINCRBY', 'gentotal', 'total', 1);
+    await redis('HINCRBY', 'gentotal', `kind:${kind}`, 1);
+    await redis('HINCRBY', 'gentotal', `src:${src}`, 1);
+
+    // 直近の生成語サンプル（実物確認用・当日分500件まで。翌日以降は日別カウンタで管理）
+    await redis('LPUSH', `genwords:${day}`, `${Date.now()}|${src}|${kind}|${word}`);
+    await redis('LTRIM', `genwords:${day}`, 0, 499);
+    await redis('EXPIRE', `genwords:${day}`, 60 * 60 * 24 * 30); // 語サンプルのみ30日で整理
+  } catch {}
+}
+
+// 【共通レート制限】種類ごとに1時間あたりの生成上限を管理する。
+async function checkGenLimit(kind, limit) {
+  try {
+    const hourKey = `genlimit:${kind}:${new Date().toISOString().slice(0, 13)}`;
+    const n = await redis('INCR', hourKey);
+    if (n === 1) await redis('EXPIRE', hourKey, 3700);
+    return n <= limit;
+  } catch {
+    return true; // Redis障害時は通す（サイトを止めない）
+  }
 }
 
 function buildHTML(word, data, nebulaWords, activity) {
@@ -692,7 +748,7 @@ ${data.etymology ? `<section><h2>語源・由来</h2><p class="prose">${esc(data
 ${data.keigo ? `<section><h2>丁寧な言い方・改まった表現</h2><p class="prose">${esc(data.keigo)}</p></section>` : ''}
 ${data.mistakes ? `<section><h2>よくある誤用・注意点</h2><p class="prose">${esc(data.mistakes)}</p></section>` : ''}
 ${data.english && data.english.length ? `<section><h2>英語で言うと</h2><div class="chips">${data.english.map(e => `<span class="chip eng">${esc(e)}</span>`).join('')}</div>${data.english_note ? `<p class="prose" style="margin-top:10px">${esc(data.english_note)}</p>` : ''}</section>` : ''}
-${data.synonyms && data.synonyms.length ? `<section><h2>「${esc(word)}」との違いを比較する</h2><p class="note">似た言葉との違い・使い分けを解説しています。</p><div class="chips">${data.synonyms.slice(0, 4).map(s => `<a class="chip" href="/compare/${encodeURIComponent(word)}-vs-${encodeURIComponent(s)}">${esc(word)} と ${esc(s)} の違い</a>`).join('')}</div></section>` : ''}
+${data.synonyms && data.synonyms.length ? `<section><h2>「${esc(word)}」との違いを比較する</h2><p class="note">似た言葉との違い・使い分けを解説しています。</p><div class="chips">${data.synonyms.slice(0, 2).map(s => `<a class="chip" href="/compare/${encodeURIComponent(word)}-vs-${encodeURIComponent(s)}">${esc(word)} と ${esc(s)} の違い</a>`).join('')}</div></section>` : ''}
 ${activityHTML(word, activity)}
 <section class="books-sec">
   <h2>「${esc(word)}」をもっと知る本</h2>
@@ -784,6 +840,83 @@ export default async function handler(req, res) {
   // 検索エンジンのクロール性を最優先する。スクレイパー対策はrobots.txtに委ねる。
   // （必要になれば下記を再度有効化できるよう関数は残してある）
   // if (isBlockedBot(req)) { ... }
+
+  // 【生成実績】AI生成の発生源・種類・コストを日別/月別/累計で確認する。
+  // 使い方: /api/word?genstats=1&key=<TREND_SECRET>
+  //   &days=30    日別の表示日数（既定30・最大365）
+  //   &words=1    当日の生成語サンプルも表示
+  //   &view=month 月別サマリーのみ表示
+  if (req.query && req.query.genstats === '1') {
+    const secret = process.env.TREND_SECRET || '';
+    if (!secret || req.query.key !== secret) return res.status(403).json({ error: 'forbidden' });
+
+    const COST_PER_GEN = 0.006; // Haiku 1生成あたりの概算コスト（USD）
+    const toObj = (h) => {
+      let obj = {};
+      if (Array.isArray(h)) { for (let j = 0; j < h.length; j += 2) obj[h[j]] = Number(h[j + 1]); }
+      else if (h && typeof h === 'object') { for (const k of Object.keys(h)) obj[k] = Number(h[k]); }
+      return obj;
+    };
+    const withCost = (o) => ({ ...o, estCostUSD: Number(((o.total || 0) * COST_PER_GEN).toFixed(2)) });
+
+    // 累計
+    let lifetime = {};
+    try { lifetime = withCost(toObj(await redis('HGETALL', 'gentotal'))); } catch {}
+
+    // 月別（記録がある月をすべて）
+    const monthly = [];
+    try {
+      const months = await redis('ZREVRANGE', 'genlog:months', 0, 23) || [];
+      for (const m of months) {
+        const o = toObj(await redis('HGETALL', `genmonth:${m}`));
+        if (Object.keys(o).length) monthly.push({ month: m, ...withCost(o) });
+      }
+    } catch {}
+
+    if (req.query.view === 'month') {
+      return res.status(200).json({ note: `1生成あたり約$${COST_PER_GEN}で概算`, lifetime, monthly });
+    }
+
+    // 日別（新しい順）
+    const days = Math.min(parseInt(req.query.days, 10) || 30, 365);
+    const daily = [];
+    try {
+      const dayList = await redis('ZREVRANGE', 'genlog:days', 0, days - 1) || [];
+      for (const d of dayList) {
+        const o = toObj(await redis('HGETALL', `genlog:${d}`));
+        if (Object.keys(o).length) daily.push({ date: d, ...withCost(o) });
+      }
+    } catch {}
+
+    // 当日の生成語サンプル
+    let samples = [];
+    if (req.query.words === '1') {
+      const today = new Date().toISOString().slice(0, 10);
+      try {
+        const raw = await redis('LRANGE', `genwords:${today}`, 0, 99) || [];
+        samples = raw.map(s => {
+          const [ts, src, kind, ...rest] = String(s).split('|');
+          return { time: new Date(Number(ts)).toISOString().slice(11, 19), src, kind, word: rest.join('|') };
+        });
+      } catch {}
+    }
+
+    // 現在時刻の各レート枠の消費状況
+    const hour = new Date().toISOString().slice(0, 13);
+    const limits = {};
+    for (const k of ['word-bot', 'word-human', 'compare-bot', 'compare-human']) {
+      try { limits[k] = Number(await redis('GET', `genlimit:${k}:${hour}`)) || 0; } catch {}
+    }
+
+    return res.status(200).json({
+      note: `kind=生成の種類 / src=発生源。1生成あたり約$${COST_PER_GEN}で概算。ログは永続保存。`,
+      currentHourUsage: limits,
+      lifetime,
+      monthly,
+      daily,
+      recentSamples: samples,
+    });
+  }
 
   // 【メンテナンス】既存の永続seopageキャッシュにTTLを付与して容量を段階的に解放する。
   // 使い方: /api/word?cleanup=1&key=<CLEANUP_SECRET>&batch=500
@@ -882,6 +1015,7 @@ export default async function handler(req, res) {
         await redis('SET', `seodata:${w}`, JSON.stringify(merged));
         if (isRichData(merged)) await redis('SADD', 'seo:rich', w);
         await redis('DEL', `seopage:${w}`); // HTMLバッファを消して次回アクセスで再構築
+        await logGeneration({ headers: { 'user-agent': 'job' } }, 'job-deepen', w);
         deepened++;
         results.push({ word: w, status: 'ok' });
       } catch (e) { failed++; results.push({ word: w, status: 'exception', detail: String(e && e.message || e) }); }
@@ -907,15 +1041,27 @@ export default async function handler(req, res) {
     } catch {}
 
     if (!c) {
-      // 検索エンジンには生成を許可。それ以外のボットには軽量版（noindexは付けない）。
+      // 【コスト保護】比較ページは組み合わせが膨大（8万語×4リンク＝32万通り）なので、
+      // クローラーが辿ると青天井に生成されうる。厳しめのレート上限を必ず適用する。
       const cua = String(req.headers['user-agent'] || '').toLowerCase();
       const cIsSearch = /googlebot|bingbot|duckduckbot|slurp|applebot(?!-extended)/i.test(cua);
-      if (isBot(req) && !cIsSearch) {
+      const cIsBot = isBot(req);
+      const emptyCmp = { summary: '', a_desc: '', b_desc: '', difference: '', a_example: '', b_example: '', usage_tip: '' };
+      // 検索エンジン以外のボットには生成させない
+      if (cIsBot && !cIsSearch) {
         res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=7200');
-        return res.status(200).send(buildCompareHTML(a, b, { summary: '', a_desc: '', b_desc: '', difference: '', a_example: '', b_example: '', usage_tip: '' }));
+        return res.status(200).send(buildCompareHTML(a, b, emptyCmp));
+      }
+      // レート上限（ボットは特に厳しく：10/時、人間は30/時）
+      const cmpLimit = cIsBot ? 10 : 30;
+      const allowed = await checkGenLimit(cIsBot ? 'compare-bot' : 'compare-human', cmpLimit);
+      if (!allowed) {
+        res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800');
+        return res.status(200).send(buildCompareHTML(a, b, emptyCmp));
       }
       c = await compareWordsAI(a, b);
       if (!c) return res.status(502).send('生成に失敗しました');
+      await logGeneration(req, 'compare', `${a}-vs-${b}`);
       try {
         await redis('SET', key, JSON.stringify(c)); // 永続保存（軽量）
         await redis('SADD', 'cmp:pairs', `${a}\u0001${b}`);
@@ -1037,7 +1183,10 @@ export default async function handler(req, res) {
         // なぜ話題になったか（関連ニュース見出し）を保存。AIで簡潔な一文の背景に要約する。
         if (t.news && t.news.length) {
           const ctx = await summarizeTrendContext(w, t.news);
-          if (ctx) await redis('SET', `trend:ctx:${w}`, ctx);
+          if (ctx) {
+            await redis('SET', `trend:ctx:${w}`, ctx);
+            await logGeneration({ headers: { 'user-agent': 'job' } }, 'job-trend', w);
+          }
         }
       } catch {}
     }
@@ -1450,24 +1599,24 @@ ${urls}
   // 検索エンジンは生成を許可し、コストはレート制限で管理する。
   const ua = String(req.headers['user-agent'] || '').toLowerCase();
   const isSearchEngine = /googlebot|bingbot|duckduckbot|slurp|applebot(?!-extended)/i.test(ua);
+  const reqIsBot = isBot(req);
   // 検索エンジン以外のボット（スクレイパー等）には生成させない
-  if (isBot(req) && !isSearchEngine) return light();
+  if (reqIsBot && !isSearchEngine) return light();
 
-  // 【レート上限】クロール由来の生成も受け止められる水準に設定。
-  // 60語/時 = 1日最大1,440語 ≒ 1日あたり約$9。月上限の目安として調整可能。
-  const GEN_LIMIT_PER_HOUR = 60;
-  let canGenerate = true;
-  try {
-    const hourKey = `seogen:${new Date().toISOString().slice(0, 13)}`;
-    const n = await redis('INCR', hourKey);
-    if (n === 1) await redis('EXPIRE', hourKey, 3700);
-    if (n > GEN_LIMIT_PER_HOUR) canGenerate = false;
-  } catch {}
-
-  if (!canGenerate) return light(); // 上限超過時も軽量ページ（次の訪問で完全版に昇格）
+  // 【レート上限】人間とボットで枠を分ける。
+  // ボット枠を絞ることで、クロール由来の暴走コストを抑えつつ、
+  // 実ユーザーの体験（未生成語を開いても完全版が出る）は守られる。
+  const BOT_LIMIT_PER_HOUR = 30;   // 検索エンジン由来：1日最大720語 ≒ $4.3/日
+  const HUMAN_LIMIT_PER_HOUR = 60; // 人間由来：実需なので広めに
+  const allowed = await checkGenLimit(
+    reqIsBot ? 'word-bot' : 'word-human',
+    reqIsBot ? BOT_LIMIT_PER_HOUR : HUMAN_LIMIT_PER_HOUR
+  );
+  if (!allowed) return light(); // 上限超過時も軽量ページ（次の訪問で完全版に昇格）
 
   // 上限内：AIで完全なデータを生成
   const ai = await relatedFromAI(word);
+  await logGeneration(req, 'word', word);
   data = {
     reading: ai.reading,
     summary: ai.summary,
