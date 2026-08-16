@@ -488,6 +488,21 @@ async function generateAndSaveData(word) {
   return { word, status: 'generated' };
 }
 
+// クライアントIPを取得する（Vercel環境ではx-forwarded-forの先頭が実IP）
+function getClientIP(req) {
+  const xf = String(req.headers['x-forwarded-for'] || '');
+  if (xf) return xf.split(',')[0].trim();
+  return String(req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown');
+}
+
+// IPを短いハッシュに変換する（生IPを保存せずプライバシーに配慮しつつ、同一性の判定はできる）
+function hashIP(ip) {
+  let h = 5381;
+  const s = String(ip) + '|goispace-salt';
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 // 【生成ログ】AI生成の発生源を記録し、コスト実績を永続的に管理する。
 // 日別・月別・累計の3階層で集計。カウンタのみなので容量は極小（1年で数十KB程度）。
 // 日別の詳細は消さずに残し、長期の実績分析に使えるようにする。
@@ -523,10 +538,21 @@ async function logGeneration(req, kind, word) {
     await redis('HINCRBY', 'gentotal', `kind:${kind}`, 1);
     await redis('HINCRBY', 'gentotal', `src:${src}`, 1);
 
-    // 直近の生成語サンプル（実物確認用・当日分500件まで。翌日以降は日別カウンタで管理）
-    await redis('LPUSH', `genwords:${day}`, `${Date.now()}|${src}|${kind}|${word}`);
+    // 【IP別集計】同一IPからの生成集中を検出する（UA偽装されても効く指標）
+    const ipRaw = getClientIP(req);
+    const ipHash = ipRaw === 'unknown' ? 'job' : hashIP(ipRaw);
+    await redis('ZINCRBY', `genip:${day}`, 1, ipHash);
+    await redis('EXPIRE', `genip:${day}`, 60 * 60 * 24 * 90); // 90日保持
+
+    // 【UA別集計】どのUser-Agentが生成しているかの実態把握
+    const uaRaw = String(req.headers['user-agent'] || '(none)').slice(0, 120);
+    await redis('ZINCRBY', `genua:${day}`, 1, uaRaw);
+    await redis('EXPIRE', `genua:${day}`, 60 * 60 * 24 * 90);
+
+    // 直近の生成語サンプル（実物確認用・当日分500件まで。IPハッシュも記録）
+    await redis('LPUSH', `genwords:${day}`, `${Date.now()}|${src}|${kind}|${ipHash}|${word}`);
     await redis('LTRIM', `genwords:${day}`, 0, 499);
-    await redis('EXPIRE', `genwords:${day}`, 60 * 60 * 24 * 30); // 語サンプルのみ30日で整理
+    await redis('EXPIRE', `genwords:${day}`, 60 * 60 * 24 * 30);
   } catch {}
 }
 
@@ -539,6 +565,21 @@ async function checkGenLimit(kind, limit) {
     return n <= limit;
   } catch {
     return true; // Redis障害時は通す（サイトを止めない）
+  }
+}
+
+// 【IP単位のレート制限】UA偽装されても効く根本的な防御。
+// 同一IPからの生成が短時間に集中する場合のみ止めるので、通常の利用者は影響を受けない。
+async function checkIPLimit(req, limit) {
+  try {
+    const ip = getClientIP(req);
+    if (ip === 'unknown') return true; // ジョブ等はIPなし
+    const key = `geniplimit:${hashIP(ip)}:${new Date().toISOString().slice(0, 13)}`;
+    const n = await redis('INCR', key);
+    if (n === 1) await redis('EXPIRE', key, 3700);
+    return n <= limit;
+  } catch {
+    return true;
   }
 }
 
@@ -895,11 +936,23 @@ export default async function handler(req, res) {
       try {
         const raw = await redis('LRANGE', `genwords:${today}`, 0, 99) || [];
         samples = raw.map(s => {
-          const [ts, src, kind, ...rest] = String(s).split('|');
-          return { time: new Date(Number(ts)).toISOString().slice(11, 19), src, kind, word: rest.join('|') };
+          const [ts, src, kind, ip, ...rest] = String(s).split('|');
+          return { time: new Date(Number(ts)).toISOString().slice(11, 19), src, kind, ip, word: rest.join('|') };
         });
       } catch {}
     }
+
+    // 【IP別・UA別の内訳】急増時の犯人特定用。指定日（既定は今日）の上位を返す。
+    const targetDay = String(req.query.day || new Date().toISOString().slice(0, 10)).slice(0, 10);
+    let topIPs = [], topUAs = [];
+    try {
+      const ipRaw = await redis('ZREVRANGE', `genip:${targetDay}`, 0, 19, 'WITHSCORES') || [];
+      for (let i = 0; i < ipRaw.length; i += 2) topIPs.push({ ip: ipRaw[i], count: Number(ipRaw[i + 1]) });
+    } catch {}
+    try {
+      const uaRaw = await redis('ZREVRANGE', `genua:${targetDay}`, 0, 19, 'WITHSCORES') || [];
+      for (let i = 0; i < uaRaw.length; i += 2) topUAs.push({ ua: uaRaw[i], count: Number(uaRaw[i + 1]) });
+    } catch {}
 
     // 現在時刻の各レート枠の消費状況
     const hour = new Date().toISOString().slice(0, 13);
@@ -910,9 +963,13 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       note: `kind=生成の種類 / src=発生源。1生成あたり約$${COST_PER_GEN}で概算。ログは永続保存。`,
+      hint: 'topIPs で同一IPからの集中を確認（1IPが突出＝機械的アクセス）。topUAs でUA偽装を確認。',
       currentHourUsage: limits,
       lifetime,
       monthly,
+      analyzedDay: targetDay,
+      topIPs,
+      topUAs,
       daily,
       recentSamples: samples,
     });
@@ -1055,7 +1112,9 @@ export default async function handler(req, res) {
       // レート上限（ボットは特に厳しく：10/時、人間は30/時）
       const cmpLimit = cIsBot ? 10 : 30;
       const allowed = await checkGenLimit(cIsBot ? 'compare-bot' : 'compare-human', cmpLimit);
-      if (!allowed) {
+      // IP単位の上限も併用（UA偽装対策。通常の利用者は到達しない水準）
+      const ipOk = await checkIPLimit(req, 40);
+      if (!allowed || !ipOk) {
         res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800');
         return res.status(200).send(buildCompareHTML(a, b, emptyCmp));
       }
@@ -1612,7 +1671,10 @@ ${urls}
     reqIsBot ? 'word-bot' : 'word-human',
     reqIsBot ? BOT_LIMIT_PER_HOUR : HUMAN_LIMIT_PER_HOUR
   );
-  if (!allowed) return light(); // 上限超過時も軽量ページ（次の訪問で完全版に昇格）
+  // 【IP単位の上限】UA偽装スクレイパー対策の要。
+  // 40件/時は、人間が普通に探索する速度（数十秒に1語）では到達しない水準。
+  const ipOk = await checkIPLimit(req, 40);
+  if (!allowed || !ipOk) return light(); // 上限超過時も軽量ページ（次の訪問で完全版に昇格）
 
   // 上限内：AIで完全なデータを生成
   const ai = await relatedFromAI(word);
