@@ -19,6 +19,24 @@ function isBlockedBot(req) {
   return /gptbot|chatgpt-user|ccbot|claudebot|anthropic-ai|perplexitybot|bytespider|amazonbot|applebot-extended|meta-externalagent|ahrefsbot|semrushbot|mj12bot|dotbot|petalbot|dataforseobot|blexbot|serpstatbot|zoominfobot|imagesiftbot/i.test(ua);
 }
 
+// 【施策1】既知のスクレイピングツール・ヘッドレスブラウザを明示的に遮断する。
+// Lightpanda等はUAに bot/crawl を含まないため、従来のisBot判定をすり抜けていた。
+function isKnownScraper(req) {
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  if (!ua) return true;
+  return /lightpanda|headlesschrome|puppeteer|playwright|selenium|phantomjs|scrapy|httrack|wget|curl|python-requests|python-urllib|go-http|okhttp|java\/|axios|node-fetch|got\/|libwww|lwp::|mechanize|colly|jsoup|guzzle|restsharp|apache-httpclient/i.test(ua);
+}
+
+// 【施策3】検索エンジンかどうかの判定（生成を許可するホワイトリスト）。
+// 新規AI生成は「検索エンジン」または「アプリ内探索」のみに限定し、
+// それ以外（UA偽装スクレイパー含む）は一切生成させない。
+function isSearchEngineBot(req) {
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  if (!ua) return false;
+  // 主要検索エンジンのクローラーのみ（AI学習・SEOツールは含めない）
+  return /googlebot|bingbot|duckduckbot|yandexbot|baiduspider|naver|applebot(?!-extended)/i.test(ua);
+}
+
 function isBot(req) {
   const ua = String(req.headers['user-agent'] || '').toLowerCase();
   if (!ua) return true; // UAなしは機械アクセスとみなす（安全側）
@@ -568,6 +586,21 @@ async function checkGenLimit(kind, limit) {
   }
 }
 
+// 【施策2】UA単位のレート制限。
+// スクレイパーが大量のIPを使い分けてIP制限を回避する手口への対抗策。
+// IPは分散できてもUA文字列は使い回されることが多いため、ここで頭打ちにする。
+async function checkUALimit(req, limit) {
+  try {
+    const ua = String(req.headers['user-agent'] || '(none)').slice(0, 120);
+    const key = `genualimit:${hashIP(ua)}:${new Date().toISOString().slice(0, 13)}`;
+    const n = await redis('INCR', key);
+    if (n === 1) await redis('EXPIRE', key, 3700);
+    return n <= limit;
+  } catch {
+    return true;
+  }
+}
+
 // 【IP単位のレート制限】UA偽装されても効く根本的な防御。
 // 同一IPからの生成が短時間に集中する場合のみ止めるので、通常の利用者は影響を受けない。
 async function checkIPLimit(req, limit) {
@@ -957,7 +990,7 @@ export default async function handler(req, res) {
     // 現在時刻の各レート枠の消費状況
     const hour = new Date().toISOString().slice(0, 13);
     const limits = {};
-    for (const k of ['word-bot', 'word-human', 'compare-bot', 'compare-human']) {
+    for (const k of ['word-se', 'compare-se']) {
       try { limits[k] = Number(await redis('GET', `genlimit:${k}:${hour}`)) || 0; } catch {}
     }
 
@@ -1098,26 +1131,23 @@ export default async function handler(req, res) {
     } catch {}
 
     if (!c) {
-      // 【コスト保護】比較ページは組み合わせが膨大（8万語×4リンク＝32万通り）なので、
-      // クローラーが辿ると青天井に生成されうる。厳しめのレート上限を必ず適用する。
-      const cua = String(req.headers['user-agent'] || '').toLowerCase();
-      const cIsSearch = /googlebot|bingbot|duckduckbot|slurp|applebot(?!-extended)/i.test(cua);
-      const cIsBot = isBot(req);
+      // 【施策3】比較ページも「原則拒否」方式に統一。
+      // 組み合わせが膨大（16万通り）なため、スクレイパーに開放すると被害が最大化する。
       const emptyCmp = { summary: '', a_desc: '', b_desc: '', difference: '', a_example: '', b_example: '', usage_tip: '' };
-      // 検索エンジン以外のボットには生成させない
-      if (cIsBot && !cIsSearch) {
-        res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=7200');
+      const serveEmpty = (maxAge, sMaxAge) => {
+        res.setHeader('Cache-Control', `public, max-age=${maxAge}, s-maxage=${sMaxAge}`);
         return res.status(200).send(buildCompareHTML(a, b, emptyCmp));
-      }
-      // レート上限（ボットは特に厳しく：10/時、人間は30/時）
-      const cmpLimit = cIsBot ? 10 : 30;
-      const allowed = await checkGenLimit(cIsBot ? 'compare-bot' : 'compare-human', cmpLimit);
-      // IP単位の上限も併用（UA偽装対策。通常の利用者は到達しない水準）
+      };
+      // 既知スクレイパー・検索エンジン以外は生成させない
+      if (isKnownScraper(req)) return serveEmpty(1800, 7200);
+      if (!isSearchEngineBot(req)) return serveEmpty(1800, 7200);
+
+      // 検索エンジン向けの上限（多層防御。比較は特に厳しく）
+      const allowed = await checkGenLimit('compare-se', 15);
       const ipOk = await checkIPLimit(req, 40);
-      if (!allowed || !ipOk) {
-        res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800');
-        return res.status(200).send(buildCompareHTML(a, b, emptyCmp));
-      }
+      const uaOk = await checkUALimit(req, 100);
+      if (!allowed || !ipOk || !uaOk) return serveEmpty(600, 1800);
+
       c = await compareWordsAI(a, b);
       if (!c) return res.status(502).send('生成に失敗しました');
       await logGeneration(req, 'compare', `${a}-vs-${b}`);
@@ -1652,29 +1682,25 @@ ${urls}
     return res.status(200).send(lightHtml);
   };
 
-  // 【クロール優先方針】検索エンジンのクローラーには生成を許可する。
-  // 以前はボット一律で生成を止めていたが、その結果8万語の大半が薄いページのまま残り、
-  // Googlebotの巡回頻度低下＝インデックス消失を招いた。
-  // 検索エンジンは生成を許可し、コストはレート制限で管理する。
-  const ua = String(req.headers['user-agent'] || '').toLowerCase();
-  const isSearchEngine = /googlebot|bingbot|duckduckbot|slurp|applebot(?!-extended)/i.test(ua);
-  const reqIsBot = isBot(req);
-  // 検索エンジン以外のボット（スクレイパー等）には生成させない
-  if (reqIsBot && !isSearchEngine) return light();
+  // 【施策3】生成の前提を「原則拒否」に転換。
+  // 従来は「怪しいボット以外は生成OK」だったため、UA偽装スクレイパー
+  // （Lightpanda、Safari偽装等）が大量のIPを分散して生成させ放題だった。
+  // ここでは「明示的に信頼できる場合のみ生成」というホワイトリスト方式にする。
+  //   許可： 主要検索エンジンのクローラーのみ（SEOインデックスに必要）
+  //   拒否： それ以外すべて（実ユーザーはアプリ内探索経由で生成される）
+  // これによりスクレイパーがいくら来てもAIコストは発生しない。
 
-  // 【レート上限】人間とボットで枠を分ける。
-  // ボット枠を絞ることで、クロール由来の暴走コストを抑えつつ、
-  // 実ユーザーの体験（未生成語を開いても完全版が出る）は守られる。
-  const BOT_LIMIT_PER_HOUR = 30;   // 検索エンジン由来：1日最大720語 ≒ $4.3/日
-  const HUMAN_LIMIT_PER_HOUR = 60; // 人間由来：実需なので広めに
-  const allowed = await checkGenLimit(
-    reqIsBot ? 'word-bot' : 'word-human',
-    reqIsBot ? BOT_LIMIT_PER_HOUR : HUMAN_LIMIT_PER_HOUR
-  );
-  // 【IP単位の上限】UA偽装スクレイパー対策の要。
-  // 40件/時は、人間が普通に探索する速度（数十秒に1語）では到達しない水準。
-  const ipOk = await checkIPLimit(req, 40);
-  if (!allowed || !ipOk) return light(); // 上限超過時も軽量ページ（次の訪問で完全版に昇格）
+  // 既知のスクレイピングツールは即座に軽量ページ
+  if (isKnownScraper(req)) return light();
+
+  if (!isSearchEngineBot(req)) return light(); // 検索エンジン以外は生成させない
+
+  // 検索エンジン向けのレート上限（多層防御）
+  const SE_LIMIT_PER_HOUR = 40; // 全体：1日最大960語 ≒ $5.8/日
+  const allowed = await checkGenLimit('word-se', SE_LIMIT_PER_HOUR);
+  const ipOk = await checkIPLimit(req, 40);    // IP単位
+  const uaOk = await checkUALimit(req, 100);   // UA単位（IP分散への対抗）
+  if (!allowed || !ipOk || !uaOk) return light();
 
   // 上限内：AIで完全なデータを生成
   const ai = await relatedFromAI(word);

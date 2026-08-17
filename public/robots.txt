@@ -7,6 +7,9 @@ User-agent: *
 Allow: /
 
 # --- 大量スクレイピングのみ個別に遮断（検索エンジンは含めない）---
+User-agent: Lightpanda
+Disallow: /
+
 User-agent: GPTBot
 Disallow: /
 
