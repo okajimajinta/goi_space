@@ -33,8 +33,12 @@ function isKnownScraper(req) {
 function isSearchEngineBot(req) {
   const ua = String(req.headers['user-agent'] || '').toLowerCase();
   if (!ua) return false;
-  // 主要検索エンジンのクローラーのみ（AI学習・SEOツールは含めない）
-  return /googlebot|bingbot|duckduckbot|yandexbot|baiduspider|naver|applebot(?!-extended)/i.test(ua);
+  // 【重要】GooglebotとBingbotのみに限定する。
+  // Applebotを許可していた際、1日1,115件（$6.7/日）の生成を発生させていた一方で、
+  // 日本語サイトにおけるApple検索経由の流入価値はほぼ無い。費用対効果が見合わないため除外。
+  // 他の検索エンジン（Yandex/Baidu/Naver等）も同様の理由で除外している。
+  // 追加する場合は、実際の流入価値を確認してから判断すること。
+  return /googlebot|bingbot/i.test(ua);
 }
 
 function isBot(req) {
@@ -530,12 +534,16 @@ async function logGeneration(req, kind, word) {
     const day = now.toISOString().slice(0, 10);   // YYYY-MM-DD
     const month = now.toISOString().slice(0, 7);  // YYYY-MM
     const ua = String(req.headers['user-agent'] || '').toLowerCase();
+    // 発生源の分類。個別に識別できるようにする（"other-search"に丸めると原因特定が遅れるため）
     let src = 'human';
     if (/googlebot/.test(ua)) src = 'googlebot';
     else if (/bingbot/.test(ua)) src = 'bingbot';
-    else if (/duckduckbot|slurp|applebot/.test(ua)) src = 'other-search';
+    else if (/applebot/.test(ua)) src = 'applebot';
+    else if (/duckduckbot/.test(ua)) src = 'duckduckbot';
+    else if (/yandex|baiduspider|naver/.test(ua)) src = 'other-search';
+    else if (/lightpanda|puppeteer|playwright|selenium|headless/.test(ua)) src = 'scraper-tool';
     else if (!ua) src = 'no-ua';
-    else if (/bot|crawl|spider|python|curl|wget|scrapy|headless/.test(ua)) src = 'other-bot';
+    else if (/bot|crawl|spider|python|curl|wget|scrapy/.test(ua)) src = 'other-bot';
 
     // 日別カウンタ（永続保存）
     await redis('HINCRBY', `genlog:${day}`, 'total', 1);
@@ -563,7 +571,10 @@ async function logGeneration(req, kind, word) {
     await redis('EXPIRE', `genip:${day}`, 60 * 60 * 24 * 90); // 90日保持
 
     // 【UA別集計】どのUser-Agentが生成しているかの実態把握
-    const uaRaw = String(req.headers['user-agent'] || '(none)').slice(0, 120);
+    // 【UA別集計】どのUser-Agentが生成しているかの実態把握。
+    // 以前120字で切り詰めていたため、UA末尾にあった "Applebot" の識別子が
+    // ログ上で見えず、原因特定が遅れた。判別に必要な情報を落とさないよう長めに保持する。
+    const uaRaw = String(req.headers['user-agent'] || '(none)').slice(0, 250);
     await redis('ZINCRBY', `genua:${day}`, 1, uaRaw);
     await redis('EXPIRE', `genua:${day}`, 60 * 60 * 24 * 90);
 
@@ -583,6 +594,20 @@ async function checkGenLimit(kind, limit) {
     return n <= limit;
   } catch {
     return true; // Redis障害時は通す（サイトを止めない）
+  }
+}
+
+// 【最終防衛線】1日あたりの総生成数に絶対上限を設ける。
+// 判定漏れ（今回のApplebotのような想定外のUA）があっても、被害がこの上限で止まる。
+// これを超えたら、その日はいかなる経路でも新規生成しない。
+async function checkDailyCap(cap) {
+  try {
+    const key = `gencap:${new Date().toISOString().slice(0, 10)}`;
+    const n = await redis('INCR', key);
+    if (n === 1) await redis('EXPIRE', key, 60 * 60 * 26);
+    return n <= cap;
+  } catch {
+    return true;
   }
 }
 
@@ -993,6 +1018,10 @@ export default async function handler(req, res) {
     for (const k of ['word-se', 'compare-se']) {
       try { limits[k] = Number(await redis('GET', `genlimit:${k}:${hour}`)) || 0; } catch {}
     }
+    // 1日の絶対上限の消費状況
+    let dailyCapUsed = 0;
+    try { dailyCapUsed = Number(await redis('GET', `gencap:${new Date().toISOString().slice(0, 10)}`)) || 0; } catch {}
+    limits['dailyCap'] = `${dailyCapUsed} / 300`;
 
     return res.status(200).json({
       note: `kind=生成の種類 / src=発生源。1生成あたり約$${COST_PER_GEN}で概算。ログは永続保存。`,
@@ -1146,7 +1175,8 @@ export default async function handler(req, res) {
       const allowed = await checkGenLimit('compare-se', 15);
       const ipOk = await checkIPLimit(req, 40);
       const uaOk = await checkUALimit(req, 100);
-      if (!allowed || !ipOk || !uaOk) return serveEmpty(600, 1800);
+      const capOk = await checkDailyCap(300); // 語ページと共有の1日絶対上限
+      if (!allowed || !ipOk || !uaOk || !capOk) return serveEmpty(600, 1800);
 
       c = await compareWordsAI(a, b);
       if (!c) return res.status(502).send('生成に失敗しました');
@@ -1700,7 +1730,8 @@ ${urls}
   const allowed = await checkGenLimit('word-se', SE_LIMIT_PER_HOUR);
   const ipOk = await checkIPLimit(req, 40);    // IP単位
   const uaOk = await checkUALimit(req, 100);   // UA単位（IP分散への対抗）
-  if (!allowed || !ipOk || !uaOk) return light();
+  const capOk = await checkDailyCap(300);      // 1日の絶対上限（≒$1.8/日）
+  if (!allowed || !ipOk || !uaOk || !capOk) return light();
 
   // 上限内：AIで完全なデータを生成
   const ai = await relatedFromAI(word);
