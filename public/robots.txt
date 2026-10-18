@@ -2,9 +2,21 @@
 # 方針：検索エンジンのクロールを最優先。一切の制約を設けない。
 # （Crawl-delay等の制約はクロール頻度低下を招くため使用しない）
 
-# --- すべてのクローラー：全面許可 ---
+# --- すべてのクローラー：ページは許可、APIは禁止 ---
+# /api/ はアプリ内部用。クロールされると1リクエストごとにAI課金が発生するため禁止。
 User-agent: *
 Allow: /
+Disallow: /api/
+
+# --- API直叩きで課金を発生させていたボット ---
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: Reflectionbot
+Disallow: /
+
+User-agent: Sogou web spider
+Disallow: /
 
 # --- 大量スクレイピングのみ個別に遮断（検索エンジンは含めない）---
 User-agent: Lightpanda

@@ -14,6 +14,7 @@
 // 同じ期間は全員同じお題になる（キャッシュで固定）。
 
 import { redis, setCors } from './_redis.js';
+import { rejectIfBot } from './_ratelimit.js';
 import { randomPair, randomDistantPair, expandWord } from './_wordpool.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
@@ -84,6 +85,9 @@ async function generatePuzzles(period, key) {
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // 【ボット遮断】AIを呼ぶ可能性があるため、クローラーのAPI直叩きを拒否する。
+  if (rejectIfBot(req, res)) return;
 
   // period: "daily"（既定）または "monthly"
   const period = (req.body?.period || req.query.period) === 'monthly' ? 'monthly' : 'daily';

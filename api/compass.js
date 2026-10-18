@@ -10,7 +10,7 @@
 //   青=自然科学(0) 緑=生物(60) 黄=社会(120) 紫=芸術(180) 赤=哲学(240) 白=数学(300)
 
 import { setCors, redis } from './_redis.js';
-import { getCredits, consumeCredits } from './_ratelimit.js';
+import { getCredits, consumeCredits, rejectIfBot } from './_ratelimit.js';
 
 const DISCIPLINES = [
   { key: '自然科学', color: '#5B8FDE', angle: 0 },
@@ -117,6 +117,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // 【ボット遮断】ここから先はAIを呼ぶ処理。クローラーのAPI直叩きを拒否する。
+  // （上のGET系＝履歴閲覧はRedis読み出しのみなので、ボットでも許可して差し支えない）
+  if (rejectIfBot(req, res)) return;
 
   // ===== 藍の夢（出藍の誉）：目標→未踏検出→知の航海図 =====
   if (req.body && req.body.ainoyume) {

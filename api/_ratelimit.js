@@ -20,6 +20,25 @@ function todayKey() {
   return now.toISOString().slice(0, 10);
 }
 
+// 【ボット遮断】AIを呼ぶAPIエンドポイントは、ブラウザ上の実ユーザー専用。
+// クローラーがAPIを直接叩く正当な理由はないため、一律で拒否する。
+// （Baiduspiderが /api/claude を直接クロールし、毎回Claudeを呼んでいた事例への対策）
+export function isBotRequest(req) {
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  // UAなし＝通常のブラウザではない（fetch等）。APIとしては拒否側に倒す。
+  if (!ua) return true;
+  return /bot|crawl|spider|slurp|baidu|yandex|sogou|bingpreview|googlebot|bingbot|duckduckbot|applebot|petalbot|bytespider|gptbot|ccbot|claudebot|anthropic|perplexity|amazonbot|reflection|lightpanda|headless|puppeteer|playwright|selenium|phantomjs|scrapy|python-requests|python-urllib|curl|wget|go-http|okhttp|java\/|axios|node-fetch|libwww|mechanize|colly|jsoup|guzzle|httpclient/i.test(ua);
+}
+
+// ボットなら即403を返す（AIを一切呼ばない）。処理を続けてよければ false を返す。
+export function rejectIfBot(req, res) {
+  if (!isBotRequest(req)) return false;
+  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.status(403).json({ error: 'forbidden' });
+  return true;
+}
+
 // 課金済みユーザーか確認（リクエストのpremium_emailヘッダー or bodyで判定）
 async function isPremium(req) {
   // フロントが課金者のメールを送ってくる（x-premium-email ヘッダー）

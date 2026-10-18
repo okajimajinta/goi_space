@@ -1,6 +1,6 @@
 // api/golf.js — ワードゴルフAPI（レートリミット付き、軽量タスクはHaiku）
 
-import { checkLimit } from './_ratelimit.js';
+import { checkLimit, rejectIfBot } from './_ratelimit.js';
 import { randomPair, expandWord } from './_wordpool.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
@@ -33,6 +33,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // 【ボット遮断】AIを呼ぶ可能性があるため、クローラーのAPI直叩きを拒否する。
+  if (rejectIfBot(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { action } = req.body || {};

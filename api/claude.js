@@ -1,7 +1,7 @@
 // api/claude.js — 語彙生成API（キャッシュ＋レートリミット付き）
 
 import { redis, setCors } from './_redis.js';
-import { checkLimit, getPlan, getCredits, consumeCredits } from './_ratelimit.js';
+import { checkLimit, getPlan, getCredits, consumeCredits, rejectIfBot } from './_ratelimit.js';
 
 const FREE_LIMIT = 20; // 1日あたりの無料探索回数
 
@@ -9,6 +9,11 @@ export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // 【最優先】クローラーからのAPI直叩きを遮断する。
+  // この探索APIはブラウザ上の実ユーザーが使うもので、ボットが叩く正当な理由はない。
+  // ここで止めないと、1リクエストごとにClaudeが呼ばれて課金が青天井になる。
+  if (rejectIfBot(req, res)) return;
 
   const { word, context, action } = req.body || {};
 
